@@ -1,158 +1,183 @@
-import type { Customer } from "../types";
+import type { Dispatch, SetStateAction } from "react";
+
+import type {
+  Customer,
+  CustomerFormData,
+} from "../types";
 
 import { TabsContent } from "@/components/ui/tabs";
 
 import { formatDate } from "@/lib/date";
 
+import { CustomerDangerZone } from "@/features/customers/components/CustomerDangerZone";
+import { CardSection } from "@/components/common/forms/CardSection";
+import { EditableCheckbox } from "@/components/common/forms/EditableCheckbox";
+import { EditableField } from "@/components/common/forms/EditableField";
+
 type Props = {
   customer: Customer;
+  editing: boolean;
+  form: CustomerFormData;
+  setForm: Dispatch<SetStateAction<CustomerFormData>>;
 };
 
-export function CustomerOverviewTab({ customer }: Props) {
-
-  const emails = customer.emails ?? [];
-
+export function CustomerOverviewTab({
+  customer,
+  editing,
+  form,
+  setForm,
+}: Props) {
   return (
     <TabsContent value="overview">
       <div className="grid gap-6 xl:grid-cols-3">
-        {/* Company Information */}
+        <CardSection title="Company Information">
+          <div className="space-y-5">
+            <EditableField
+              label="Company Name"
+              editing={editing}
+              value={form.name}
+              maxLength={100}
+              displayValue={customer.name}
+              onChange={(name) =>
+                setForm((previous) => ({
+                  ...previous,
+                  name,
+                }))
+              }
+            />
 
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-6 text-lg font-semibold">
-            Company Information
-          </h2>
+            <EditableField
+              label="Email Address"
+              maxLength={254}
+              editing={editing}
+              value={form.emails[0] ?? ""}
+              displayValue={customer.emails.join(", ")}
+              onChange={(email) =>
+                setForm((previous) => ({
+                  ...previous,
+                  emails: email ? [email] : [],
+                }))
+              }
+            />
 
-          <dl className="space-y-5">
+            <EditableField
+              label="Phone"
+              maxLength={25}
+              editing={editing}
+              value={form.office_phone}
+              displayValue={customer.office_phone ?? ""}
+              onChange={(office_phone) =>
+                setForm((previous) => ({
+                  ...previous,
+                  office_phone,
+                }))
+              }
+            />
+
             <div>
-              <dt className="text-sm text-muted-foreground">
-                Company Name
-              </dt>
-
-              <dd>{customer.name}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                Email Addresses
-              </dt>
-
-              <dd>
-                {emails.length > 0 ? (
-                  <div className="space-y-1">
-                    {emails.map((email) => (
-                      <div key={email}>{email}</div>
-                    ))}
-                  </div>
-                ) : (
-                  "—"
-                )}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                Phone
-              </dt>
-
-              <dd>{customer.phone || "—"}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 Created
-              </dt>
+              </div>
 
-              <dd>{formatDate(customer.created_at)}</dd>
+              <div className="mt-1">
+                {formatDate(customer.created_at)}
+              </div>
             </div>
-          </dl>
-        </div>
+          </div>
+        </CardSection>
 
-        {/* Address */}
+        <CardSection title="Address">
+          <div className="space-y-5">
+            <EditableField
+              label="Address 1"
+              maxLength={100}
+              editing={editing}
+              value={form.address_1}
+              displayValue={customer.address_1 ?? ""}
+              onChange={(address_1) =>
+                setForm((previous) => ({
+                  ...previous,
+                  address_1,
+                }))
+              }
+            />
 
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-6 text-lg font-semibold">
-            Address
-          </h2>
+            <EditableField
+              label="Address 2"
+              maxLength={100}
+              editing={editing}
+              value={form.address_2}
+              displayValue={customer.address_2 ?? ""}
+              onChange={(address_2) =>
+                setForm((previous) => ({
+                  ...previous,
+                  address_2,
+                }))
+              }
+            />
 
-          <dl className="space-y-5">
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                Physical Address
-              </dt>
+            <EditableField
+              label="City"
+              editing={editing}
+              maxLength={100}
+              value={form.city}
+              displayValue={customer.city ?? ""}
+              onChange={(city) =>
+                setForm((previous) => ({
+                  ...previous,
+                  city,
+                }))
+              }
+            />
 
-              <dd>
-                {customer.address_1 ? (
-                  <>
-                    {customer.address_1}
+            <div className="grid grid-cols-2 gap-4">
+              <EditableField
+                label="State"
+                editing={editing}
+                maxLength={100}
+                value={form.state}
+                displayValue={customer.state ?? ""}
+                onChange={(state) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    state,
+                  }))
+                }
+              />
 
-                    {customer.address_2 && (
-                      <>
-                        <br />
-                        {customer.address_2}
-                      </>
-                    )}
-
-                    <br />
-
-                    {customer.city}, {customer.state} {customer.zip}
-                  </>
-                ) : (
-                  "—"
-                )}
-              </dd>
+              <EditableField
+                label="ZIP"
+                editing={editing}
+                maxLength={20}
+                value={form.zip}
+                displayValue={customer.zip ?? ""}
+                onChange={(zip) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    zip,
+                  }))
+                }
+              />
             </div>
+          </div>
+        </CardSection>
 
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                Billing Address
-              </dt>
-
-              <dd>
-                {customer.billing_same_as_physical ? (
-                  "Same as physical"
-                ) : (
-                  <>
-                    {customer.billing_address_1}
-
-                    {customer.billing_address_2 && (
-                      <>
-                        <br />
-                        {customer.billing_address_2}
-                      </>
-                    )}
-
-                    <br />
-
-                    {customer.billing_city},{" "}
-                    {customer.billing_state}{" "}
-                    {customer.billing_zip}
-                  </>
-                )}
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Payment Settings */}
-
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-6 text-lg font-semibold">
-            Payment Settings
-          </h2>
-
-          <dl className="space-y-5">
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                Require PO
-              </dt>
-
-              <dd>{customer.require_po ? "Yes" : "No"}</dd>
-            </div>
-
-
-          </dl>
-        </div>
+        <CardSection title="Payment Settings">
+          <EditableCheckbox
+            label="Require Purchase Order"
+            editing={editing}
+            checked={form.require_po}
+            onChange={(require_po) =>
+              setForm((previous) => ({
+                ...previous,
+                require_po,
+              }))
+            }
+          />
+        </CardSection>
       </div>
+
+      <CustomerDangerZone customer={customer} />
     </TabsContent>
   );
 }

@@ -50,7 +50,7 @@ export function CustomerDangerZone({ customer }: Props) {
     }
 
     return (
-        <section className="mt-12 rounded-lg border border-destructive/20 p-6">
+        <section className="mt-12 inline-block rounded-lg p-6">
             <h2 className="text-lg font-semibold text-destructive">
                 Danger Zone
             </h2>

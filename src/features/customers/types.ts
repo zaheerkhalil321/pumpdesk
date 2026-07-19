@@ -4,7 +4,7 @@ export interface Customer {
   name: string;
 
   emails: string[];
-  phone: string | null;
+  office_phone: string | null;
 
   address_1: string | null;
   address_2: string | null;
@@ -29,3 +29,23 @@ export interface Customer {
   created_at: string;
   updated_at: string;
 }
+
+export type CustomerFormData = Omit<
+  Customer,
+  "id" | "active" | "created_at" | "updated_at"
+> & {
+  office_phone: string;
+  address_1: string;
+  address_2: string;
+  city: string;
+  state: string;
+  zip: string;
+
+  billing_address_1: string;
+  billing_address_2: string;
+  billing_city: string;
+  billing_state: string;
+  billing_zip: string;
+
+  notes: string;
+};

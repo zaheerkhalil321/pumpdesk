@@ -5,3 +5,4 @@ export * from "./CustomerInvoicesTab";
 export * from "./CustomerContactsTab";
 export * from "./CustomerNotesTab";
 export * from "./CustomerFilesTab";
+export * from "./CustomerPageClient";
