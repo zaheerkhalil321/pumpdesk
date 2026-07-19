@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PumpDesk
+
+PumpDesk is a modern concrete pumping operations platform built for concrete pumping companies. It is designed to replace outdated dispatch and scheduling software with a faster, cleaner, and AI-powered experience.
+
+> **Status:** Active development (Pre-Alpha)
+
+---
+
+## Tech Stack
+
+### Frontend
+- Next.js (App Router)
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+
+### Backend
+- Supabase
+  - PostgreSQL
+  - Authentication
+  - Storage
+  - Row Level Security (RLS)
+
+### Infrastructure
+- GitHub (Source Control)
+- Vercel (Hosting & Deployments)
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Clone the repository
+
+```bash
+git clone https://github.com/pinecoastweb/pumpdesk.git
+cd pumpdesk
+```
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Create environment variables
+
+Create a `.env.local` file in the project root.
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+### Start development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+│
+├── app/             # Next.js App Router pages
+├── components/      # Shared UI components
+├── lib/             # Utilities & Supabase client
+├── hooks/
+├── types/
+└── styles/
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Database
 
-## Deploy on Vercel
+The database is hosted on Supabase.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Database design is maintained separately in:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+docs/database.dbml
+```
+
+The DBML file is considered the source of truth before creating SQL migrations.
+
+---
+
+## Deployment
+
+Every push to the `main` branch automatically deploys to Vercel.
+
+Deployment workflow:
+
+```
+VS Code
+    ↓
+Git Commit
+    ↓
+GitHub
+    ↓
+Vercel
+    ↓
+Production
+```
+
+---
+
+## Development Workflow
+
+1. Create a feature branch.
+2. Build the feature.
+3. Test locally.
+4. Commit changes.
+5. Push to GitHub.
+6. Open a Pull Request.
+7. Merge into `main`.
+8. Vercel deploys automatically.
+
+---
+
+## Coding Standards
+
+- TypeScript only
+- Use Server Components by default
+- Client Components only when necessary
+- Keep components small and reusable
+- Prefer composition over duplication
+- Never commit secrets or `.env.local`
+- Database changes should begin in `database.dbml`
+
+---
+
+## Future Features
+
+- AI Dispatch Assistant
+- Drag-and-drop Scheduling
+- Operator Mobile App
+- GPS Tracking
+- Equipment Maintenance
+- Work Tickets
+- Customer Portal
+- Digital Signatures
+- Invoicing
+- Stripe Payments
+- Reporting & Analytics
+
+---
+
+## License
+
+Private repository.
+
+Copyright © PumpDesk.
