@@ -32,6 +32,11 @@ export const navigation: NavigationItem[] = [
     href: "/jobs",
     icon: ClipboardList,
   },
+    {
+    title: "Customers",
+    href: "/customers",
+    icon: Building2,
+  },
   {
     title: "Pumps",
     href: "/pumps",

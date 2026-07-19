@@ -1,5 +1,5 @@
-import { ScheduleToolbar } from "@/components/schedule/ScheduleToolbar";
-import { ScheduleGrid } from "@/components/schedule/ScheduleGrid";
+import { ScheduleToolbar } from "@/features/schedule/components/ScheduleToolbar";
+import { ScheduleGrid } from "@/features/schedule/components/ScheduleGrid";
 
 export default function SchedulePage() {
   return (

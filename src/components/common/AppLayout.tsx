@@ -16,7 +16,9 @@ export function AppLayout({ children }: Props) {
         <AppHeader />
 
         <main className="flex-1 overflow-auto">
-          {children}
+          <div className="mx-auto w-full max-w-7xl p-6">
+            {children}
+          </div>
         </main>
 
       </SidebarInset>

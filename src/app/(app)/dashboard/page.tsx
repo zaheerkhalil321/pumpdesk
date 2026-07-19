@@ -1,4 +1,4 @@
-import { Typography } from "@/components/shared/Typography";
+import { Typography } from "@/components/common/Typography";
 
 export default function DashboardPage() {
   return (

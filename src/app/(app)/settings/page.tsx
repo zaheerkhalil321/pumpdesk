@@ -1,5 +1,5 @@
-import { Page } from "@/components/shared/Page";
-import { Typography } from "@/components/shared/Typography";
+import { Page } from "@/components/common/Page";
+import { Typography } from "@/components/common/Typography";
 import { GeneralSettings } from "@/app/(app)/settings/GeneralSettings";
 
 export default function SettingsPage() {
