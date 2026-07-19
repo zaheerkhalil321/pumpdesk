@@ -1,0 +1,922 @@
+// PumpDesk database blueprint
+// Version: 0.1
+// Purpose: Multi-company concrete pumping operations platform
+// Notes:
+// - app_users.id should match Supabase auth.users.id.
+// - Nearly every operational table includes company_id for tenant isolation.
+// - This is a planning model. Convert it to reviewed PostgreSQL migrations before applying to Supabase.
+
+Project PumpDesk {
+  database_type: 'PostgreSQL'
+  Note: 'Core operational schema for concrete pumping companies.'
+}
+
+Enum membership_role {
+  owner
+  admin
+  dispatcher
+  office
+  operator
+  mechanic
+  accountant
+  read_only
+}
+
+Enum membership_status {
+  invited
+  active
+  suspended
+  inactive
+}
+
+Enum employee_status {
+  active
+  inactive
+  leave
+  terminated
+}
+
+Enum customer_status {
+  lead
+  active
+  inactive
+  blocked
+}
+
+Enum project_status {
+  planning
+  active
+  on_hold
+  completed
+  cancelled
+}
+
+Enum job_status {
+  draft
+  tentative
+  confirmed
+  dispatched
+  en_route
+  on_site
+  pumping
+  completed
+  cancelled
+  no_show
+}
+
+Enum job_priority {
+  low
+  normal
+  high
+  urgent
+}
+
+Enum assignment_type {
+  primary_operator
+  second_operator
+  helper
+  mechanic
+}
+
+Enum equipment_status {
+  available
+  assigned
+  maintenance
+  out_of_service
+  retired
+}
+
+Enum equipment_type {
+  boom_pump
+  line_pump
+  trailer_pump
+  placing_boom
+  service_truck
+  support_vehicle
+  other
+}
+
+Enum ticket_status {
+  draft
+  submitted
+  approved
+  rejected
+  invoiced
+  void
+}
+
+Enum invoice_status {
+  draft
+  sent
+  partially_paid
+  paid
+  overdue
+  void
+  uncollectible
+}
+
+Enum payment_status {
+  pending
+  succeeded
+  failed
+  refunded
+  partially_refunded
+  void
+}
+
+Enum payment_method {
+  cash
+  check
+  ach
+  card
+  wire
+  other
+}
+
+Enum maintenance_status {
+  open
+  scheduled
+  in_progress
+  waiting_parts
+  completed
+  cancelled
+}
+
+Enum maintenance_priority {
+  low
+  normal
+  high
+  critical
+}
+
+Enum inspection_status {
+  draft
+  passed
+  failed
+  needs_attention
+}
+
+Enum file_visibility {
+  internal
+  customer
+}
+
+Enum note_visibility {
+  internal
+  operator
+  customer
+}
+
+Table companies {
+  id uuid [pk]
+  legal_name varchar(200) [not null]
+  display_name varchar(200) [not null]
+  slug varchar(100) [not null, unique]
+  phone varchar(40)
+  email varchar(255)
+  website varchar(255)
+  timezone varchar(80) [not null, default: 'America/New_York']
+  currency char(3) [not null, default: 'USD']
+  address_line_1 varchar(200)
+  address_line_2 varchar(200)
+  city varchar(100)
+  state varchar(100)
+  postal_code varchar(30)
+  country_code char(2) [not null, default: 'US']
+  tax_id_last4 varchar(4)
+  logo_path text
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'One tenant/company using PumpDesk.'
+}
+
+Table app_users {
+  id uuid [pk]
+  full_name varchar(200)
+  phone varchar(40)
+  avatar_path text
+  last_active_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Public user profile. id should equal Supabase auth.users.id.'
+}
+
+Table company_memberships {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  user_id uuid [not null, ref: > app_users.id]
+  role membership_role [not null, default: 'operator']
+  status membership_status [not null, default: 'invited']
+  invited_by_user_id uuid [ref: > app_users.id]
+  invited_at timestamptz
+  joined_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, user_id) [unique]
+    (company_id, status)
+  }
+}
+
+Table company_settings {
+  company_id uuid [pk, ref: > companies.id]
+  default_job_duration_minutes int [not null, default: 240]
+  default_minimum_hours numeric(6,2) [not null, default: 4]
+  default_hourly_rate numeric(12,2)
+  default_overtime_rate numeric(12,2)
+  default_cancellation_fee numeric(12,2)
+  invoice_due_days int [not null, default: 30]
+  job_number_prefix varchar(20) [default: 'JOB']
+  next_job_number bigint [not null, default: 1]
+  invoice_number_prefix varchar(20) [default: 'INV']
+  next_invoice_number bigint [not null, default: 1]
+  require_ticket_signature boolean [not null, default: true]
+  require_operator_ticket_approval boolean [not null, default: false]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table employees {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  user_id uuid [ref: > app_users.id]
+  employee_number varchar(50)
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  preferred_name varchar(100)
+  email varchar(255)
+  phone varchar(40)
+  status employee_status [not null, default: 'active']
+  hire_date date
+  termination_date date
+  is_operator boolean [not null, default: false]
+  is_dispatcher boolean [not null, default: false]
+  is_mechanic boolean [not null, default: false]
+  cdl_class varchar(20)
+  cdl_expiration date
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, employee_number) [unique]
+    (company_id, status)
+    (company_id, last_name, first_name)
+  }
+}
+
+Table employee_certifications {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  employee_id uuid [not null, ref: > employees.id]
+  certification_type varchar(100) [not null]
+  certification_number varchar(100)
+  issued_date date
+  expiration_date date
+  issuing_authority varchar(150)
+  file_path text
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (employee_id, expiration_date)
+  }
+}
+
+Table customers {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_number varchar(50)
+  business_name varchar(200) [not null]
+  legal_name varchar(200)
+  status customer_status [not null, default: 'active']
+  customer_type varchar(80)
+  phone varchar(40)
+  email varchar(255)
+  website varchar(255)
+  billing_address_line_1 varchar(200)
+  billing_address_line_2 varchar(200)
+  billing_city varchar(100)
+  billing_state varchar(100)
+  billing_postal_code varchar(30)
+  billing_country_code char(2) [default: 'US']
+  payment_terms_days int
+  tax_exempt boolean [not null, default: false]
+  tax_exempt_number varchar(100)
+  credit_limit numeric(12,2)
+  requires_po boolean [not null, default: false]
+  internal_notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, business_name)
+    (company_id, customer_number) [unique]
+    (company_id, status)
+  }
+}
+
+Table customer_contacts {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_id uuid [not null, ref: > customers.id]
+  first_name varchar(100) [not null]
+  last_name varchar(100)
+  job_title varchar(120)
+  email varchar(255)
+  phone varchar(40)
+  mobile varchar(40)
+  is_primary boolean [not null, default: false]
+  receives_job_confirmations boolean [not null, default: true]
+  receives_invoices boolean [not null, default: false]
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (customer_id, is_primary)
+    (company_id, email)
+  }
+}
+
+Table job_sites {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_id uuid [ref: > customers.id]
+  name varchar(200)
+  address_line_1 varchar(200) [not null]
+  address_line_2 varchar(200)
+  city varchar(100) [not null]
+  state varchar(100) [not null]
+  postal_code varchar(30)
+  country_code char(2) [not null, default: 'US']
+  latitude numeric(10,7)
+  longitude numeric(10,7)
+  access_notes text
+  setup_notes text
+  washout_notes text
+  hazard_notes text
+  gate_code varchar(100)
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, city, state)
+    (customer_id, is_active)
+  }
+}
+
+Table projects {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_id uuid [not null, ref: > customers.id]
+  job_site_id uuid [ref: > job_sites.id]
+  project_number varchar(50)
+  name varchar(200) [not null]
+  status project_status [not null, default: 'active']
+  general_contractor varchar(200)
+  project_manager_contact_id uuid [ref: > customer_contacts.id]
+  estimated_start_date date
+  estimated_end_date date
+  description text
+  internal_notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, project_number) [unique]
+    (customer_id, status)
+    (job_site_id, status)
+  }
+}
+
+Table concrete_suppliers {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  name varchar(200) [not null]
+  phone varchar(40)
+  email varchar(255)
+  dispatch_phone varchar(40)
+  address_line_1 varchar(200)
+  city varchar(100)
+  state varchar(100)
+  postal_code varchar(30)
+  notes text
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, name)
+  }
+}
+
+Table equipment {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  equipment_number varchar(50) [not null]
+  type equipment_type [not null]
+  status equipment_status [not null, default: 'available']
+  manufacturer varchar(100)
+  model varchar(100)
+  model_year int
+  serial_number varchar(100)
+  vin varchar(100)
+  license_plate varchar(50)
+  boom_length_meters numeric(6,2)
+  max_vertical_reach_feet numeric(8,2)
+  max_horizontal_reach_feet numeric(8,2)
+  current_engine_hours numeric(12,2)
+  current_mileage numeric(12,2)
+  home_location text
+  purchase_date date
+  in_service_date date
+  retired_date date
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, equipment_number) [unique]
+    (company_id, status, type)
+    (company_id, vin) [unique]
+  }
+}
+
+Table equipment_documents {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  equipment_id uuid [not null, ref: > equipment.id]
+  document_type varchar(100) [not null]
+  title varchar(200) [not null]
+  file_path text [not null]
+  issued_date date
+  expiration_date date
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (equipment_id, expiration_date)
+  }
+}
+
+Table jobs {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_number varchar(50) [not null]
+  customer_id uuid [not null, ref: > customers.id]
+  customer_contact_id uuid [ref: > customer_contacts.id]
+  project_id uuid [ref: > projects.id]
+  job_site_id uuid [not null, ref: > job_sites.id]
+  concrete_supplier_id uuid [ref: > concrete_suppliers.id]
+  status job_status [not null, default: 'draft']
+  priority job_priority [not null, default: 'normal']
+  scheduled_start timestamptz
+  scheduled_end timestamptz
+  arrival_window_start timestamptz
+  arrival_window_end timestamptz
+  timezone varchar(80) [not null, default: 'America/New_York']
+  requested_equipment_type equipment_type
+  requested_boom_length_meters numeric(6,2)
+  estimated_yards numeric(10,2)
+  estimated_hours numeric(8,2)
+  mix_type varchar(150)
+  slump varchar(50)
+  pour_type varchar(120)
+  purchase_order_number varchar(100)
+  customer_reference varchar(100)
+  dispatch_notes text
+  operator_notes text
+  office_notes text
+  cancellation_reason text
+  cancelled_at timestamptz
+  confirmed_at timestamptz
+  completed_at timestamptz
+  created_by_user_id uuid [ref: > app_users.id]
+  updated_by_user_id uuid [ref: > app_users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, job_number) [unique]
+    (company_id, scheduled_start)
+    (company_id, status, scheduled_start)
+    (customer_id, scheduled_start)
+    (job_site_id, scheduled_start)
+  }
+}
+
+Table job_equipment_assignments {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_id uuid [not null, ref: > jobs.id]
+  equipment_id uuid [not null, ref: > equipment.id]
+  assigned_at timestamptz [not null, default: `now()`]
+  assigned_by_user_id uuid [ref: > app_users.id]
+  released_at timestamptz
+  notes text
+
+  indexes {
+    (job_id, equipment_id) [unique]
+    (equipment_id, assigned_at)
+  }
+}
+
+Table job_employee_assignments {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_id uuid [not null, ref: > jobs.id]
+  employee_id uuid [not null, ref: > employees.id]
+  assignment_type assignment_type [not null, default: 'primary_operator']
+  assigned_at timestamptz [not null, default: `now()`]
+  assigned_by_user_id uuid [ref: > app_users.id]
+  acknowledged_at timestamptz
+  notes text
+
+  indexes {
+    (job_id, employee_id, assignment_type) [unique]
+    (employee_id, assigned_at)
+  }
+}
+
+Table job_status_history {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_id uuid [not null, ref: > jobs.id]
+  old_status job_status
+  new_status job_status [not null]
+  changed_by_user_id uuid [ref: > app_users.id]
+  reason text
+  changed_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (job_id, changed_at)
+  }
+}
+
+Table job_notes {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_id uuid [not null, ref: > jobs.id]
+  author_user_id uuid [ref: > app_users.id]
+  visibility note_visibility [not null, default: 'internal']
+  body text [not null]
+  is_pinned boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (job_id, created_at)
+  }
+}
+
+Table job_files {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_id uuid [not null, ref: > jobs.id]
+  uploaded_by_user_id uuid [ref: > app_users.id]
+  visibility file_visibility [not null, default: 'internal']
+  file_name varchar(255) [not null]
+  file_path text [not null]
+  mime_type varchar(150)
+  size_bytes bigint
+  category varchar(80)
+  caption text
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (job_id, category)
+  }
+}
+
+Table work_tickets {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  job_id uuid [not null, ref: > jobs.id]
+  ticket_number varchar(50) [not null]
+  status ticket_status [not null, default: 'draft']
+  operator_employee_id uuid [ref: > employees.id]
+  equipment_id uuid [ref: > equipment.id]
+  arrived_at timestamptz
+  setup_started_at timestamptz
+  pumping_started_at timestamptz
+  pumping_ended_at timestamptz
+  cleanup_ended_at timestamptz
+  departed_at timestamptz
+  billed_hours numeric(8,2)
+  pumped_yards numeric(10,2)
+  travel_miles numeric(10,2)
+  concrete_temperature varchar(50)
+  weather_notes text
+  delay_minutes int
+  delay_reason text
+  washout_location text
+  operator_notes text
+  customer_notes text
+  customer_signer_name varchar(200)
+  customer_signature_path text
+  customer_signed_at timestamptz
+  submitted_at timestamptz
+  approved_at timestamptz
+  approved_by_user_id uuid [ref: > app_users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, ticket_number) [unique]
+    (job_id) [unique]
+    (company_id, status, submitted_at)
+  }
+}
+
+Table work_ticket_line_items {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  work_ticket_id uuid [not null, ref: > work_tickets.id]
+  item_code varchar(50)
+  description varchar(255) [not null]
+  quantity numeric(12,3) [not null, default: 1]
+  unit varchar(40)
+  unit_price numeric(12,2) [not null, default: 0]
+  amount numeric(12,2) [not null, default: 0]
+  sort_order int [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (work_ticket_id, sort_order)
+  }
+}
+
+Table rate_cards {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_id uuid [ref: > customers.id]
+  name varchar(150) [not null]
+  description text
+  effective_from date
+  effective_to date
+  is_default boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, customer_id, is_active)
+  }
+}
+
+Table rate_card_items {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  rate_card_id uuid [not null, ref: > rate_cards.id]
+  item_code varchar(50) [not null]
+  description varchar(255) [not null]
+  unit varchar(40) [not null]
+  unit_price numeric(12,2) [not null]
+  minimum_quantity numeric(12,3)
+  equipment_type equipment_type
+  overtime_after_hours numeric(8,2)
+  sort_order int [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (rate_card_id, item_code) [unique]
+  }
+}
+
+Table invoices {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_id uuid [not null, ref: > customers.id]
+  invoice_number varchar(50) [not null]
+  status invoice_status [not null, default: 'draft']
+  invoice_date date [not null]
+  due_date date
+  subtotal numeric(12,2) [not null, default: 0]
+  tax_amount numeric(12,2) [not null, default: 0]
+  discount_amount numeric(12,2) [not null, default: 0]
+  total_amount numeric(12,2) [not null, default: 0]
+  amount_paid numeric(12,2) [not null, default: 0]
+  balance_due numeric(12,2) [not null, default: 0]
+  purchase_order_number varchar(100)
+  billing_email varchar(255)
+  notes text
+  terms text
+  sent_at timestamptz
+  paid_at timestamptz
+  voided_at timestamptz
+  created_by_user_id uuid [ref: > app_users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, invoice_number) [unique]
+    (customer_id, status, due_date)
+    (company_id, status, due_date)
+  }
+}
+
+Table invoice_items {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  invoice_id uuid [not null, ref: > invoices.id]
+  job_id uuid [ref: > jobs.id]
+  work_ticket_id uuid [ref: > work_tickets.id]
+  item_code varchar(50)
+  description varchar(255) [not null]
+  quantity numeric(12,3) [not null, default: 1]
+  unit varchar(40)
+  unit_price numeric(12,2) [not null, default: 0]
+  tax_rate numeric(7,4) [not null, default: 0]
+  amount numeric(12,2) [not null, default: 0]
+  sort_order int [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (invoice_id, sort_order)
+    (job_id)
+  }
+}
+
+Table payments {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  customer_id uuid [not null, ref: > customers.id]
+  status payment_status [not null, default: 'pending']
+  method payment_method [not null]
+  payment_date date [not null]
+  amount numeric(12,2) [not null]
+  reference_number varchar(150)
+  processor varchar(80)
+  processor_payment_id varchar(200)
+  memo text
+  received_by_user_id uuid [ref: > app_users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, payment_date)
+    (customer_id, payment_date)
+    (processor, processor_payment_id) [unique]
+  }
+}
+
+Table payment_allocations {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  payment_id uuid [not null, ref: > payments.id]
+  invoice_id uuid [not null, ref: > invoices.id]
+  amount numeric(12,2) [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (payment_id, invoice_id) [unique]
+    (invoice_id)
+  }
+}
+
+Table equipment_inspections {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  equipment_id uuid [not null, ref: > equipment.id]
+  employee_id uuid [ref: > employees.id]
+  job_id uuid [ref: > jobs.id]
+  inspection_type varchar(100) [not null]
+  status inspection_status [not null, default: 'draft']
+  inspected_at timestamptz [not null, default: `now()`]
+  engine_hours numeric(12,2)
+  mileage numeric(12,2)
+  notes text
+  signed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (equipment_id, inspected_at)
+    (company_id, status, inspected_at)
+  }
+}
+
+Table inspection_items {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  inspection_id uuid [not null, ref: > equipment_inspections.id]
+  item_code varchar(50)
+  label varchar(255) [not null]
+  result varchar(40) [not null]
+  notes text
+  photo_path text
+  sort_order int [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (inspection_id, sort_order)
+  }
+}
+
+Table maintenance_work_orders {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  equipment_id uuid [not null, ref: > equipment.id]
+  work_order_number varchar(50) [not null]
+  status maintenance_status [not null, default: 'open']
+  priority maintenance_priority [not null, default: 'normal']
+  title varchar(200) [not null]
+  description text
+  reported_by_employee_id uuid [ref: > employees.id]
+  assigned_to_employee_id uuid [ref: > employees.id]
+  opened_at timestamptz [not null, default: `now()`]
+  scheduled_for timestamptz
+  started_at timestamptz
+  completed_at timestamptz
+  odometer_at_service numeric(12,2)
+  engine_hours_at_service numeric(12,2)
+  labor_hours numeric(8,2)
+  parts_cost numeric(12,2)
+  outside_service_cost numeric(12,2)
+  total_cost numeric(12,2)
+  vendor_name varchar(200)
+  resolution_notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, work_order_number) [unique]
+    (equipment_id, status, scheduled_for)
+  }
+}
+
+Table maintenance_parts {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  work_order_id uuid [not null, ref: > maintenance_work_orders.id]
+  part_number varchar(100)
+  description varchar(255) [not null]
+  quantity numeric(12,3) [not null, default: 1]
+  unit_cost numeric(12,2)
+  vendor_name varchar(200)
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (work_order_id)
+  }
+}
+
+Table employee_time_entries {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  employee_id uuid [not null, ref: > employees.id]
+  job_id uuid [ref: > jobs.id]
+  clock_in timestamptz [not null]
+  clock_out timestamptz
+  break_minutes int [not null, default: 0]
+  regular_hours numeric(8,2)
+  overtime_hours numeric(8,2)
+  notes text
+  approved_by_user_id uuid [ref: > app_users.id]
+  approved_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (employee_id, clock_in)
+    (job_id)
+  }
+}
+
+Table activity_log {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  actor_user_id uuid [ref: > app_users.id]
+  entity_type varchar(80) [not null]
+  entity_id uuid [not null]
+  action varchar(80) [not null]
+  summary text
+  metadata jsonb
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (company_id, created_at)
+    (entity_type, entity_id, created_at)
+  }
+}
+
+Table notifications {
+  id uuid [pk]
+  company_id uuid [not null, ref: > companies.id]
+  user_id uuid [not null, ref: > app_users.id]
+  type varchar(80) [not null]
+  title varchar(200) [not null]
+  body text
+  entity_type varchar(80)
+  entity_id uuid
+  read_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, read_at, created_at)
+  }
+}
