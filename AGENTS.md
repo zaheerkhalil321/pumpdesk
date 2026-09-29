@@ -1,297 +1,108 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# AGENTS.md
+# AGENTS.md — PumpDesk Master AI Instructions & Boundaries (2026 Edition)
 
-# PumpDesk
-
-This repository contains PumpDesk, a modern SaaS platform for concrete pumping companies.
-
-The goal is not to recreate CreteSuite.
-
-The goal is to build a faster, simpler, AI-first platform that operators and office staff actually enjoy using.
+PumpDesk is a modern SaaS platform for concrete pumping companies (target client: Midcoast Concrete Pumping).
+The goal is not to recreate CreteSuite. The goal is to build a faster, simpler, AI-first platform that operators and office staff actually enjoy using.
 
 ---
 
-# Design Philosophy
+## 1. Scope Governance (Strict V1 vs V2 Boundaries)
 
-Always prefer:
+Every new conversation tab MUST adhere to the following scope boundaries:
 
-- Simplicity
-- Readability
-- Consistency
-- Scalability
-- Accessibility
+### IN SCOPE (Phase 1 — Core Dispatch MVP):
+- **Schedule Board:** Gantt dispatch timeline grid (pumps lanes: 34M, 28M, 47M, Line pumps) with date navigator.
+- **Quick Order Booking:** 15-second Quick Order Drawer (Customer, Site, Pump size, Pour start time, Volume).
+- **Pour Orders Directory:** Master table with status filters (`Pending`, `Confirmed`, `Turned In`, `Cancelled`) and Order Dossier.
+- **CRM Master Directories:** Customers, Contacts & Superintendents, and Job Sites directories.
+- **Fleet & Crew:** Equipment list (Pumps with boom lengths) and Operator roster.
+- **Company Settings:** Midcoast Pumping profile, yard address, and base rate presets.
 
-Avoid unnecessary abstraction.
-
-If a simple solution works, prefer it over a clever one.
-
----
-
-# Technology
-
-Frontend
-
-- Next.js (App Router)
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-
-Backend
-
-- Supabase
-    - PostgreSQL
-    - Authentication
-    - Storage
-    - Row Level Security
-
-Infrastructure
-
-- GitHub
-- Vercel
+### STRICTLY OUT OF SCOPE (Deferred to Phase 2 / V2):
+- ❌ **Do NOT build** the Operator Native/PWA Mobile App (Phase 2).
+- ❌ **Do NOT build** QuickBooks Online two-way invoicing synchronization.
+- ❌ **Do NOT build** Stripe/ACH Customer Self-Service Payment Portal.
+- ❌ **Do NOT build** Live Uber-style GPS map telematics or tracking.
+*If the user asks about these, clarify that they are designated for Phase 2.*
 
 ---
 
-# Code Style
+## 2. Dependency Governance (Package Lock)
 
-Use TypeScript everywhere.
-
-Prefer:
-
-- named exports
-- functional components
-- async / await
-- server components
-
-Avoid:
-
-- any
-- deeply nested components
-- duplicated code
-- inline styles
-
-Every component should have a single responsibility.
+- **NEVER install or add new packages (`npm install`) without explicit user permission.**
+- Always build with the existing package roster:
+  - Framework: `next` (16.x App Router), `react` (19.x), `typescript` (5.x).
+  - UI & Styling: `tailwindcss` (v4), `shadcn/ui`, `lucide-react`, `sonner`.
+  - Forms & Validation: `react-hook-form`, `@hookform/resolvers`, `zod`.
+  - State & Dates: `nuqs`, `date-fns`, `date-fns-tz`.
+  - Database: `@supabase/supabase-js`.
+  - Testing: `@playwright/test`, `vitest`.
+- If a new package is genuinely needed, you MUST ask the user and receive confirmation BEFORE installing it.
 
 ---
 
-# Folder Structure
+## 3. Frontend & Styling Standards (Strict Invariants)
 
-src/
-
-app/
-components/
-features/
-hooks/
-lib/
-services/
-types/
-utils/
-
-Keep business logic out of page components whenever possible.
-
----
-
-# UI Guidelines
-
-PumpDesk should feel modern.
-
-Think:
-
-- Linear
-- Stripe Dashboard
-- Notion
-- Raycast
-
-Not:
-
-- Enterprise ERP
-- Windows desktop software
-- Outdated admin panels
-
-Use whitespace generously.
-
-Prefer fewer controls over more.
-
-Every screen should have a clear primary action.
+- **NEVER use inline styles (`style={{ ... }}`).** Inline styling is completely forbidden.
+- **Always use Tailwind CSS utility classes.**
+- **Conditional Classes:** Always use the `cn()` utility (`clsx` + `tailwind-merge`) from `@/lib/utils`.
+- **CSS Files Policy:**
+  - Do NOT create random, ad-hoc `.css` files across the codebase.
+  - All global tokens, color variables, and font settings live strictly in `src/app/globals.css` using Tailwind CSS v4 `@theme inline`.
+- **Colors & Theme:**
+  - Never hardcode colors (e.g., `#FF5500`, `#1E293B`, `rgb(...)`).
+  - Always use theme variables (`text-foreground`, `bg-card`, `border-border`, `text-muted-foreground`).
+  - Safety Orange accents use the standardized `orange-600` / `orange-500` tokens.
+- **UI Components:**
+  - Use ONLY the approved components from `@/components/ui/` (shadcn/ui primitives).
+  - Use `lucide-react` for all icons.
+- **No Emojis:** Never use emojis in UI buttons, tables, or labels. Use crisp vector SVGs from `lucide-react`.
 
 ---
 
-# Theme
+## 4. Code Style & Architecture
 
-Support both:
-
-- Light Mode
-- Dark Mode
-
-Never hardcode colors.
-
-Always use theme variables.
-
----
-
-# Database
-
-Database design lives in:
-
-docs/database.dbml
-
-Do not create or modify database tables before updating the DBML.
-
-The DBML is the source of truth.
-
-All operational tables should belong to a company.
-
-Use UUID primary keys.
-
-Never rely on sequential IDs.
+- **Language:** TypeScript everywhere in strict mode. Zero `any`.
+- **Components:**
+  - Functional components with named exports.
+  - Prefer Server Components by default. Use `"use client"` only when interactivity (hooks, state, event listeners) is required.
+  - Small, reusable, single-responsibility components.
+  - Keep business logic out of `page.tsx` routing files.
+- **Next.js 16 Standards:**
+  - `params` and `searchParams` in pages and layouts are Promises. Always `await params` and `await searchParams`.
+  - `cookies()` and `headers()` are Promises. Always `await cookies()`.
+- **Forms:** Always use `react-hook-form` paired with `zod` and `@hookform/resolvers`.
+- **Dates & Timezone:** Always format dates with `date-fns-tz` locked to `America/Chicago` (Central Time) to eliminate hydration mismatches.
 
 ---
 
-# Security
+## 5. Database Authority (Supabase & Multi-Tenancy)
 
-Never expose:
-
-- Service Role Keys
-- Secrets
-- API Keys
-
-Use Supabase Row Level Security.
-
-Assume the frontend is public.
-
----
-
-# AI Features
-
-PumpDesk is AI-first.
-
-When adding features, always consider whether AI can:
-
-- reduce clicks
-- automate repetitive work
-- improve scheduling
-- improve dispatch
-- predict maintenance
-- summarize notes
-
-AI should enhance workflows without getting in the user's way.
+- **Single Source of Truth:** `docs/pumpdesk-database.dbml`.
+  - Do NOT create or modify tables or columns before checking the DBML.
+- **Multi-Tenancy:** Every operational table MUST include `company_id` (UUID).
+- **Primary Keys:** Use UUID primary keys (`gen_random_uuid()`). Never rely on sequential integer IDs.
+- **Row Level Security (RLS):**
+  - Assume the frontend is public.
+  - All tables must have RLS enabled with subquery caching: `(SELECT auth.uid()) = user_id`.
+  - Never expose Supabase Service Role keys to the client.
+- **Soft Deletes:** Never run hard `DELETE` queries on core operational data (Pumps, Customers, Contacts, Orders). Always use `is_active: false` to preserve financial audit trails.
 
 ---
 
-# Naming
+## 6. Definition of Done (Quality Gates)
 
-Prefer descriptive names.
-
-Good
-
-Customer
-JobSite
-WorkTicket
-PumpAssignment
-
-Avoid abbreviations.
+Before concluding any development task, you MUST verify:
+1. `npm run lint` &rarr; 0 errors, 0 warnings.
+2. `npx tsc --noEmit` &rarr; 0 TypeScript errors.
+3. `npm run build` &rarr; Production build compiles cleanly.
+4. `npm run test:unit` &rarr; All unit tests pass.
 
 ---
 
-# Components
+## 7. Ultimate Goal
 
-Components should be:
-
-small
-
-reusable
-
-predictable
-
-Prefer composition over inheritance.
-
----
-
-# Forms
-
-Use:
-
-React Hook Form
-
-Zod
-
-Keep validation shared between client and server whenever possible.
-
----
-
-# State
-
-Use local state first.
-
-Introduce global state only when necessary.
-
-Avoid unnecessary complexity.
-
----
-
-# Error Handling
-
-Fail gracefully.
-
-Show meaningful errors.
-
-Never expose internal implementation details.
-
----
-
-# Performance
-
-Optimize for:
-
-fast page loads
-
-minimal JavaScript
-
-server rendering
-
-lazy loading when appropriate
-
-Avoid premature optimization.
-
-Readable code comes first.
-
----
-
-# Git
-
-Small commits.
-
-Descriptive commit messages.
-
-Example:
-
-feat(schedule): add drag and drop scheduling
-
-fix(invoice): resolve tax calculation
-
-refactor(customers): simplify contact editor
-
----
-
-# Documentation
-
-When adding major features:
-
-Update README.md if setup changes.
-
-Update database.dbml if schema changes.
-
-Document architectural decisions.
-
----
-
-# Goal
-
-Every feature should answer:
-
-Does this make a concrete pumping company faster?
-
-If not, reconsider the design.
-
-PumpDesk should become the simplest and most enjoyable concrete pumping platform available.
+Every feature should answer:  
+**Does this make a concrete pumping company (dispatcher Jessie) faster?**  
+If not, reconsider the design. PumpDesk should become the simplest, fastest, and most enjoyable concrete pumping platform available.
 <!-- END:nextjs-agent-rules -->
