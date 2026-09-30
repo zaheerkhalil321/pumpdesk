@@ -14,7 +14,6 @@ import {
   ChevronsUpDown,
   Check,
   Plus,
-  Search,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -244,51 +243,16 @@ export function AppSidebar() {
           </DropdownMenu>
         </div>
 
-        {/* 3. QUICK JUMP / COMMAND SEARCH (Linear/Raycast Pro SaaS Touch) */}
-        <div className={cn("mb-3 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
-          {isCollapsed ? (
-            <div className="relative group">
-              <button
-                type="button"
-                className="h-10 w-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors mx-auto cursor-pointer"
-                aria-label="Quick search"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-              <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 flex items-center gap-1.5">
-                <span>Quick search</span>
-                <kbd className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1 py-0.2 rounded border border-slate-700">
-                  ⌘K
-                </kbd>
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-slate-200/70 bg-slate-50/60 hover:bg-slate-100 hover:border-slate-300 text-xs text-slate-500 hover:text-slate-800 transition-all group cursor-pointer shadow-2xs"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Search className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
-                <span className="truncate">Jump to...</span>
-              </div>
-              <kbd className="text-[10px] font-mono bg-white text-slate-400 group-hover:text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">
-                ⌘K
-              </kbd>
-            </button>
-          )}
-        </div>
-
         {/* Section Divider / Label */}
         {!isCollapsed && (
-          <div className="px-4 pb-1">
+          <div className="px-3.5 pb-1.5 pt-1">
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
               Dispatch & Ops
             </p>
           </div>
         )}
 
-        {/* 4. NAVIGATION LINKS */}
+        {/* 3. NAVIGATION LINKS */}
         <nav className={cn("space-y-1 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -303,7 +267,7 @@ export function AppSidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "h-10 w-10 mx-auto rounded-xl flex items-center justify-center transition-all duration-150 relative",
+                      "h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative",
                       isActive
                         ? "bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs"
                         : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/80"
@@ -343,15 +307,15 @@ export function AppSidebar() {
                 key={item.title}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-xl font-medium transition-all duration-150 group relative px-3 py-2 text-sm",
+                  "flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm",
                   isActive
                     ? "bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs"
                     : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/70"
                 )}
               >
-                {/* Left Active Indicator Bar (Linear/Vercel Anchor) */}
+                {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
                 {isActive && (
-                  <span className="absolute left-1 top-2 bottom-2 w-1 rounded-full bg-[#0D7A7F]" />
+                  <span className="absolute left-1.5 top-2.5 bottom-2.5 w-1 rounded-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
                 )}
 
                 <Icon

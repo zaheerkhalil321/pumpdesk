@@ -128,3 +128,23 @@
     @apply font-sans;
   }
 }
+
+@keyframes expandVertical {
+  0% {
+    transform: scaleY(0);
+    opacity: 0.2;
+  }
+  70% {
+    transform: scaleY(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.animate-expand-vertical {
+  transform-origin: center;
+  animation: expandVertical 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
