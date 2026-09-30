@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Calendar,
   FileText,
@@ -11,13 +11,13 @@ import {
   // Truck,
   // Receipt,
   Settings,
-  ChevronsUpDown,
+  ChevronDown,
   Check,
   Plus,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+  ChevronsLeftRight,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,45 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
+
+interface YardLocation {
+  id: string;
+  companyName: string;
+  yardName: string;
+  code: string;
+  location: string;
+  isHQ?: boolean;
+  pumpCount: number;
+}
+
+const dummyYards: YardLocation[] = [
+  {
+    id: 'yard-1',
+    companyName: 'Midcoast Pumping',
+    yardName: 'Warren Yard (HQ)',
+    code: 'MC',
+    location: 'Warren, Maine',
+    isHQ: true,
+    pumpCount: 4,
+  },
+  {
+    id: 'yard-2',
+    companyName: 'Midcoast South',
+    yardName: 'Portland Terminal',
+    code: 'MS',
+    location: 'Portland, Maine',
+    pumpCount: 2,
+  },
+  {
+    id: 'yard-3',
+    companyName: 'Midcoast North',
+    yardName: 'Bangor Staging',
+    code: 'MN',
+    location: 'Bangor, Maine',
+    pumpCount: 1,
+  },
+];
 
 interface NavItem {
   title: string;
@@ -38,26 +76,26 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    title: "Schedule",
-    href: "/schedule",
+    title: 'Schedule',
+    href: '/schedule',
     icon: Calendar,
     isLive: true,
   },
   {
-    title: "Orders",
-    href: "/orders",
+    title: 'Orders',
+    href: '/orders',
     icon: FileText,
-    badge: "12",
+    badge: '12',
   },
   {
-    title: "Customers",
-    href: "/customers",
+    title: 'Customers',
+    href: '/customers',
     icon: Users,
     matchPrefix: true,
   },
   {
-    title: "Contacts",
-    href: "/contacts",
+    title: 'Contacts',
+    href: '/contacts',
     icon: Contact,
   },
   /*
@@ -78,6 +116,8 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedYard, setSelectedYard] = useState<YardLocation>(dummyYards[0]);
+  const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
 
   // Keyboard shortcut: Pressing '[' or 'Cmd/Ctrl + B' toggles the sidebar
   const toggleCollapse = useCallback(() => {
@@ -89,153 +129,174 @@ export function AppSidebar() {
       const target = e.target as HTMLElement | null;
       if (
         target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
           target.isContentEditable)
       ) {
         return;
       }
-      if (e.key === "[" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b")) {
+      if (
+        e.key === '[' ||
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b')
+      ) {
         e.preventDefault();
         toggleCollapse();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleCollapse]);
 
   return (
     <aside
       className={cn(
-        "relative border-r border-slate-200/90 bg-white flex flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-20",
-        isCollapsed ? "w-[68px]" : "w-64"
+        'relative border-r border-slate-200/90 bg-white flex flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-20',
+        isCollapsed ? 'w-[68px]' : 'w-64',
       )}
     >
+      {/* ── Floating Squircle Border Toggle Button (< >) Exactly As User Requested ── */}
+      <button
+        type="button"
+        onClick={toggleCollapse}
+        className="absolute -right-3 top-4.5 h-6 w-6 rounded-md border border-slate-200 bg-white shadow-xs flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 z-30 cursor-pointer hover:scale-105 active:scale-95"
+        title={isCollapsed ? 'Expand sidebar ( [ )' : 'Collapse sidebar ( [ )'}
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <ChevronsLeftRight className="h-3.5 w-3.5 text-slate-700" />
+      </button>
+
       {/* ── Top Area: Brand, Workspace Switcher, Nav Links ── */}
       <div className="flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
-        {/* 1. BRAND HEADER & INTEGRATED TOGGLE (Linear/Supabase 2026 Style) */}
+        {/* 1. BRAND HEADER */}
         <div
           className={cn(
-            "h-15 flex items-center border-b border-slate-100 transition-all duration-300",
-            isCollapsed ? "justify-center px-2" : "justify-between px-3.5"
+            'h-15 flex items-center border-b border-slate-100 transition-all duration-300',
+            isCollapsed ? 'justify-center px-2' : 'px-3.5 gap-2.5',
           )}
         >
-          {isCollapsed ? (
-            /* Collapsed: Sleek expand button */
-            <div className="relative group">
-              <button
-                type="button"
-                onClick={toggleCollapse}
-                className="h-9 w-9 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-2xs active:scale-95"
-                aria-label="Expand sidebar"
-              >
-                <PanelLeftOpen className="h-4.5 w-4.5" />
-              </button>
-              {/* Rail Tooltip */}
-              <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 flex items-center gap-1.5">
-                <span>Expand sidebar</span>
-                <kbd className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1 py-0.2 rounded border border-slate-700">
-                  [
-                </kbd>
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
-              </div>
-            </div>
-          ) : (
-            /* Expanded: Brand title with status tag & collapse toggle */
-            <>
-              <div className="flex items-center gap-2.5 min-w-0">
-                {/* Logo Mark: Deep slate squircle with emerald accent */}
-                <div className="h-8.5 w-8.5 rounded-xl bg-slate-950 flex items-center justify-center shadow-xs shrink-0 ring-1 ring-white/10">
-                  <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none pl-0.5">
-                    P<span className="text-emerald-400">.</span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-bold text-[17px] tracking-tight text-slate-900 truncate">
-                    PumpDesk
-                  </span>
-                  <span className="text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
-                    PRO
-                  </span>
-                </div>
-              </div>
+          {/* Logo Mark: Deep slate squircle with emerald accent */}
+          <div className="h-8.5 w-8.5 rounded-[8px] bg-slate-950 flex items-center justify-center shadow-xs shrink-0 ring-1 ring-white/10">
+            <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none pl-0.5">
+              P<span className="text-emerald-400">.</span>
+            </span>
+          </div>
 
-              {/* In-Header Collapse Trigger */}
-              <div className="relative group">
-                <button
-                  type="button"
-                  onClick={toggleCollapse}
-                  className="h-8 w-8 rounded-lg border border-slate-200/60 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all cursor-pointer shadow-2xs active:scale-95"
-                  aria-label="Collapse sidebar"
-                >
-                  <PanelLeftClose className="h-4 w-4" />
-                </button>
-                {/* Header Tooltip */}
-                <div className="pointer-events-none absolute right-0 top-full mt-2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 flex items-center gap-1.5">
-                  <span>Collapse sidebar</span>
-                  <kbd className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1 py-0.2 rounded border border-slate-700">
-                    [
-                  </kbd>
-                </div>
-              </div>
-            </>
+          {!isCollapsed && (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-bold text-[17px] tracking-tight text-slate-900 truncate">
+                PumpDesk
+              </span>
+              <span className="text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                PRO
+              </span>
+            </div>
           )}
         </div>
 
         {/* 2. WORKSPACE / BRANCH SELECTOR */}
-        <div className={cn("mt-3 mb-2 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
-          <DropdownMenu>
+        <div
+          className={cn(
+            'mt-3 mb-2 transition-all duration-300',
+            isCollapsed ? 'px-2' : 'px-3',
+          )}
+        >
+          <DropdownMenu open={isYardMenuOpen} onOpenChange={setIsYardMenuOpen}>
             <DropdownMenuTrigger
               className={cn(
-                "w-full flex items-center rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/70 hover:border-slate-300 transition-all duration-150 cursor-pointer group text-left shadow-2xs outline-none",
+                'w-full flex items-center rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/70 hover:border-slate-300 transition-all duration-150 cursor-pointer group text-left shadow-2xs outline-none',
                 isCollapsed
-                  ? "h-10 w-10 justify-center p-0 mx-auto"
-                  : "justify-between p-2"
+                  ? 'h-10 w-10 justify-center p-0 mx-auto'
+                  : 'justify-between p-2',
               )}
+              title={
+                isCollapsed
+                  ? `${selectedYard.companyName} (${selectedYard.yardName})`
+                  : undefined
+              }
             >
-              <div className={cn("flex items-center min-w-0", isCollapsed ? "justify-center" : "gap-2.5")}>
+              <div
+                className={cn(
+                  'flex items-center min-w-0',
+                  isCollapsed ? 'justify-center' : 'gap-2.5',
+                )}
+              >
                 {/* Monogram Badge */}
-                <div className="h-7.5 w-7.5 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs ring-1 ring-slate-800">
-                  MC
+                <div className="h-7.5 w-7.5 rounded-[8px] bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs ring-1 ring-slate-800 transition-colors">
+                  {selectedYard.code}
                 </div>
 
                 {!isCollapsed && (
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-xs text-slate-800 truncate group-hover:text-[#0D7A7F] transition-colors leading-tight">
-                      Midcoast Pumping
+                      {selectedYard.companyName}
                     </p>
                     <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      Warren Yard (HQ)
+                      {selectedYard.yardName}
                     </p>
                   </div>
                 )}
               </div>
 
               {!isCollapsed && (
-                <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-colors shrink-0 ml-1" />
+                <ChevronDown
+                  className={cn(
+                    'h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 shrink-0 ml-1 ease-out',
+                    isYardMenuOpen && 'rotate-180',
+                  )}
+                />
               )}
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="start" className="w-58 p-1.5 rounded-xl shadow-lg border-slate-200">
+            <DropdownMenuContent
+              align="start"
+              className="w-60 p-1.5 rounded-xl shadow-lg border-slate-200"
+            >
               <DropdownMenuLabel className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">
                 Dispatch Yards
               </DropdownMenuLabel>
-              <DropdownMenuItem className="flex items-center justify-between p-2 rounded-lg cursor-pointer bg-slate-100/80 font-medium text-xs">
-                <div>
-                  <p className="font-semibold text-slate-900">Midcoast Pumping</p>
-                  <p className="text-[11px] text-slate-500">Warren Yard (Main HQ)</p>
-                </div>
-                <Check className="h-4 w-4 text-[#0D7A7F]" />
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-slate-100 text-xs text-slate-600 hover:text-slate-900">
-                <div>
-                  <p className="font-medium">Midcoast South</p>
-                  <p className="text-[11px] text-slate-500">Portland Terminal</p>
-                </div>
-              </DropdownMenuItem>
+              {dummyYards.map((yard) => {
+                const isSelected = selectedYard.id === yard.id;
+                return (
+                  <DropdownMenuItem
+                    key={yard.id}
+                    onClick={() => {
+                      setSelectedYard(yard);
+                      toast.success(`Active yard: ${yard.yardName}`, {
+                        description: `${yard.companyName} (${yard.location}) • ${yard.pumpCount} pumps assigned`,
+                      });
+                    }}
+                    className={cn(
+                      'flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition-colors',
+                      isSelected
+                        ? 'bg-slate-100/90 font-medium text-slate-900'
+                        : 'hover:bg-slate-100/60 text-slate-600 hover:text-slate-900',
+                    )}
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {yard.companyName}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {yard.yardName} {yard.isHQ && '• Main HQ'}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <Check className="h-4 w-4 text-[#0D7A7F] shrink-0 ml-2" />
+                    )}
+                  </DropdownMenuItem>
+                );
+              })}
               <DropdownMenuSeparator className="my-1" />
-              <DropdownMenuItem className="flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs text-[#0D7A7F] font-medium hover:bg-[#E6F7F5]">
+              <DropdownMenuItem
+                onClick={() => {
+                  toast.info('Add Yard Location', {
+                    description:
+                      'Yard terminal management is configured in Company Settings.',
+                  });
+                }}
+                className="flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs text-[#0D7A7F] font-medium hover:bg-[#E6F7F5]"
+              >
                 <Plus className="h-3.5 w-3.5" />
                 Add Yard Location
               </DropdownMenuItem>
@@ -253,7 +314,12 @@ export function AppSidebar() {
         )}
 
         {/* 3. NAVIGATION LINKS */}
-        <nav className={cn("space-y-1 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
+        <nav
+          className={cn(
+            'space-y-1 transition-all duration-300',
+            isCollapsed ? 'px-2' : 'px-3',
+          )}
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.matchPrefix
@@ -267,10 +333,10 @@ export function AppSidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative",
+                      'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
                       isActive
-                        ? "bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs"
-                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/80"
+                        ? 'bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80',
                     )}
                   >
                     <Icon className="h-4.5 w-4.5 shrink-0" />
@@ -307,23 +373,23 @@ export function AppSidebar() {
                 key={item.title}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden",
+                  'flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden',
                   isActive
-                    ? "bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs"
-                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/70"
+                    ? 'bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/70',
                 )}
               >
                 {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-[4px] rounded-r-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
+                  <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
                 )}
 
                 <Icon
                   className={cn(
-                    "h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5",
+                    'h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5',
                     isActive
-                      ? "text-[#0D7A7F]"
-                      : "text-slate-400 group-hover:text-slate-700"
+                      ? 'text-[#0D7A7F]'
+                      : 'text-slate-400 group-hover:text-slate-700',
                   )}
                 />
                 <span className="truncate">{item.title}</span>
@@ -339,10 +405,10 @@ export function AppSidebar() {
                 {item.badge && (
                   <span
                     className={cn(
-                      "ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0",
+                      'ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0',
                       isActive
-                        ? "bg-[#0D7A7F] text-white"
-                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                        ? 'bg-[#0D7A7F] text-white'
+                        : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700',
                     )}
                   >
                     {item.badge}
@@ -357,8 +423,8 @@ export function AppSidebar() {
       {/* ── Bottom Portion: User Profile Dock & Quick Settings ── */}
       <div
         className={cn(
-          "border-t border-slate-200/80 bg-slate-50/50 transition-all duration-300 shrink-0",
-          isCollapsed ? "p-2 pb-6" : "p-3 pb-4"
+          'border-t border-slate-200/80 bg-slate-50/50 transition-all duration-300 shrink-0',
+          isCollapsed ? 'p-2 pb-6' : 'p-3 pb-4',
         )}
       >
         {isCollapsed ? (
