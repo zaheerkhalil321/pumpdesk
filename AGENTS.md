@@ -63,11 +63,12 @@ Every new conversation tab MUST adhere to the following scope boundaries:
 ## 4. Code Style & Architecture
 
 - **Language:** TypeScript everywhere in strict mode. Zero `any`.
-- **Components:**
+- **Components & Modularity:**
+  - **Always build small, reusable, single-responsibility components.** Never dump monolithic blocks of UI or logic into `page.tsx` routing files.
+  - Structure feature components cleanly in dedicated directories (e.g., `src/components/schedule/`).
+  - Always use reusable design system patterns, Tailwind utility classes, and approved UI primitives from `@/components/ui/`.
   - Functional components with named exports.
   - Prefer Server Components by default. Use `"use client"` only when interactivity (hooks, state, event listeners) is required.
-  - Small, reusable, single-responsibility components.
-  - Keep business logic out of `page.tsx` routing files.
 - **Next.js 16 Standards:**
   - `params` and `searchParams` in pages and layouts are Promises. Always `await params` and `await searchParams`.
   - `cookies()` and `headers()` are Promises. Always `await cookies()`.

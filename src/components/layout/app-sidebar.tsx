@@ -227,7 +227,7 @@ export function AppSidebar() {
 
                 {!isCollapsed && (
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-xs text-slate-800 truncate group-hover:text-[#0D7A7F] transition-colors leading-tight">
+                    <p className="font-bold text-xs text-slate-800 truncate group-hover:text-[#0D7A7F] transition-colors leading-tight">
                       {selectedYard.companyName}
                     </p>
                     <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
@@ -305,18 +305,11 @@ export function AppSidebar() {
         </div>
 
         {/* Section Divider / Label */}
-        {!isCollapsed && (
-          <div className="px-3.5 pb-1.5 pt-1">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Dispatch & Ops
-            </p>
-          </div>
-        )}
 
         {/* 3. NAVIGATION LINKS */}
         <nav
           className={cn(
-            'space-y-1 transition-all duration-300',
+            'space-y-1 transition-all duration-300 py-1',
             isCollapsed ? 'px-2' : 'px-3',
           )}
         >
@@ -477,11 +470,11 @@ export function AppSidebar() {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="font-semibold text-xs text-slate-800 truncate leading-tight group-hover:text-[#0D7A7F] transition-colors">
+                  <p className="font-bold text-xs text-slate-800 truncate leading-tight group-hover:text-[#0D7A7F] transition-colors">
                     Jessie Black
                   </p>
                   <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
-                    Dispatcher • On Duty
+                    Dispatcher
                   </p>
                 </div>
               </Link>
@@ -497,14 +490,8 @@ export function AppSidebar() {
             </div>
 
             {/* Micro Version Meta */}
-            <div className="flex items-center justify-between px-1 text-[10px] text-slate-400 font-mono">
-              <span>v1.0 Dispatcher</span>
-              <span className="flex items-center gap-1">
-                <kbd className="bg-white border border-slate-200 px-1 rounded text-[9px]">
-                  [
-                </kbd>
-                <span>toggle</span>
-              </span>
+            <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-mono">
+              <span>v1.0 Pumpdesk 2026</span>
             </div>
           </div>
         )}
