@@ -68,6 +68,7 @@ export default function SchedulePage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerInitialPump, setDrawerInitialPump] = useState<string | undefined>();
   const [drawerInitialHour, setDrawerInitialHour] = useState<number | undefined>();
+  const [editingBooking, setEditingBooking] = useState<ScheduleBooking | null>(null);
 
   // Filtered pumps based on dropdown selections
   const filteredPumps = INITIAL_PUMPS.filter((pump) => {
@@ -89,6 +90,7 @@ export default function SchedulePage() {
   });
 
   const handleOpenNewBooking = (pumpId?: string, hour?: number) => {
+    setEditingBooking(null);
     setDrawerInitialPump(pumpId || INITIAL_PUMPS[0]?.id);
     setDrawerInitialHour(hour || 7);
     setIsDrawerOpen(true);
@@ -96,6 +98,14 @@ export default function SchedulePage() {
 
   const handleAddBooking = (newBooking: ScheduleBooking) => {
     setBookings((prev) => [...prev, newBooking]);
+  };
+
+  const handleUpdateBooking = (updated: ScheduleBooking) => {
+    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
   };
 
   const handleRescheduleBooking = (
@@ -127,9 +137,8 @@ export default function SchedulePage() {
   };
 
   const handleBookingClick = (booking: ScheduleBooking) => {
-    toast.info(`Order ${booking.orderNumber}`, {
-      description: `${booking.customerName} at ${booking.jobSiteName} (${booking.volumeYards} yd³ • ${booking.durationHours}h)`,
-    });
+    setEditingBooking(booking);
+    setIsDrawerOpen(true);
   };
 
   return (
@@ -178,14 +187,17 @@ export default function SchedulePage() {
       {/* ── 6. Bottom Helper & Legend Bar ── */}
       <ScheduleLegend />
 
-      {/* ── 7. Quick Order Booking Drawer (15-second dispatcher flow) ── */}
+      {/* ── 7. Quick Order Booking Drawer (15-second dispatcher flow with Edit/Delete) ── */}
       <QuickBookingDrawer
         isOpen={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
         pumps={INITIAL_PUMPS}
         initialPumpId={drawerInitialPump}
         initialHour={drawerInitialHour}
+        editingBooking={editingBooking}
         onAddBooking={handleAddBooking}
+        onUpdateBooking={handleUpdateBooking}
+        onDeleteBooking={handleDeleteBooking}
       />
     </div>
   );

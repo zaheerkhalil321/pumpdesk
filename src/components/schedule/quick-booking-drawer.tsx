@@ -12,17 +12,18 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { PumpLane, ScheduleBooking } from "./schedule-types";
+import { BookingStatus, PumpLane, ScheduleBooking } from "./schedule-types";
 import { toast } from "sonner";
-import { Clock, HardHat, MapPin, Truck } from "lucide-react";
+import { Clock, HardHat, MapPin, Truck, Trash2, Activity } from "lucide-react";
 
 const bookingSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
   jobSiteName: z.string().min(2, "Job site name is required"),
   pumpId: z.string().min(1, "Please select a pump"),
   startHour: z.number().min(5).max(17),
-  durationHours: z.number().min(1).max(10),
+  durationHours: z.number().min(1).max(12),
   volumeYards: z.number().min(1, "Volume is required"),
+  status: z.enum(["travel", "onsite", "washout"]),
 });
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
@@ -33,7 +34,10 @@ interface QuickBookingDrawerProps {
   pumps: PumpLane[];
   initialPumpId?: string;
   initialHour?: number;
+  editingBooking?: ScheduleBooking | null;
   onAddBooking: (booking: ScheduleBooking) => void;
+  onUpdateBooking?: (booking: ScheduleBooking) => void;
+  onDeleteBooking?: (bookingId: string) => void;
 }
 
 export function QuickBookingDrawer({
@@ -42,8 +46,13 @@ export function QuickBookingDrawer({
   pumps,
   initialPumpId,
   initialHour,
+  editingBooking,
   onAddBooking,
+  onUpdateBooking,
+  onDeleteBooking,
 }: QuickBookingDrawerProps) {
+  const isEditMode = Boolean(editingBooking);
+
   const {
     register,
     handleSubmit,
@@ -59,54 +68,119 @@ export function QuickBookingDrawer({
       startHour: initialHour || 7,
       durationHours: 3,
       volumeYards: 120,
+      status: "onsite",
     },
   });
 
   useEffect(() => {
     if (isOpen) {
-      if (initialPumpId) setValue("pumpId", initialPumpId);
-      if (initialHour) setValue("startHour", initialHour);
+      if (editingBooking) {
+        setValue("customerName", editingBooking.customerName);
+        setValue("jobSiteName", editingBooking.jobSiteName);
+        setValue("pumpId", editingBooking.pumpId);
+        setValue("startHour", editingBooking.startHour);
+        setValue("durationHours", editingBooking.durationHours);
+        setValue("volumeYards", editingBooking.volumeYards);
+        setValue("status", editingBooking.status);
+      } else {
+        setValue("customerName", "");
+        setValue("jobSiteName", "");
+        setValue("pumpId", initialPumpId || pumps[0]?.id || "");
+        setValue("startHour", initialHour || 7);
+        setValue("durationHours", 3);
+        setValue("volumeYards", 120);
+        setValue("status", "onsite");
+      }
     }
-  }, [isOpen, initialPumpId, initialHour, setValue]);
+  }, [isOpen, editingBooking, initialPumpId, initialHour, pumps, setValue]);
 
   const onSubmit = (data: BookingFormValues) => {
     const selectedPump = pumps.find((p) => p.id === data.pumpId);
-    const uniqueId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "booking-new";
-    const shortCode = uniqueId.slice(0, 4).toUpperCase();
-    const newBooking: ScheduleBooking = {
-      id: `ord-${uniqueId}`,
-      orderNumber: `ORD-${shortCode}`,
-      pumpId: data.pumpId,
-      customerName: data.customerName,
-      jobSiteName: data.jobSiteName,
-      startHour: data.startHour,
-      durationHours: data.durationHours,
-      volumeYards: data.volumeYards,
-      status: "onsite",
-    };
 
-    onAddBooking(newBooking);
-    toast.success("Booking Created (15s Dispatch)", {
-      description: `${data.customerName} on ${selectedPump?.code || "Pump"} at ${data.startHour}:00 AM`,
-    });
+    if (editingBooking && onUpdateBooking) {
+      const updatedBooking: ScheduleBooking = {
+        ...editingBooking,
+        customerName: data.customerName,
+        jobSiteName: data.jobSiteName,
+        pumpId: data.pumpId,
+        startHour: data.startHour,
+        durationHours: data.durationHours,
+        volumeYards: data.volumeYards,
+        status: data.status as BookingStatus,
+      };
+
+      onUpdateBooking(updatedBooking);
+      toast.success("Booking Updated", {
+        description: `${data.customerName} on ${selectedPump?.code || "Pump"} (${data.durationHours}h)`,
+      });
+    } else {
+      const uniqueId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : "booking-new";
+      const shortCode = uniqueId.slice(0, 4).toUpperCase();
+      const newBooking: ScheduleBooking = {
+        id: `ord-${uniqueId}`,
+        orderNumber: `ORD-${shortCode}`,
+        pumpId: data.pumpId,
+        customerName: data.customerName,
+        jobSiteName: data.jobSiteName,
+        startHour: data.startHour,
+        durationHours: data.durationHours,
+        volumeYards: data.volumeYards,
+        status: data.status as BookingStatus,
+      };
+
+      onAddBooking(newBooking);
+      toast.success("Booking Created (15s Dispatch)", {
+        description: `${data.customerName} on ${selectedPump?.code || "Pump"} at ${data.startHour}:00 AM`,
+      });
+    }
+
     reset();
     onOpenChange(false);
   };
 
+  const handleDelete = () => {
+    if (editingBooking && onDeleteBooking) {
+      onDeleteBooking(editingBooking.id);
+      toast.info("Booking Cancelled", {
+        description: `Order ${editingBooking.orderNumber} was removed from the schedule.`,
+      });
+      onOpenChange(false);
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-6 bg-white flex flex-col justify-between">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md p-6 bg-white flex flex-col justify-between"
+      >
         <div>
           <SheetHeader className="p-0 pb-4 border-b border-slate-200">
-            <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight">
-              Quick Order Booking
-            </SheetTitle>
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight">
+                {isEditMode ? `Edit Order • ${editingBooking?.orderNumber}` : "Quick Order Booking"}
+              </SheetTitle>
+              {isEditMode && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0D7A7F] bg-[#E6F7F5] px-2 py-0.5 rounded-full">
+                  Active Pour
+                </span>
+              )}
+            </div>
             <SheetDescription className="text-xs text-slate-500">
-              Book a pour order in under 15 seconds. Assign equipment and time slot.
+              {isEditMode
+                ? "Update rig assignment, duration, or volume for this pour order."
+                : "Book a pour order in under 15 seconds. Assign equipment and time slot."}
             </SheetDescription>
           </SheetHeader>
 
-          <form id="quick-booking-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-5">
+          <form
+            id="quick-booking-form"
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4 pt-5"
+          >
             {/* Customer Name */}
             <div>
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
@@ -119,7 +193,9 @@ export function QuickBookingDrawer({
                 className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
               />
               {errors.customerName && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.customerName.message}</p>
+                <p className="text-[11px] text-red-500 mt-1">
+                  {errors.customerName.message}
+                </p>
               )}
             </div>
 
@@ -135,7 +211,9 @@ export function QuickBookingDrawer({
                 className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
               />
               {errors.jobSiteName && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.jobSiteName.message}</p>
+                <p className="text-[11px] text-red-500 mt-1">
+                  {errors.jobSiteName.message}
+                </p>
               )}
             </div>
 
@@ -156,7 +234,9 @@ export function QuickBookingDrawer({
                 ))}
               </select>
               {errors.pumpId && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.pumpId.message}</p>
+                <p className="text-[11px] text-red-500 mt-1">
+                  {errors.pumpId.message}
+                </p>
               )}
             </div>
 
@@ -181,13 +261,13 @@ export function QuickBookingDrawer({
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1 block">
-                  Est. Duration (Hours)
+                  Duration (Hours)
                 </label>
                 <select
                   {...register("durationHours", { valueAsNumber: true })}
                   className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all cursor-pointer"
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((d) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((d) => (
                     <option key={d} value={d}>
                       {d} {d === 1 ? "hour" : "hours"}
                     </option>
@@ -196,42 +276,96 @@ export function QuickBookingDrawer({
               </div>
             </div>
 
-            {/* Estimated Yards */}
-            <div>
-              <label className="text-xs font-semibold text-slate-700 mb-1 block">
-                Estimated Volume (Yards &bull; yd³)
-              </label>
-              <input
-                type="number"
-                {...register("volumeYards", { valueAsNumber: true })}
-                placeholder="120"
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
-              />
-              {errors.volumeYards && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.volumeYards.message}</p>
-              )}
+            {/* Estimated Yards & Pour Status */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 mb-1 block">
+                  Volume (yd³)
+                </label>
+                <input
+                  type="number"
+                  {...register("volumeYards", { valueAsNumber: true })}
+                  placeholder="120"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
+                />
+                {errors.volumeYards && (
+                  <p className="text-[11px] text-red-500 mt-1">
+                    {errors.volumeYards.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
+                  <Activity className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Status</span>
+                </label>
+                <select
+                  {...register("status")}
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all cursor-pointer"
+                >
+                  <option value="onsite">On site (Active Pour)</option>
+                  <option value="travel">Travel (En Route)</option>
+                  <option value="washout">Washout & return</option>
+                </select>
+              </div>
             </div>
           </form>
         </div>
 
         {/* Footer Actions */}
-        <div className="pt-4 border-t border-slate-200 flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 h-9 rounded-lg border-slate-200 text-xs text-slate-600 hover:text-slate-900"
-          >
-            Cancel
-          </Button>
-          <Button
-            form="quick-booking-form"
-            type="submit"
-            disabled={isSubmitting}
-            className="flex-1 h-9 rounded-lg bg-[#0D7A7F] hover:bg-[#0B6569] text-white text-xs font-semibold shadow-2xs"
-          >
-            Confirm Booking
-          </Button>
+        <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+          {isEditMode ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleDelete}
+                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-medium gap-1.5 rounded-lg"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="h-9 px-3 rounded-lg border-slate-200 text-xs text-slate-600 hover:text-slate-900"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  form="quick-booking-form"
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-9 px-4 rounded-lg bg-[#0D7A7F] hover:bg-[#0B6569] text-white text-xs font-semibold shadow-2xs"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="flex-1 h-9 rounded-lg border-slate-200 text-xs text-slate-600 hover:text-slate-900"
+              >
+                Cancel
+              </Button>
+              <Button
+                form="quick-booking-form"
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 h-9 rounded-lg bg-[#0D7A7F] hover:bg-[#0B6569] text-white text-xs font-semibold shadow-2xs"
+              >
+                Confirm Booking
+              </Button>
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>
