@@ -315,7 +315,7 @@ export function AppSidebar() {
               >
                 {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
                 {isActive && (
-                  <span className="absolute left-1.5 top-2 bottom-2 w-[3px] rounded-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
+                  <span className="absolute left-1.5 top-2 bottom-2 w-[4px] rounded-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
                 )}
 
                 <Icon
