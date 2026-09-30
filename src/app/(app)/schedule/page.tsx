@@ -98,9 +98,37 @@ export default function SchedulePage() {
     setBookings((prev) => [...prev, newBooking]);
   };
 
+  const handleRescheduleBooking = (
+    bookingId: string,
+    targetPumpId: string,
+    targetStartHour: number
+  ) => {
+    const targetPump = INITIAL_PUMPS.find((p) => p.id === targetPumpId);
+    const hourLabel =
+      targetStartHour <= 12
+        ? `${targetStartHour}:00 AM`
+        : `${targetStartHour - 12}:00 PM`;
+
+    setBookings((prev) =>
+      prev.map((b) => {
+        if (b.id === bookingId) {
+          toast.success("Job Rescheduled (Drag & Drop)", {
+            description: `${b.customerName} moved to ${targetPump?.code || "Pump"} at ${hourLabel}`,
+          });
+          return {
+            ...b,
+            pumpId: targetPumpId,
+            startHour: targetStartHour,
+          };
+        }
+        return b;
+      })
+    );
+  };
+
   const handleBookingClick = (booking: ScheduleBooking) => {
     toast.info(`Order ${booking.orderNumber}`, {
-      description: `${booking.customerName} at ${booking.jobSiteName} (${booking.volumeYards} yd³)`,
+      description: `${booking.customerName} at ${booking.jobSiteName} (${booking.volumeYards} yd³ • ${booking.durationHours}h)`,
     });
   };
 
@@ -127,12 +155,13 @@ export default function SchedulePage() {
         onSelectOperator={setSelectedOperator}
       />
 
-      {/* ── 3. Gantt Timeline Grid (5 AM - 5 PM, 4 Rigs, Interactive hover slots) ── */}
+      {/* ── 3. Gantt Timeline Grid (5 AM - 5 PM, 4 Rigs, Drag & Drop + Multi-Hour Spanning) ── */}
       <TimelineGrid
         pumps={filteredPumps}
         bookings={filteredBookings}
         onSlotClick={(pumpId, hour) => handleOpenNewBooking(pumpId, hour)}
         onBookingClick={handleBookingClick}
+        onRescheduleBooking={handleRescheduleBooking}
       />
 
       {/* ── 4. Empty State Card (Visible when schedule is clear for the day) ── */}
