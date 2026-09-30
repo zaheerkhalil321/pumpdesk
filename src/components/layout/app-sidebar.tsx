@@ -315,12 +315,12 @@ export function AppSidebar() {
               >
                 {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
                 {isActive && (
-                  <span className="absolute left-1.5 top-2.5 bottom-2.5 w-1 rounded-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
+                  <span className="absolute left-1.5 top-2 bottom-2 w-[3px] rounded-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
                 )}
 
                 <Icon
                   className={cn(
-                    "h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5",
+                    "h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5 ml-0.5",
                     isActive
                       ? "text-[#0D7A7F]"
                       : "text-slate-400 group-hover:text-slate-700"
