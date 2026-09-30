@@ -6,6 +6,16 @@ The goal is not to recreate CreteSuite. The goal is to build a faster, simpler, 
 
 ---
 
+## 0. Git & Deployment Governance (STRICT INVARIANT)
+
+- 🚨 **NEVER RUN `git push` WITHOUT EXPLICIT USER PERMISSION.** 🚨
+- Running `git push` automatically, proactively, or as part of a task completion is **STRICTLY FORBIDDEN**.
+- You may ONLY run `git push` if the user explicitly writes a direct command in their prompt (e.g. "push", "git push", "push the code").
+- Even if all tests pass, builds compile, and commits are made locally, **KEEP ALL CHANGES LOCAL**. Never push to remote without explicit approval.
+- Local commits (`git commit`) are allowed to save work, but `git push` is locked down permanently.
+
+---
+
 ## 1. Scope Governance (Strict V1 vs V2 Boundaries)
 
 Every new conversation tab MUST adhere to the following scope boundaries:
