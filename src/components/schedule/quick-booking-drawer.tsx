@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { AppSelect } from "@/components/ui/app-select";
 import { BookingStatus, PumpLane, ScheduleBooking } from "./schedule-types";
 import { toast } from "sonner";
 import { Clock, HardHat, MapPin, Truck, Trash2, Activity } from "lucide-react";
@@ -58,6 +59,7 @@ export function QuickBookingDrawer({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -71,6 +73,48 @@ export function QuickBookingDrawer({
       status: "onsite",
     },
   });
+
+  const pumpIdVal = watch("pumpId");
+  const startHourVal = watch("startHour");
+  const durationHoursVal = watch("durationHours");
+  const statusVal = watch("status");
+
+  const pumpOptions = useMemo(
+    () =>
+      pumps.map((p) => ({
+        value: p.id,
+        label: `${p.code} · ${p.name}`,
+        description: p.operator || "No Operator",
+      })),
+    [pumps]
+  );
+
+  const startHourOptions = useMemo(
+    () =>
+      [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((h) => ({
+        value: String(h),
+        label: h <= 12 ? `${h}:00 AM` : `${h - 12}:00 PM`,
+      })),
+    []
+  );
+
+  const durationOptions = useMemo(
+    () =>
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((d) => ({
+        value: String(d),
+        label: `${d} ${d === 1 ? "hour" : "hours"}`,
+      })),
+    []
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "onsite", label: "On site (Active Pour)" },
+      { value: "travel", label: "Travel (En Route)" },
+      { value: "washout", label: "Washout & return" },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -164,7 +208,7 @@ export function QuickBookingDrawer({
                 {isEditMode ? `Edit Order • ${editingBooking?.orderNumber}` : "Quick Order Booking"}
               </SheetTitle>
               {isEditMode && (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0D7A7F] bg-[#E6F7F5] px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand bg-brand-light px-2 py-0.5 rounded-full">
                   Active Pour
                 </span>
               )}
@@ -190,7 +234,7 @@ export function QuickBookingDrawer({
               <input
                 {...register("customerName")}
                 placeholder="e.g. Turner Construction"
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand transition-all"
               />
               {errors.customerName && (
                 <p className="text-[11px] text-red-500 mt-1">
@@ -208,7 +252,7 @@ export function QuickBookingDrawer({
               <input
                 {...register("jobSiteName")}
                 placeholder="e.g. Dallas Medical Tower Phase 2"
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand transition-all"
               />
               {errors.jobSiteName && (
                 <p className="text-[11px] text-red-500 mt-1">
@@ -223,16 +267,13 @@ export function QuickBookingDrawer({
                 <Truck className="h-3.5 w-3.5 text-slate-400" />
                 <span>Assigned Rig</span>
               </label>
-              <select
-                {...register("pumpId")}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all cursor-pointer"
-              >
-                {pumps.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.code} ({p.name}) &bull; {p.operator || "No Operator"}
-                  </option>
-                ))}
-              </select>
+              <AppSelect
+                value={pumpIdVal}
+                onChange={(val) => setValue("pumpId", val, { shouldValidate: true })}
+                options={pumpOptions}
+                placeholder="Select pump..."
+                error={Boolean(errors.pumpId)}
+              />
               {errors.pumpId && (
                 <p className="text-[11px] text-red-500 mt-1">
                   {errors.pumpId.message}
@@ -247,32 +288,22 @@ export function QuickBookingDrawer({
                   <Clock className="h-3.5 w-3.5 text-slate-400" />
                   <span>Start Time</span>
                 </label>
-                <select
-                  {...register("startHour", { valueAsNumber: true })}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all cursor-pointer"
-                >
-                  {[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((h) => (
-                    <option key={h} value={h}>
-                      {h <= 12 ? `${h}:00 AM` : `${h - 12}:00 PM`}
-                    </option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={String(startHourVal)}
+                  onChange={(val) => setValue("startHour", parseInt(val, 10), { shouldValidate: true })}
+                  options={startHourOptions}
+                />
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1 block">
                   Duration (Hours)
                 </label>
-                <select
-                  {...register("durationHours", { valueAsNumber: true })}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all cursor-pointer"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((d) => (
-                    <option key={d} value={d}>
-                      {d} {d === 1 ? "hour" : "hours"}
-                    </option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={String(durationHoursVal)}
+                  onChange={(val) => setValue("durationHours", parseInt(val, 10), { shouldValidate: true })}
+                  options={durationOptions}
+                />
               </div>
             </div>
 
@@ -286,7 +317,7 @@ export function QuickBookingDrawer({
                   type="number"
                   {...register("volumeYards", { valueAsNumber: true })}
                   placeholder="120"
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-brand transition-all"
                 />
                 {errors.volumeYards && (
                   <p className="text-[11px] text-red-500 mt-1">
@@ -300,14 +331,11 @@ export function QuickBookingDrawer({
                   <Activity className="h-3.5 w-3.5 text-slate-400" />
                   <span>Status</span>
                 </label>
-                <select
-                  {...register("status")}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7A7F]/20 focus:border-[#0D7A7F] transition-all cursor-pointer"
-                >
-                  <option value="onsite">On site (Active Pour)</option>
-                  <option value="travel">Travel (En Route)</option>
-                  <option value="washout">Washout & return</option>
-                </select>
+                <AppSelect
+                  value={statusVal}
+                  onChange={(val) => setValue("status", val as BookingStatus, { shouldValidate: true })}
+                  options={statusOptions}
+                />
               </div>
             </div>
           </form>
@@ -340,7 +368,7 @@ export function QuickBookingDrawer({
                   form="quick-booking-form"
                   type="submit"
                   disabled={isSubmitting}
-                  className="h-9 px-4 rounded-lg bg-[#0D7A7F] hover:bg-[#0B6569] text-white text-xs font-semibold shadow-2xs"
+                  className="h-9 px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs"
                 >
                   Save Changes
                 </Button>
@@ -360,7 +388,7 @@ export function QuickBookingDrawer({
                 form="quick-booking-form"
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 h-9 rounded-lg bg-[#0D7A7F] hover:bg-[#0B6569] text-white text-xs font-semibold shadow-2xs"
+                className="flex-1 h-9 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs"
               >
                 Confirm Booking
               </Button>

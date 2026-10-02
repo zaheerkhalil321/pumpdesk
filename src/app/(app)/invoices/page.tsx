@@ -1,5 +1,6 @@
 import { Receipt, Download, DollarSign, FileCheck, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const mockInvoices = [
@@ -42,31 +43,28 @@ export default function InvoicesPage() {
   return (
     <div className="p-6 space-y-5 max-w-7xl mx-auto">
       {/* 1. HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Tickets & Billing</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Audit signed digital field work tickets and synchronize invoices to accounting.
-          </p>
-        </div>
-
-        <Button size="sm" className="h-9 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold gap-1.5 shadow-sm">
-          <DollarSign className="h-4 w-4" />
-          <span>Sync All to QuickBooks</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Tickets & Billing"
+        description="Audit signed digital field work tickets and synchronize invoices to accounting."
+        actions={
+          <Button variant="brand" size="sm" className="font-semibold gap-1.5">
+            <DollarSign className="h-4 w-4" />
+            <span>Sync All to QuickBooks</span>
+          </Button>
+        }
+      />
 
       {/* 2. STATS ROW */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 rounded-lg border border-border bg-card">
           <span className="text-xs text-muted-foreground font-medium">Pending Review & Sign-Off</span>
           <div className="text-2xl font-bold text-foreground mt-1">1 Ticket</div>
-          <span className="text-[11px] text-orange-600 font-semibold mt-0.5 block">$1,815.00 awaiting approval</span>
+          <span className="text-[11px] text-amber-600 font-semibold mt-0.5 block">$1,815.00 awaiting approval</span>
         </div>
         <div className="p-4 rounded-lg border border-border bg-card">
           <span className="text-xs text-muted-foreground font-medium">Synced This Week</span>
           <div className="text-2xl font-bold text-foreground mt-1">$3,890.00</div>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">2 Invoices verified</span>
+          <span className="text-[11px] text-brand font-semibold mt-0.5 block">2 Invoices verified</span>
         </div>
         <div className="p-4 rounded-lg border border-border bg-card">
           <span className="text-xs text-muted-foreground font-medium">Avg Turnaround Time</span>
@@ -94,9 +92,9 @@ export default function InvoicesPage() {
                 <TableCell>
                   <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-foreground font-semibold text-xs border border-border">
-                      <Receipt className="h-4 w-4 text-orange-600" />
+                      <Receipt className="h-4 w-4 text-brand" />
                     </div>
-                    <span className="font-semibold text-xs text-foreground group-hover:text-orange-600 transition-colors">
+                    <span className="font-semibold text-xs text-foreground group-hover:text-brand transition-colors">
                       {inv.id}
                     </span>
                   </div>
@@ -117,10 +115,10 @@ export default function InvoicesPage() {
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
                       inv.statusVariant === "paid"
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                        ? "bg-brand-light text-brand border border-brand/20"
                         : inv.statusVariant === "synced"
-                        ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20"
-                        : "bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-500/20"
+                        ? "bg-brand-light text-brand border border-brand/20"
+                        : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
                     }`}
                   >
                     {inv.statusVariant === "paid" && <CheckCircle2 className="h-3 w-3 mr-1 inline" />}

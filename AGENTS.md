@@ -8,11 +8,11 @@ The goal is not to recreate CreteSuite. The goal is to build a faster, simpler, 
 
 ## 0. Git & Deployment Governance (STRICT INVARIANT)
 
-- 🚨 **NEVER RUN `git push` WITHOUT EXPLICIT USER PERMISSION.** 🚨
-- Running `git push` automatically, proactively, or as part of a task completion is **STRICTLY FORBIDDEN**.
-- You may ONLY run `git push` if the user explicitly writes a direct command in their prompt (e.g. "push", "git push", "push the code").
-- Even if all tests pass, builds compile, and commits are made locally, **KEEP ALL CHANGES LOCAL**. Never push to remote without explicit approval.
-- Local commits (`git commit`) are allowed to save work, but `git push` is locked down permanently.
+- 🚨 **NEVER RUN `git commit` OR `git push` WITHOUT EXPLICIT USER COMMAND.** 🚨
+- Running `git commit` or `git push` automatically, proactively, or as part of a task completion is **STRICTLY FORBIDDEN**.
+- Keep all edits uncommitted in the working tree.
+- You may ONLY run `git commit` when the user explicitly says "commit".
+- You may ONLY run `git push` when the user explicitly says "push".
 
 ---
 
@@ -48,6 +48,20 @@ Every new conversation tab MUST adhere to the following scope boundaries:
   - Database: `@supabase/supabase-js`.
   - Testing: `@playwright/test`, `vitest`.
 - If a new package is genuinely needed, you MUST ask the user and receive confirmation BEFORE installing it.
+
+---
+
+## 2.1 Context & Token Optimization (Repomix)
+
+- Whenever broader architectural understanding is needed across multiple files, execute:
+  ```bash
+  npm run pack
+  ```
+  and read `repomix-output.xml`. This contains Tree-sitter compressed AST representations (~41k tokens instead of hundreds of thousands).
+- For targeted tasks, utilize domain-sliced context:
+  - `npm run pack:dispatch`: Schedule board, timeline, pumps, and booking components.
+  - `npm run pack:orders`: Orders dossier, booking drawer, and order state.
+  - `npm run pack:crm`: Customers, contacts, and job sites.
 
 ---
 

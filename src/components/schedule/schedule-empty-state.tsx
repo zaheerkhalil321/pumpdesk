@@ -11,7 +11,7 @@ export function ScheduleEmptyState({ onNewBookingClick }: ScheduleEmptyStateProp
   return (
     <div className="w-full rounded-xl border border-slate-200 bg-white p-8 sm:p-10 flex flex-col items-center justify-center text-center shadow-2xs">
       {/* Calendar Vector Illustration */}
-      <div className="h-13 w-13 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shadow-2xs mb-3">
+      <div className="h-13 w-13 rounded-2xl bg-brand-light border border-brand/20 flex items-center justify-center text-brand shadow-2xs mb-3">
         <Calendar className="h-6 w-6 stroke-[1.8]" />
       </div>
 
@@ -26,7 +26,7 @@ export function ScheduleEmptyState({ onNewBookingClick }: ScheduleEmptyStateProp
       {/* Action Button */}
       <Button
         onClick={onNewBookingClick}
-        className="mt-4 h-9 px-4 rounded-lg bg-[#0D7A7F] hover:bg-[#0B6569] text-white text-xs font-semibold gap-1.5 shadow-2xs transition-all cursor-pointer hover:shadow-xs active:scale-98"
+        className="mt-4 h-9 px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold gap-1.5 shadow-2xs transition-all cursor-pointer hover:shadow-xs active:scale-98"
       >
         <Plus className="h-3.5 w-3.5" />
         <span>New booking</span>

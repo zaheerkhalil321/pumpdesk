@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "test:unit": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "pack": "npx -y repomix",
+    "pack:dispatch": "npx -y repomix --include \"src/components/schedule/**,src/app/(app)/schedule/**,src/app/(app)/pumps/**,src/lib/**,src/types/**\"",
+    "pack:orders": "npx -y repomix --include \"src/components/orders/**,src/app/(app)/orders/**,src/lib/**\"",
+    "pack:crm": "npx -y repomix --include \"src/app/(app)/customers/**,src/app/(app)/contacts/**,src/lib/**\"",
+    "ai:verify": "npx tsc --noEmit && npm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -25,6 +30,7 @@
     "next-themes": "^0.4.6",
     "nuqs": "^2.10.1",
     "react": "19.2.4",
+    "react-day-picker": "^10.0.2",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.89.0",
     "shadcn": "^4.13.0",

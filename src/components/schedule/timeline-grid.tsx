@@ -80,7 +80,7 @@ export function TimelineGrid({
           {/* ── 1. HEADER ROW ── */}
           <div className="flex border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold text-xs sticky top-0 z-30">
             {/* Frozen Left Header */}
-            <div className="w-[220px] shrink-0 px-4 py-2.5 border-r border-slate-200 bg-slate-50 sticky left-0 z-40 flex items-center gap-2">
+            <div className="w-[180px] shrink-0 px-3 py-2.5 border-r border-slate-200 bg-slate-50 sticky left-0 z-40 flex items-center gap-2">
               <span className="text-slate-700">Pumps & Operators</span>
             </div>
 
@@ -108,25 +108,31 @@ export function TimelineGrid({
                   className="flex min-h-[82px] group hover:bg-slate-50/30 transition-colors relative"
                 >
                   {/* Left Column: Pump & Operator Badge (Frozen Left) */}
-                  <div className="w-[220px] shrink-0 px-3.5 py-3 border-r border-slate-200 bg-white group-hover:bg-slate-50/60 sticky left-0 z-20 flex items-center gap-3 transition-colors shadow-[2px_0_4px_-2px_rgba(0,0,0,0.03)]">
-                    <div className="h-8.5 w-8.5 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-                      <Truck className="h-4.5 w-4.5 text-slate-700" />
-                    </div>
+                  <div className="w-[180px] shrink-0 px-3 py-3 border-r border-slate-200 bg-white group-hover:bg-slate-50/60 sticky left-0 z-20 flex items-center gap-2.5 transition-colors shadow-[2px_0_4px_-2px_rgba(0,0,0,0.03)]">
+                    <Truck className="h-5 w-5 text-slate-500 shrink-0" />
 
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-xs text-slate-900 truncate tracking-tight">
                         {pump.code}
                       </p>
-                      <p
-                        className={cn(
-                          "text-[11px] truncate mt-0.5",
-                          pump.operator
-                            ? "text-slate-500 font-medium"
-                            : "text-slate-400 italic"
-                        )}
-                      >
-                        {pump.operator || "No default operator"}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full shrink-0",
+                            pump.operator ? "bg-brand" : "bg-rose-500"
+                          )}
+                        />
+                        <p
+                          className={cn(
+                            "text-[11px] truncate",
+                            pump.operator
+                              ? "text-slate-600 font-medium"
+                              : "text-rose-600 font-medium"
+                          )}
+                        >
+                          {pump.operator || "Needs operator"}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -177,27 +183,29 @@ export function TimelineGrid({
                             className={cn(
                               "border-r border-slate-100 last:border-r-0 relative flex items-center justify-center p-1.5 transition-all cursor-pointer select-none",
                               !isBooked && "hover:bg-slate-100/50",
-                              isDragOver && "bg-[#E6F7F5] border-2 border-dashed border-[#0D7A7F] z-20"
+                              isDragOver && "bg-brand-light border-2 border-dashed border-brand z-20"
                             )}
                           >
                             {/* Drag-over hover state indicator */}
                             {isDragOver && (
-                              <div className="text-[10px] font-bold text-[#0D7A7F] animate-pulse">
+                              <div className="text-[10px] font-bold text-brand animate-pulse">
                                 Drop here
                               </div>
                             )}
 
-                            {/* Static prompt slot matching screenshot: "+ Add booking" at 7 AM */}
+                            {/* Static prompt slot matching screenshot: "+ Add booking" with clean vertical layout */}
                             {isSpecPromptSlot && !isDragOver && (
-                              <div className="w-full h-full rounded-lg border border-dashed border-sky-400 bg-sky-50/50 text-sky-700 hover:bg-sky-100/60 hover:border-sky-500 flex items-center justify-center gap-1 text-[11.5px] font-semibold transition-all shadow-2xs">
-                                <Plus className="h-3.5 w-3.5" />
-                                <span>Add booking</span>
+                              <div className="w-full h-full rounded-lg border border-dashed border-brand/40 bg-brand-light/50 text-brand hover:bg-brand-light hover:border-brand flex flex-col items-center justify-center gap-1.5 text-center transition-all shadow-2xs p-1 select-none group">
+                                <Plus className="h-3.5 w-3.5 text-brand group-hover:scale-110 transition-transform shrink-0" />
+                                <span className="text-[10px] font-semibold text-brand-text leading-tight tracking-tight">
+                                  Add booking
+                                </span>
                               </div>
                             )}
 
                             {/* Interactive dynamic hover slot for other empty cells */}
                             {!isBooked && !isSpecPromptSlot && !isDragOver && (
-                              <div className="w-full h-full rounded-lg border border-dashed border-slate-200 opacity-0 hover:opacity-100 hover:border-[#0D7A7F]/40 hover:bg-[#E6F7F5]/40 text-[#0D7A7F] flex items-center justify-center gap-1 text-[11px] font-medium transition-all">
+                              <div className="w-full h-full rounded-lg border border-dashed border-slate-200 opacity-0 hover:opacity-100 hover:border-brand/40 hover:bg-brand-light/40 text-brand flex items-center justify-center gap-1 text-[11px] font-medium transition-all">
                                 <Plus className="h-3 w-3" />
                                 <span>Add</span>
                               </div>
@@ -243,9 +251,9 @@ export function TimelineGrid({
                               "pointer-events-auto h-full rounded-lg p-2.5 flex flex-col justify-between shadow-2xs border transition-all cursor-grab active:cursor-grabbing hover:shadow-md select-none",
                               startColClass,
                               spanColClass,
-                              isBeingDragged && "opacity-40 scale-98 ring-2 ring-[#0D7A7F]",
+                              isBeingDragged && "opacity-40 scale-98 border-2 border-brand",
                               booking.status === "onsite" &&
-                                "bg-[#E6F7F5] border-[#0D7A7F]/40 text-[#0D7A7F] hover:border-[#0D7A7F]",
+                                "bg-brand-light border-brand/40 text-brand hover:border-brand",
                               booking.status === "travel" &&
                                 "bg-slate-100 border-slate-300 text-slate-700 hover:border-slate-400",
                               booking.status === "washout" &&

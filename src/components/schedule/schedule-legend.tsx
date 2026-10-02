@@ -23,7 +23,7 @@ export function ScheduleLegend() {
 
         {/* On site */}
         <div className="flex items-center gap-1.5">
-          <div className="h-4 w-5 rounded border border-[#0D7A7F]/40 bg-[#E6F7F5]" />
+          <div className="h-4 w-5 rounded border border-brand/40 bg-brand-light" />
           <span className="text-slate-600 font-medium">On site</span>
         </div>
 

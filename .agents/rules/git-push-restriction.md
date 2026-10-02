@@ -1,7 +1,8 @@
-# Git Push Invariant Rule
+# Git Governance Invariant Rule
 
 ## Absolute Rule
-- **NEVER RUN `git push` WITHOUT EXPLICIT USER COMMAND.**
-- Proactive or automatic pushing of code is strictly banned under all circumstances.
-- Only run `git push` when the user explicitly commands it in prompt text (e.g. "push", "git push", "push the code").
-- Work locally: stage changes with `git add` and commit locally with `git commit`, but never push to remote.
+- **NEVER RUN `git commit` OR `git push` WITHOUT EXPLICIT USER COMMAND.**
+- Proactive or automatic commits or pushes are strictly banned under all circumstances.
+- Keep all edits uncommitted in working files.
+- Only run `git commit` when the user explicitly commands it in prompt text.
+- Only run `git push` when the user explicitly commands it in prompt text.

@@ -1,6 +1,7 @@
 import { Search, Download, Plus, Filter, Phone, Mail, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const mockContacts = [
@@ -65,34 +66,31 @@ export default function ContactsPage() {
   return (
     <div className="p-6 space-y-5 max-w-7xl mx-auto">
       {/* 1. HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Contacts & Superintendents</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Directory of field superintendents, project managers, and dispatch alert recipients.
-          </p>
-        </div>
-
-        <Button size="sm" className="h-9 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold gap-1.5 shadow-sm">
-          <Plus className="h-4 w-4" />
-          <span>+ Add New Contact</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Contacts & Superintendents"
+        description="Directory of field superintendents, project managers, and dispatch alert recipients."
+        actions={
+          <Button variant="brand" size="sm" className="font-semibold gap-1.5">
+            <Plus className="h-4 w-4" />
+            <span>Add New Contact</span>
+          </Button>
+        }
+      />
 
       {/* 2. FILTER & SEARCH BAR */}
-      <div className="flex items-center justify-between gap-4 bg-card p-3 rounded-lg border border-border">
+      <div className="flex items-center justify-between gap-4 bg-card p-3 rounded-md border border-border">
         <div className="flex items-center gap-3 flex-1 max-w-md">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search by contact name, phone, or company..."
-              className="h-8 pl-9 text-xs bg-muted/30 border-border"
+              className="h-8 pl-9 text-xs"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button variant="outline" size="sm" className="h-8 text-xs font-medium gap-1.5 border-border">
+          <Button variant="outline" size="sm" className="h-8 text-xs font-medium gap-1.5">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Active Field Contacts (4/5)</span>
           </Button>
@@ -125,11 +123,11 @@ export default function ContactsPage() {
                 >
                   <TableCell>
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-orange-600/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-xs">
+                      <div className="h-8 w-8 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold text-xs">
                         <UserCheck className="h-4 w-4" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-semibold text-xs text-foreground group-hover:text-orange-600 transition-colors">
+                        <span className="font-semibold text-xs text-foreground group-hover:text-brand transition-colors">
                           {contact.name}
                         </span>
                         <span className="text-[10.5px] font-mono text-muted-foreground">{contact.id}</span>
@@ -144,13 +142,13 @@ export default function ContactsPage() {
                   </TableCell>
                   <TableCell className="text-xs font-mono text-foreground">
                     <span className="flex items-center gap-1.5">
-                      <Phone className="h-3 w-3 text-muted-foreground" />
+                      <Phone className="h-3 w-3 text-brand" />
                       {contact.mobile}
                     </span>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5">
-                      <Mail className="h-3 w-3 text-muted-foreground" />
+                      <Mail className="h-3 w-3 text-brand" />
                       {contact.email}
                     </span>
                   </TableCell>
@@ -161,7 +159,7 @@ export default function ContactsPage() {
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
                         contact.statusVariant === "active"
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                          ? "bg-brand-light text-brand border border-brand/25"
                           : "bg-muted text-muted-foreground border border-border"
                       }`}
                     >

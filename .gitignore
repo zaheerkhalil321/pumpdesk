@@ -42,5 +42,7 @@ next-env.d.ts
 
 # designs & exports
 designs/
+design files/
 *.zip
+repomix-output.xml
 

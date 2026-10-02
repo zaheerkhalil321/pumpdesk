@@ -2,14 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Calendar,
   FileText,
   Users,
-  Contact,
-  // Truck,
-  // Receipt,
   Settings,
   ChevronDown,
   Check,
@@ -26,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useSettings } from '@/components/providers/settings-provider';
 
 interface YardLocation {
   id: string;
@@ -80,12 +78,14 @@ const navItems: NavItem[] = [
     href: '/schedule',
     icon: Calendar,
     isLive: true,
+    matchPrefix: true,
   },
   {
     title: 'Orders',
     href: '/orders',
     icon: FileText,
     badge: '12',
+    matchPrefix: true,
   },
   {
     title: 'Customers',
@@ -93,31 +93,43 @@ const navItems: NavItem[] = [
     icon: Users,
     matchPrefix: true,
   },
-  {
-    title: 'Contacts',
-    href: '/contacts',
-    icon: Contact,
-  },
-  /*
-  // Tabs below contacts commented out as requested:
-  {
-    title: "Pumps & Operators",
-    href: "/pumps",
-    icon: Truck,
-  },
-  {
-    title: "Tickets & Billing",
-    href: "/invoices",
-    icon: Receipt,
-  },
-  */
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const router = useRouter();
   const [selectedYard, setSelectedYard] = useState<YardLocation>(dummyYards[0]);
   const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
+  const { isOpen: isSettingsOpen, toggleSettings: toggleSettingsModal } = useSettings();
+  const isSettingsActive = isSettingsOpen || pathname === '/settings' || pathname.startsWith('/settings');
+  // Track the last non-settings route so clicking settings again closes and restores work
+  useEffect(() => {
+    if (pathname && !pathname.startsWith('/settings')) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pumpdesk_last_path', pathname);
+      }
+    }
+  }, [pathname]);
+
+  const handleToggleSettings = useCallback(
+    (e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+      }
+      if (pathname.startsWith('/settings')) {
+        const stored =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('pumpdesk_last_path')
+            : null;
+        const target = stored && stored !== '/settings' ? stored : '/schedule';
+        router.push(target);
+      } else {
+        toggleSettingsModal();
+      }
+    },
+    [pathname, router, toggleSettingsModal]
+  );
 
   // Keyboard shortcut: Pressing '[' or 'Cmd/Ctrl + B' toggles the sidebar
   const toggleCollapse = useCallback(() => {
@@ -150,34 +162,36 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        'relative border-r border-slate-200/90 bg-white flex flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-20',
+        'relative border-r border-border bg-card flex flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-50',
         isCollapsed ? 'w-[68px]' : 'w-64',
       )}
     >
-      {/* ── Floating Squircle Border Toggle Button (< >) Exactly As User Requested ── */}
+      {/* ── Floating Border Toggle Button (< >) ── */}
       <button
         type="button"
         onClick={toggleCollapse}
-        className="absolute -right-3 top-4.5 h-6 w-6 rounded-md border border-slate-200 bg-white shadow-xs flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 z-30 cursor-pointer hover:scale-105 active:scale-95"
+        className="absolute -right-3.5 top-4.5 h-7 w-7 rounded-full border border-border bg-card shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border transition-all duration-150 z-50 cursor-pointer hover:scale-110 active:scale-95"
         title={isCollapsed ? 'Expand sidebar ( [ )' : 'Collapse sidebar ( [ )'}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        <ChevronsLeftRight className="h-3.5 w-3.5 text-slate-700" />
+        <ChevronsLeftRight className="h-3.5 w-3.5" />
       </button>
 
       {/* ── Top Area: Brand, Workspace Switcher, Nav Links ── */}
       <div className="flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
         {/* 1. BRAND HEADER */}
-        <div
+        <Link
+          href="/schedule"
           className={cn(
-            'h-15 flex items-center border-b border-slate-100 transition-all duration-300',
+            'h-15 flex items-center border-b border-slate-100 transition-all duration-300 hover:bg-slate-50/50 cursor-pointer',
             isCollapsed ? 'justify-center px-2' : 'px-3.5 gap-2.5',
           )}
+          title="PumpDesk — Schedule Board"
         >
-          {/* Logo Mark: Deep slate squircle with emerald accent */}
-          <div className="h-8.5 w-8.5 rounded-[8px] bg-slate-950 flex items-center justify-center shadow-xs shrink-0 ring-1 ring-white/10">
+          {/* Logo Mark: Deep slate squircle with brand accent */}
+          <div className="h-8.5 w-8.5 rounded-[8px] bg-slate-950 flex items-center justify-center shadow-xs shrink-0 border border-white/10">
             <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none pl-0.5">
-              P<span className="text-emerald-400">.</span>
+              P<span className="text-brand">.</span>
             </span>
           </div>
 
@@ -191,7 +205,7 @@ export function AppSidebar() {
               </span>
             </div>
           )}
-        </div>
+        </Link>
 
         {/* 2. WORKSPACE / BRANCH SELECTOR */}
         <div
@@ -221,13 +235,13 @@ export function AppSidebar() {
                 )}
               >
                 {/* Monogram Badge */}
-                <div className="h-7.5 w-7.5 rounded-[8px] bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs ring-1 ring-slate-800 transition-colors">
+                <div className="h-7.5 w-7.5 rounded-[8px] bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs border border-slate-800 transition-colors">
                   {selectedYard.code}
                 </div>
 
                 {!isCollapsed && (
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-xs text-slate-800 truncate group-hover:text-[#0D7A7F] transition-colors leading-tight">
+                    <p className="font-bold text-xs text-slate-800 truncate group-hover:text-brand transition-colors leading-tight">
                       {selectedYard.companyName}
                     </p>
                     <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
@@ -282,7 +296,7 @@ export function AppSidebar() {
                       </p>
                     </div>
                     {isSelected && (
-                      <Check className="h-4 w-4 text-[#0D7A7F] shrink-0 ml-2" />
+                      <Check className="h-4 w-4 text-brand shrink-0 ml-2" />
                     )}
                   </DropdownMenuItem>
                 );
@@ -295,7 +309,7 @@ export function AppSidebar() {
                       'Yard terminal management is configured in Company Settings.',
                   });
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs text-[#0D7A7F] font-medium hover:bg-[#E6F7F5]"
+                className="flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs text-brand font-medium hover:bg-brand-light"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Yard Location
@@ -328,16 +342,16 @@ export function AppSidebar() {
                     className={cn(
                       'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
                       isActive
-                        ? 'bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs'
+                        ? 'bg-brand-light text-brand font-semibold shadow-2xs'
                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80',
                     )}
                   >
                     <Icon className="h-4.5 w-4.5 shrink-0" />
                     {item.isLive && (
-                      <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                      <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-brand border border-white" />
                     )}
                     {item.badge && !item.isLive && (
-                      <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-slate-400 ring-2 ring-white" />
+                      <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-slate-400 border border-white" />
                     )}
                   </Link>
 
@@ -350,7 +364,7 @@ export function AppSidebar() {
                       </span>
                     )}
                     {item.isLive && (
-                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded">
+                      <span className="text-[10px] font-bold text-brand bg-slate-950 px-1.5 py-0.2 rounded">
                         LIVE
                       </span>
                     )}
@@ -368,20 +382,20 @@ export function AppSidebar() {
                 className={cn(
                   'flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden',
                   isActive
-                    ? 'bg-[#E6F7F5] text-[#0D7A7F] font-semibold shadow-2xs'
+                    ? 'bg-brand-light text-brand font-semibold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/70',
                 )}
               >
                 {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
                 {isActive && (
-                  <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-[#0D7A7F] origin-center animate-expand-vertical" />
+                  <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-brand origin-center animate-expand-vertical" />
                 )}
 
                 <Icon
                   className={cn(
                     'h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5',
                     isActive
-                      ? 'text-[#0D7A7F]'
+                      ? 'text-brand'
                       : 'text-slate-400 group-hover:text-slate-700',
                   )}
                 />
@@ -389,8 +403,8 @@ export function AppSidebar() {
 
                 {/* Badges */}
                 {item.isLive && (
-                  <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded-full tracking-wide">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-brand bg-brand-light border border-brand/25 px-1.5 py-0.5 rounded-full tracking-wide">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
                     LIVE
                   </span>
                 )}
@@ -400,7 +414,7 @@ export function AppSidebar() {
                     className={cn(
                       'ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0',
                       isActive
-                        ? 'bg-[#0D7A7F] text-white'
+                        ? 'bg-brand text-white'
                         : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700',
                     )}
                   >
@@ -424,30 +438,45 @@ export function AppSidebar() {
           /* Collapsed User Dock */
           <div className="flex flex-col items-center gap-2">
             <div className="relative group">
-              <Link
-                href="/settings"
-                className="h-10 w-10 rounded-full bg-[#0D7A7F] text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs hover:ring-2 hover:ring-[#0D7A7F]/40 transition-all relative block"
-                aria-label="Jessie Black profile"
+              <button
+                type="button"
+                onClick={handleToggleSettings}
+                className={cn(
+                  'h-10 w-10 rounded-full bg-brand text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs hover:opacity-90 transition-all relative block cursor-pointer',
+                  isSettingsActive && 'ring-2 ring-brand ring-offset-2'
+                )}
+                aria-label={isSettingsActive ? 'Close Settings' : 'Jessie Black profile'}
               >
                 JB
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-              </Link>
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+              </button>
               <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
-                Jessie Black (Dispatcher)
+                {isSettingsActive ? 'Close Settings (Esc)' : 'Jessie Black (Dispatcher)'}
                 <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
               </div>
             </div>
 
             <div className="relative group">
-              <Link
-                href="/settings"
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
-                aria-label="Settings"
+              <button
+                type="button"
+                onClick={handleToggleSettings}
+                className={cn(
+                  'h-8 w-8 rounded-lg flex items-center justify-center transition-all cursor-pointer',
+                  isSettingsActive
+                    ? 'bg-brand-light text-brand ring-1 ring-brand/30 shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/60'
+                )}
+                aria-label={isSettingsActive ? 'Close Settings' : 'Settings'}
               >
-                <Settings className="h-4 w-4" />
-              </Link>
+                <Settings
+                  className={cn(
+                    'h-4 w-4 transition-transform duration-300',
+                    isSettingsActive ? 'rotate-90 text-brand' : 'group-hover:rotate-45'
+                  )}
+                />
+              </button>
               <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
-                Settings
+                {isSettingsActive ? 'Close Settings (Esc)' : 'Settings'}
                 <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
               </div>
             </div>
@@ -455,43 +484,59 @@ export function AppSidebar() {
         ) : (
           /* Expanded User Dock */
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-200/50 transition-colors group">
-              <Link
-                href="/settings"
-                className="flex items-center gap-2.5 min-w-0 flex-1"
+            <div
+              className={cn(
+                'flex items-center justify-between p-1.5 rounded-xl transition-colors group',
+                isSettingsActive ? 'bg-brand-light/60 border border-brand/20' : 'hover:bg-slate-200/50'
+              )}
+            >
+              <button
+                type="button"
+                onClick={handleToggleSettings}
+                className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+                title={isSettingsActive ? 'Close Settings (Esc)' : 'Open Settings'}
               >
                 {/* Jessie Black Circle Avatar */}
                 <div className="relative shrink-0">
-                  <div className="h-8.5 w-8.5 rounded-full bg-[#0D7A7F] text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs group-hover:ring-2 group-hover:ring-[#0D7A7F]/40 transition-all">
+                  <div className="h-8.5 w-8.5 rounded-full bg-brand text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs group-hover:opacity-90 transition-all">
                     JB
                   </div>
                   {/* Online Green Status Dot */}
-                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
                 </div>
 
                 <div className="min-w-0">
-                  <p className="font-bold text-xs text-slate-800 truncate leading-tight group-hover:text-[#0D7A7F] transition-colors">
+                  <p className="font-bold text-xs text-slate-800 truncate leading-tight group-hover:text-brand transition-colors">
                     Jessie Black
                   </p>
                   <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
                     Dispatcher
                   </p>
                 </div>
-              </Link>
+              </button>
 
-              <Link
-                href="/settings"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 transition-all duration-200 hover:rotate-45"
-                title="Settings"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Settings</span>
-              </Link>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleToggleSettings}
+                  className={cn(
+                    'p-1.5 rounded-lg transition-all duration-200 cursor-pointer',
+                    isSettingsActive
+                      ? 'bg-brand text-white shadow-2xs rotate-90 hover:bg-brand-hover'
+                      : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 hover:rotate-45'
+                  )}
+                  title={isSettingsActive ? 'Close Settings (Esc)' : 'Settings'}
+                  aria-label={isSettingsActive ? 'Close Settings' : 'Settings'}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="sr-only">{isSettingsActive ? 'Close Settings' : 'Settings'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Micro Version Meta */}
             <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-mono">
-              <span>v1.0 Pumpdesk 2026</span>
+              <span>v1.0 PumpDesk 2026</span>
             </div>
           </div>
         )}
