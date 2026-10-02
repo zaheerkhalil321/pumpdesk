@@ -1,23 +1,10 @@
-import { notFound } from "next/navigation";
+import { CustomerDetailView } from './customer-detail-view';
 
-import { getCustomer } from "@/features/customers/api/customers.api";
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-import { CustomerPageClient } from "@/features/customers/components";
-
-type Props = {
-  params: Promise<{
-    id: string;
-  }>;
-};
-
-export default async function CustomerPage({ params }: Props) {
+export default async function CustomerDetailPage({ params }: PageProps) {
   const { id } = await params;
-
-  const { data: customer, error } = await getCustomer(id);
-
-  if (error || !customer) {
-    notFound();
-  }
-
-  return <CustomerPageClient customer={customer} />;
+  return <CustomerDetailView customerId={id} />;
 }

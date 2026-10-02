@@ -1,0 +1,32 @@
+{
+  "$schema": "https://repomix.com/schemas/config.json",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "parsableStyle": true,
+    "compress": true,
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "showLineNumbers": false,
+    "topFilesLength": 5
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      ".next/**",
+      "node_modules/**",
+      "coverage/**",
+      ".vercel/**",
+      "designs/**",
+      "package-lock.json",
+      "repomix-output.xml",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

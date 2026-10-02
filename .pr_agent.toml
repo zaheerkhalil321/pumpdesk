@@ -1,0 +1,44 @@
+[pr_reviewer]
+# Run automated review on every PR
+enable_auto_review = true
+require_focused_review = true
+require_score_review = true
+require_tests_review = true
+num_code_suggestions = 5
+
+extra_instructions = """
+You are the Lead AI Engineering Manager for PumpDesk (concrete pumping dispatch SaaS).
+Review this pull request strictly against our architectural invariants and AGENTS.md rules:
+
+1. 🔴 BLOCKERS:
+   - Inline styles (style={{ ... }}) are STRICTLY FORBIDDEN. Reject any PR containing inline styles.
+   - Hardcoded hex colors (e.g. #FF5500, #1E293B, rgb(...)). Only theme tokens (bg-primary, text-foreground, border-border) are allowed.
+   - TypeScript `any` type usage is forbidden. Strict mode only.
+   - Multi-tenancy leak: Every operational table query MUST respect `company_id` (UUID) with RLS.
+   - Hard deletes: Reject any hard DELETE on operational data. Must use soft deletes (`is_active: false`).
+   - Scope Creep: Reject Phase 2 features (Driver Mobile App, QuickBooks sync, Stripe payments portal, live GPS telematics).
+
+2. 🟡 SHOULD-FIX:
+   - Missing error boundaries or unhandled async promises (Next.js 16 params, searchParams, cookies, headers must be awaited).
+   - Timezone formatting: All dates/times MUST use date-fns-tz locked to America/Chicago (Central Time).
+   - Component bloat: Components must be single-responsibility and under 200 lines.
+   - Form handling: Forms must use react-hook-form + zod resolver.
+
+3. 🟢 NITS:
+   - No emojis in UI buttons, tables, or labels. Only Lucide icons allowed.
+   - Clean naming conventions.
+
+Format your review with clear sections:
+- 🔴 Blockers (if any)
+- 🟡 Should-fix (if any)
+- 🟢 Nits (if any)
+- 🏁 Verdict: (Mergeable / Changes Requested)
+"""
+
+[pr_description]
+enable_pr_type = true
+use_bullet_points = true
+
+[pr_code_suggestions]
+num_code_suggestions_per_chunk = 4
+focus_only_on_problems = true

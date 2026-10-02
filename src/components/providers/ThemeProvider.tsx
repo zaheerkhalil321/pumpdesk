@@ -1,6 +1,7 @@
 "use client"
 
-import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { BrandThemeProvider } from "./brand-theme-provider";
 
 export function ThemeProvider({
   children,
@@ -10,11 +11,13 @@ export function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      defaultTheme="light"
+      enableSystem={false}
       disableTransitionOnChange
     >
-      {children}
+      <BrandThemeProvider>
+        {children}
+      </BrandThemeProvider>
     </NextThemesProvider>
-  )
+  );
 }

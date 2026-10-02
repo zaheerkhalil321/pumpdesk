@@ -1,9 +1,5 @@
-import { Typography } from "@/components/common/Typography";
+import { redirect } from "next/navigation";
 
 export default function DashboardPage() {
-  return (
-    <Typography.H1>
-      Dashboard
-    </Typography.H1>
-  )
+  redirect("/schedule");
 }

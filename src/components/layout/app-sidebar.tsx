@@ -1,0 +1,553 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Calendar,
+  FileText,
+  Users,
+  Settings,
+  ChevronDown,
+  Check,
+  Plus,
+  ChevronsLeftRight,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useSettings } from '@/components/providers/settings-provider';
+
+interface YardLocation {
+  id: string;
+  companyName: string;
+  yardName: string;
+  code: string;
+  location: string;
+  isHQ?: boolean;
+  pumpCount: number;
+}
+
+const dummyYards: YardLocation[] = [
+  {
+    id: 'yard-1',
+    companyName: 'Midcoast Pumping',
+    yardName: 'Warren Yard (HQ)',
+    code: 'MC',
+    location: 'Warren, Maine',
+    isHQ: true,
+    pumpCount: 4,
+  },
+  {
+    id: 'yard-2',
+    companyName: 'Midcoast South',
+    yardName: 'Portland Terminal',
+    code: 'MS',
+    location: 'Portland, Maine',
+    pumpCount: 2,
+  },
+  {
+    id: 'yard-3',
+    companyName: 'Midcoast North',
+    yardName: 'Bangor Staging',
+    code: 'MN',
+    location: 'Bangor, Maine',
+    pumpCount: 1,
+  },
+];
+
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+  isLive?: boolean;
+  matchPrefix?: boolean;
+}
+
+const navItems: NavItem[] = [
+  {
+    title: 'Schedule',
+    href: '/schedule',
+    icon: Calendar,
+    isLive: true,
+    matchPrefix: true,
+  },
+  {
+    title: 'Orders',
+    href: '/orders',
+    icon: FileText,
+    badge: '12',
+    matchPrefix: true,
+  },
+  {
+    title: 'Customers',
+    href: '/customers',
+    icon: Users,
+    matchPrefix: true,
+  },
+];
+
+export function AppSidebar() {
+  const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const router = useRouter();
+  const [selectedYard, setSelectedYard] = useState<YardLocation>(dummyYards[0]);
+  const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
+  const { isOpen: isSettingsOpen, toggleSettings: toggleSettingsModal } = useSettings();
+  const isSettingsActive = isSettingsOpen || pathname === '/settings' || pathname.startsWith('/settings');
+  // Track the last non-settings route so clicking settings again closes and restores work
+  useEffect(() => {
+    if (pathname && !pathname.startsWith('/settings')) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pumpdesk_last_path', pathname);
+      }
+    }
+  }, [pathname]);
+
+  const handleToggleSettings = useCallback(
+    (e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+      }
+      if (pathname.startsWith('/settings')) {
+        const stored =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('pumpdesk_last_path')
+            : null;
+        const target = stored && stored !== '/settings' ? stored : '/schedule';
+        router.push(target);
+      } else {
+        toggleSettingsModal();
+      }
+    },
+    [pathname, router, toggleSettingsModal]
+  );
+
+  // Keyboard shortcut: Pressing '[' or 'Cmd/Ctrl + B' toggles the sidebar
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (
+        e.key === '[' ||
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b')
+      ) {
+        e.preventDefault();
+        toggleCollapse();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleCollapse]);
+
+  return (
+    <aside
+      className={cn(
+        'relative border-r border-border bg-card flex flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-50',
+        isCollapsed ? 'w-[68px]' : 'w-64',
+      )}
+    >
+      {/* ── Floating Border Toggle Button (< >) ── */}
+      <button
+        type="button"
+        onClick={toggleCollapse}
+        className="absolute -right-3.5 top-4.5 h-7 w-7 rounded-full border border-border bg-card shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border transition-all duration-150 z-50 cursor-pointer hover:scale-110 active:scale-95"
+        title={isCollapsed ? 'Expand sidebar ( [ )' : 'Collapse sidebar ( [ )'}
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <ChevronsLeftRight className="h-3.5 w-3.5" />
+      </button>
+
+      {/* ── Top Area: Brand, Workspace Switcher, Nav Links ── */}
+      <div className="flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
+        {/* 1. BRAND HEADER */}
+        <Link
+          href="/schedule"
+          className={cn(
+            'h-15 flex items-center border-b border-slate-100 transition-all duration-300 hover:bg-slate-50/50 cursor-pointer',
+            isCollapsed ? 'justify-center px-2' : 'px-3.5 gap-2.5',
+          )}
+          title="PumpDesk — Schedule Board"
+        >
+          {/* Logo Mark: Deep slate squircle with brand accent */}
+          <div className="h-8.5 w-8.5 rounded-[8px] bg-slate-950 flex items-center justify-center shadow-xs shrink-0 border border-white/10">
+            <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none pl-0.5">
+              P<span className="text-brand">.</span>
+            </span>
+          </div>
+
+          {!isCollapsed && (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-bold text-[17px] tracking-tight text-slate-900 truncate">
+                PumpDesk
+              </span>
+              <span className="text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                PRO
+              </span>
+            </div>
+          )}
+        </Link>
+
+        {/* 2. WORKSPACE / BRANCH SELECTOR */}
+        <div
+          className={cn(
+            'mt-3 mb-2 transition-all duration-300',
+            isCollapsed ? 'px-2' : 'px-3',
+          )}
+        >
+          <DropdownMenu open={isYardMenuOpen} onOpenChange={setIsYardMenuOpen}>
+            <DropdownMenuTrigger
+              className={cn(
+                'w-full flex items-center rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/70 hover:border-slate-300 transition-all duration-150 cursor-pointer group text-left shadow-2xs outline-none',
+                isCollapsed
+                  ? 'h-10 w-10 justify-center p-0 mx-auto'
+                  : 'justify-between p-2',
+              )}
+              title={
+                isCollapsed
+                  ? `${selectedYard.companyName} (${selectedYard.yardName})`
+                  : undefined
+              }
+            >
+              <div
+                className={cn(
+                  'flex items-center min-w-0',
+                  isCollapsed ? 'justify-center' : 'gap-2.5',
+                )}
+              >
+                {/* Monogram Badge */}
+                <div className="h-7.5 w-7.5 rounded-[8px] bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs border border-slate-800 transition-colors">
+                  {selectedYard.code}
+                </div>
+
+                {!isCollapsed && (
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-xs text-slate-800 truncate group-hover:text-brand transition-colors leading-tight">
+                      {selectedYard.companyName}
+                    </p>
+                    <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      {selectedYard.yardName}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {!isCollapsed && (
+                <ChevronDown
+                  className={cn(
+                    'h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 shrink-0 ml-1 ease-out',
+                    isYardMenuOpen && 'rotate-180',
+                  )}
+                />
+              )}
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="start"
+              className="w-60 p-1.5 rounded-xl shadow-lg border-slate-200"
+            >
+              <DropdownMenuLabel className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">
+                Dispatch Yards
+              </DropdownMenuLabel>
+              {dummyYards.map((yard) => {
+                const isSelected = selectedYard.id === yard.id;
+                return (
+                  <DropdownMenuItem
+                    key={yard.id}
+                    onClick={() => {
+                      setSelectedYard(yard);
+                      toast.success(`Active yard: ${yard.yardName}`, {
+                        description: `${yard.companyName} (${yard.location}) • ${yard.pumpCount} pumps assigned`,
+                      });
+                    }}
+                    className={cn(
+                      'flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition-colors',
+                      isSelected
+                        ? 'bg-slate-100/90 font-medium text-slate-900'
+                        : 'hover:bg-slate-100/60 text-slate-600 hover:text-slate-900',
+                    )}
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {yard.companyName}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {yard.yardName} {yard.isHQ && '• Main HQ'}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <Check className="h-4 w-4 text-brand shrink-0 ml-2" />
+                    )}
+                  </DropdownMenuItem>
+                );
+              })}
+              <DropdownMenuSeparator className="my-1" />
+              <DropdownMenuItem
+                onClick={() => {
+                  toast.info('Add Yard Location', {
+                    description:
+                      'Yard terminal management is configured in Company Settings.',
+                  });
+                }}
+                className="flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs text-brand font-medium hover:bg-brand-light"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Yard Location
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Section Divider / Label */}
+
+        {/* 3. NAVIGATION LINKS */}
+        <nav
+          className={cn(
+            'space-y-1 transition-all duration-300 py-1',
+            isCollapsed ? 'px-2' : 'px-3',
+          )}
+        >
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.matchPrefix
+              ? pathname.startsWith(item.href)
+              : pathname === item.href;
+
+            if (isCollapsed) {
+              /* Collapsed Rail Item with Tooltip */
+              return (
+                <div key={item.title} className="relative group">
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
+                      isActive
+                        ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80',
+                    )}
+                  >
+                    <Icon className="h-4.5 w-4.5 shrink-0" />
+                    {item.isLive && (
+                      <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-brand border border-white" />
+                    )}
+                    {item.badge && !item.isLive && (
+                      <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-slate-400 border border-white" />
+                    )}
+                  </Link>
+
+                  {/* Tooltip on hover */}
+                  <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 flex items-center gap-1.5">
+                    <span>{item.title}</span>
+                    {item.badge && (
+                      <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded">
+                        {item.badge}
+                      </span>
+                    )}
+                    {item.isLive && (
+                      <span className="text-[10px] font-bold text-brand bg-slate-950 px-1.5 py-0.2 rounded">
+                        LIVE
+                      </span>
+                    )}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
+                  </div>
+                </div>
+              );
+            }
+
+            /* Expanded Nav Item */
+            return (
+              <Link
+                key={item.title}
+                href={item.href}
+                className={cn(
+                  'flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden',
+                  isActive
+                    ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/70',
+                )}
+              >
+                {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
+                {isActive && (
+                  <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-brand origin-center animate-expand-vertical" />
+                )}
+
+                <Icon
+                  className={cn(
+                    'h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5',
+                    isActive
+                      ? 'text-brand'
+                      : 'text-slate-400 group-hover:text-slate-700',
+                  )}
+                />
+                <span className="truncate">{item.title}</span>
+
+                {/* Badges */}
+                {item.isLive && (
+                  <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-brand bg-brand-light border border-brand/25 px-1.5 py-0.5 rounded-full tracking-wide">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+                    LIVE
+                  </span>
+                )}
+
+                {item.badge && (
+                  <span
+                    className={cn(
+                      'ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0',
+                      isActive
+                        ? 'bg-brand text-white'
+                        : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700',
+                    )}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* ── Bottom Portion: User Profile Dock & Quick Settings ── */}
+      <div
+        className={cn(
+          'border-t border-slate-200/80 bg-slate-50/50 transition-all duration-300 shrink-0',
+          isCollapsed ? 'p-2 pb-6' : 'p-3 pb-4',
+        )}
+      >
+        {isCollapsed ? (
+          /* Collapsed User Dock */
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={handleToggleSettings}
+                className={cn(
+                  'h-10 w-10 rounded-full bg-brand text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs hover:opacity-90 transition-all relative block cursor-pointer',
+                  isSettingsActive && 'ring-2 ring-brand ring-offset-2'
+                )}
+                aria-label={isSettingsActive ? 'Close Settings' : 'Jessie Black profile'}
+              >
+                JB
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+              </button>
+              <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+                {isSettingsActive ? 'Close Settings (Esc)' : 'Jessie Black (Dispatcher)'}
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
+              </div>
+            </div>
+
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={handleToggleSettings}
+                className={cn(
+                  'h-8 w-8 rounded-lg flex items-center justify-center transition-all cursor-pointer',
+                  isSettingsActive
+                    ? 'bg-brand-light text-brand ring-1 ring-brand/30 shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/60'
+                )}
+                aria-label={isSettingsActive ? 'Close Settings' : 'Settings'}
+              >
+                <Settings
+                  className={cn(
+                    'h-4 w-4 transition-transform duration-300',
+                    isSettingsActive ? 'rotate-90 text-brand' : 'group-hover:rotate-45'
+                  )}
+                />
+              </button>
+              <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+                {isSettingsActive ? 'Close Settings (Esc)' : 'Settings'}
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Expanded User Dock */
+          <div className="space-y-2">
+            <div
+              className={cn(
+                'flex items-center justify-between p-1.5 rounded-xl transition-colors group',
+                isSettingsActive ? 'bg-brand-light/60 border border-brand/20' : 'hover:bg-slate-200/50'
+              )}
+            >
+              <button
+                type="button"
+                onClick={handleToggleSettings}
+                className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+                title={isSettingsActive ? 'Close Settings (Esc)' : 'Open Settings'}
+              >
+                {/* Jessie Black Circle Avatar */}
+                <div className="relative shrink-0">
+                  <div className="h-8.5 w-8.5 rounded-full bg-brand text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs group-hover:opacity-90 transition-all">
+                    JB
+                  </div>
+                  {/* Online Green Status Dot */}
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-bold text-xs text-slate-800 truncate leading-tight group-hover:text-brand transition-colors">
+                    Jessie Black
+                  </p>
+                  <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
+                    Dispatcher
+                  </p>
+                </div>
+              </button>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleToggleSettings}
+                  className={cn(
+                    'p-1.5 rounded-lg transition-all duration-200 cursor-pointer',
+                    isSettingsActive
+                      ? 'bg-brand text-white shadow-2xs rotate-90 hover:bg-brand-hover'
+                      : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 hover:rotate-45'
+                  )}
+                  title={isSettingsActive ? 'Close Settings (Esc)' : 'Settings'}
+                  aria-label={isSettingsActive ? 'Close Settings' : 'Settings'}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="sr-only">{isSettingsActive ? 'Close Settings' : 'Settings'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Micro Version Meta */}
+            <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-mono">
+              <span>v1.0 PumpDesk 2026</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Linear-Style Edge Interaction Rail (Border Click Target) ── */}
+      <div
+        onClick={toggleCollapse}
+        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-slate-300/80 active:bg-slate-400 transition-colors z-20"
+        title="Toggle sidebar ([)"
+      />
+    </aside>
+  );
+}

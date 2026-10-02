@@ -5,7 +5,6 @@ import {
   Truck,
   Users,
   Receipt,
-  LayoutDashboard,
   Settings,
   type LucideIcon,
 } from "lucide-react"
@@ -17,11 +16,6 @@ export type NavigationItem = {
 }
 
 export const navigation: NavigationItem[] = [
-  {
-    title: "Dashboard",
-    href: "/",
-    icon: LayoutDashboard,
-  },
   {
     title: "Schedule",
     href: "/schedule",
