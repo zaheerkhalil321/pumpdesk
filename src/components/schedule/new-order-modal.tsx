@@ -34,6 +34,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { DeleteOrderDialog } from './delete-order-dialog';
 
 const TIMEZONE = 'America/Chicago';
 
@@ -114,7 +115,7 @@ function NewOrderModalForm({
   const [customer, setCustomer] = useState(
     () => editingBooking?.customerName || '',
   );
-  const [supplier, setSupplier] = useState('Auburn Concrete');
+  const [supplier, setSupplier] = useState('');
 
   // Job Site States
   const [siteAddress, setSiteAddress] = useState(
@@ -122,10 +123,13 @@ function NewOrderModalForm({
   );
   const [townCity, setTownCity] = useState(() => editingBooking?.address || '');
 
-  // Pump States
+  // Pump & Operator States
   const [minPumpSize, setMinPumpSize] = useState('34 meters');
   const [assignedPumpId, setAssignedPumpId] = useState<string>(
     () => editingBooking?.pumpId || initialPumpId || 'assign-later',
+  );
+  const [assignedOperator, setAssignedOperator] = useState<string>(
+    () => editingBooking?.operator || 'unassigned',
   );
 
   const [formErrors, setFormErrors] = useState<{
@@ -154,10 +158,34 @@ function NewOrderModalForm({
       ...pumps.map((p) => ({
         value: p.id,
         label: `${p.code} (${p.name})`,
-        description: p.operator || 'No Operator',
+        description: p.boomLength || undefined,
       })),
     ],
     [pumps]
+  );
+
+  const operatorOptions = useMemo(
+    () => [
+      {
+        value: 'unassigned',
+        label: 'Assign later (Unassigned)',
+        description: 'You can assign an operator anytime before dispatch',
+      },
+      { value: 'Rob Black', label: 'Rob Black', description: 'ACPA Certified • (207) 555-0168' },
+      { value: 'Dave Smith', label: 'Dave Smith', description: '47M Heavy Boom Specialist' },
+      { value: 'Tony Perez', label: 'Tony Perez', description: 'Line Pump & Trailer Specialist' },
+      { value: 'Marcus Brody', label: 'Marcus Brody', description: 'Commercial Pours • Relief Operator' },
+      { value: 'Sam Higgins', label: 'Sam Higgins', description: 'Boom Apprentice • Yard Lead' },
+    ],
+    []
+  );
+
+  const supplierOptions = useMemo(
+    () => [
+      { value: '', label: 'None / Not specified' },
+      ...SAMPLE_SUPPLIERS.map((s) => ({ value: s, label: s })),
+    ],
+    []
   );
 
   const formattedDate = formatInTimeZone(
@@ -176,11 +204,8 @@ function NewOrderModalForm({
     if (!customer.trim()) {
       errors.customer = 'Customer is required.';
     }
-    if (!siteAddress.trim()) {
-      errors.siteAddress = 'Street address is required.';
-    }
     if (!townCity.trim()) {
-      errors.townCity = 'Confirm the job-site town to continue.';
+      errors.townCity = 'Town is required.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -188,7 +213,6 @@ function NewOrderModalForm({
       toast.error('Required Information Missing', {
         description:
           errors.customer ||
-          errors.siteAddress ||
           errors.townCity ||
           'Please enter required job site details.',
       });
@@ -210,14 +234,21 @@ function NewOrderModalForm({
       hour = h;
     }
 
+    const finalJobSite = siteAddress.trim() || townCity.trim();
+    const finalAddress = siteAddress.trim() ? `${siteAddress.trim()}, ${townCity.trim()}` : townCity.trim();
+    const finalOperator = assignedOperator !== 'unassigned' ? assignedOperator : undefined;
+    const finalDispatchStatus = finalOperator ? (editingBooking?.dispatchStatus || 'draft') : 'unassigned';
+
     if (editingBooking && onUpdateBooking) {
       const updated: ScheduleBooking = {
         ...editingBooking,
         customerName: customer,
-        jobSiteName: siteAddress,
-        address: townCity || editingBooking.address,
+        jobSiteName: finalJobSite,
+        address: finalAddress || editingBooking.address,
         pumpId: isAssignLater ? '' : assignedPumpId,
         startHour: hour,
+        operator: finalOperator,
+        dispatchStatus: finalDispatchStatus,
       };
       onUpdateBooking(updated);
       toast.success('Order Updated', {
@@ -235,12 +266,14 @@ function NewOrderModalForm({
         orderNumber: `ORD-${shortCode}`,
         pumpId: isAssignLater ? '' : assignedPumpId,
         customerName: customer,
-        jobSiteName: siteAddress,
-        address: townCity,
+        jobSiteName: finalJobSite,
+        address: finalAddress,
         startHour: hour,
         durationHours: 3,
         volumeYards: 120,
         status: isAssignLater ? 'travel' : 'onsite',
+        operator: finalOperator,
+        dispatchStatus: finalDispatchStatus,
       };
 
       if (isAssignLater) {
@@ -250,7 +283,7 @@ function NewOrderModalForm({
           onAddBooking(newOrder);
         }
         toast.info('Pending Order Created', {
-          description: `${customer} at ${siteAddress} added to Unassigned Jobs.`,
+          description: `${customer} in ${townCity} added to Unassigned Jobs.`,
         });
       } else {
         onAddBooking(newOrder);
@@ -263,12 +296,16 @@ function NewOrderModalForm({
     onOpenChange(false);
   };
 
-  const handleDelete = () => {
+  // Delete confirmation dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleConfirmDelete = () => {
     if (editingBooking && onDeleteBooking) {
       onDeleteBooking(editingBooking.id);
       toast.info('Order Removed', {
         description: `Order ${editingBooking.orderNumber} removed from schedule.`,
       });
+      setIsDeleteDialogOpen(false);
       onOpenChange(false);
     }
   };
@@ -394,89 +431,102 @@ function NewOrderModalForm({
             )}
           </div>
 
-          {/* Concrete Supplier Field */}
+          {/* Concrete Supplier Field (Optional) */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Concrete supplier
+              Concrete supplier <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <AppSelect
               value={supplier}
               onChange={setSupplier}
-              options={SAMPLE_SUPPLIERS}
-              placeholder="Select supplier..."
+              options={supplierOptions}
+              placeholder="Select supplier (optional)..."
               icon={Building2}
               className="h-10"
             />
           </div>
         </div>
 
-        {/* Row 3: Job Site Location (Street Address + Town/City) */}
-        <div>
-          <label className="text-xs font-semibold text-slate-700 block mb-1">
-            Job site <span className="text-red-500">*</span>
-          </label>
-          <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs space-y-2.5 transition-colors hover:border-slate-300">
-            {/* Street Address Input */}
-            <div className="space-y-1">
-              <div
+        {/* Row 3: Job Site Address (Optional) & Town (Required) */}
+        <div className="space-y-3">
+          {/* Street Address / Cross Streets (Optional) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Job site address <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+              <span className="text-[10.5px] text-slate-400">Cross streets or street number</span>
+            </div>
+            <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-slate-200 bg-white focus-within:border-brand transition-colors shadow-2xs">
+              <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                type="text"
+                value={siteAddress}
+                onChange={(e) => setSiteAddress(e.target.value)}
+                placeholder="Street address, cross streets, or landmark (optional)"
+                className="text-xs font-medium text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          {/* Town / City (Strictly Required) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Town / City <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10.5px] text-amber-700 font-medium">Required for dispatch routing</span>
+            </div>
+            <div
+              className={cn(
+                'flex items-center gap-2 h-10 px-3 rounded-lg border transition-colors shadow-2xs',
+                formErrors.townCity
+                  ? 'border-red-500 bg-red-50/20'
+                  : 'border-slate-200 bg-white focus-within:border-brand',
+              )}
+            >
+              <Building2
                 className={cn(
-                  'flex items-center gap-2 h-9 px-3 rounded-md border bg-white transition-colors',
-                  formErrors.siteAddress
-                    ? 'border-red-500 bg-red-50/20'
-                    : 'border-slate-200 focus-within:border-brand',
+                  'h-4 w-4 shrink-0',
+                  formErrors.townCity ? 'text-red-500' : 'text-slate-400',
                 )}
-              >
-                <MapPin
-                  className={cn(
-                    'h-4 w-4 shrink-0',
-                    formErrors.siteAddress ? 'text-red-500' : 'text-slate-400',
-                  )}
-                />
-                <input
-                  type="text"
-                  value={siteAddress}
-                  onChange={(e) => {
-                    setSiteAddress(e.target.value);
-                    if (formErrors.siteAddress) {
-                      setFormErrors((prev) => ({
-                        ...prev,
-                        siteAddress: undefined,
-                      }));
-                    }
-                  }}
-                  placeholder="Job site street address"
-                  className="text-xs font-semibold text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-400"
-                />
-                <Pencil className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              </div>
-              {formErrors.siteAddress && (
-                <p className="text-[11px] text-red-500 font-medium px-1">
-                  {formErrors.siteAddress}
-                </p>
+              />
+              <input
+                type="text"
+                value={townCity}
+                onChange={(e) => {
+                  setTownCity(e.target.value);
+                  if (formErrors.townCity) {
+                    setFormErrors((prev) => ({
+                      ...prev,
+                      townCity: undefined,
+                    }));
+                  }
+                }}
+                placeholder="Enter town or city (e.g. Camden, ME) *"
+                className="text-xs text-slate-900 bg-transparent placeholder:text-slate-400 outline-none w-full font-medium"
+              />
+              {townCity && (
+                <Check className="h-3.5 w-3.5 text-brand shrink-0" />
               )}
             </div>
 
-            {/* Nested Town/City Input: clean border focus, zero ring */}
-            <div className="space-y-1.5">
-              <div
-                className={cn(
-                  'flex items-center gap-2 h-9 px-3 rounded-md border bg-slate-50/70 focus-within:bg-white transition-colors',
-                  formErrors.townCity
-                    ? 'border-red-500 bg-red-50/30'
-                    : 'border-slate-200 focus-within:border-brand',
-                )}
-              >
-                <Building2
-                  className={cn(
-                    'h-3.5 w-3.5 shrink-0',
-                    formErrors.townCity ? 'text-red-500' : 'text-slate-400',
-                  )}
-                />
-                <input
-                  type="text"
-                  value={townCity}
-                  onChange={(e) => {
-                    setTownCity(e.target.value);
+            {/* Quick Town Suggestions */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+              <span className="text-[10px] text-slate-400 font-medium">
+                Quick select town:
+              </span>
+              {[
+                'Warren, ME',
+                'Camden, ME',
+                'Rockport, ME',
+                'Rockland, ME',
+              ].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setTownCity(t);
                     if (formErrors.townCity) {
                       setFormErrors((prev) => ({
                         ...prev,
@@ -484,58 +534,24 @@ function NewOrderModalForm({
                       }));
                     }
                   }}
-                  placeholder="Town / city"
-                  className="text-xs text-slate-900 bg-transparent placeholder:text-slate-400 outline-none w-full font-medium"
-                />
-                {townCity && (
-                  <Check className="h-3.5 w-3.5 text-brand shrink-0" />
-                )}
-              </div>
-
-              {/* Quick Town Suggestions */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Quick select:
-                </span>
-                {[
-                  'Warren, ME',
-                  'Camden, ME',
-                  'Rockport, ME',
-                  'Rockland, ME',
-                ].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      setTownCity(t);
-                      setFormErrors((prev) => ({
-                        ...prev,
-                        townCity: undefined,
-                      }));
-                    }}
-                    className={cn(
-                      'text-[10.5px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer',
-                      townCity === t
-                        ? 'bg-brand-light border-brand text-brand font-semibold'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900',
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              {formErrors.townCity ? (
-                <p className="text-[11px] text-red-500 font-semibold px-1 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3 shrink-0" />
-                  <span>{formErrors.townCity}</span>
-                </p>
-              ) : (
-                <p className="text-[11px] text-slate-500 font-normal px-1">
-                  Select town to confirm address
-                </p>
-              )}
+                  className={cn(
+                    'text-[10.5px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer',
+                    townCity === t
+                      ? 'bg-brand-light border-brand text-brand font-semibold'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900',
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
+
+            {formErrors.townCity ? (
+              <p className="text-[11px] text-red-500 font-semibold mt-1 px-0.5 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span>{formErrors.townCity}</span>
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -571,6 +587,20 @@ function NewOrderModalForm({
               className="h-10"
             />
           </div>
+
+          {/* Assigned Operator Selector */}
+          <div className="sm:col-span-2">
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Assigned operator (Optional)
+            </label>
+            <AppSelect
+              value={assignedOperator}
+              onChange={setAssignedOperator}
+              options={operatorOptions}
+              icon={User}
+              className="h-10 transition-colors cursor-pointer border-slate-200 hover:border-slate-300 hover:bg-slate-50/60"
+            />
+          </div>
         </div>
       </div>
 
@@ -588,8 +618,16 @@ function NewOrderModalForm({
             <>
               Creates a{' '}
               <strong className="font-semibold text-slate-900">Confirmed</strong>{' '}
-              order • Assigned to {assignedPump?.code || 'Pump'} (
-              {assignedPump?.operator || 'No Operator'})
+              order • Assigned to {assignedPump?.code || 'Pump'} •{' '}
+              {assignedOperator !== 'unassigned' ? (
+                <span className="font-semibold text-emerald-800">
+                  Operator: {assignedOperator} (Draft)
+                </span>
+              ) : (
+                <span className="font-medium text-slate-600">
+                  Operator unassigned
+                </span>
+              )}
             </>
           )}
         </span>
@@ -599,9 +637,21 @@ function NewOrderModalForm({
       <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Left Action: Open Full Form */}
         <Link
-          href="/orders/new"
+          href={`/orders/new?${new URLSearchParams({
+            ...(editingBooking?.orderNumber ? { orderId: editingBooking.orderNumber } : {}),
+            ...(editingBooking?.id ? { bookingId: editingBooking.id } : {}),
+            ...(editingBooking?.volumeYards ? { volume: String(editingBooking.volumeYards) } : {}),
+            ...(editingBooking?.dispatchStatus === 'dispatched' ? { status: 'Confirmed' } : {}),
+            pourTime,
+            date: formattedDate,
+            ...(assignedPumpId && assignedPumpId !== 'assign-later' ? { pumpId: assignedPumpId } : {}),
+            ...(customer ? { customer } : {}),
+            ...(siteAddress ? { site: siteAddress } : {}),
+            ...(townCity ? { town: townCity } : {}),
+            ...(assignedOperator && assignedOperator !== 'unassigned' ? { operator: assignedOperator } : {}),
+          }).toString()}`}
           onClick={() => onOpenChange(false)}
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
         >
           <ExternalLink className="h-4 w-4 text-slate-500" />
           <span>Open full form</span>
@@ -614,8 +664,8 @@ function NewOrderModalForm({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={handleDelete}
-                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-medium gap-1.5 rounded-lg"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-sm font-medium gap-1.5 rounded-lg cursor-pointer"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span>Delete</span>
@@ -625,14 +675,14 @@ function NewOrderModalForm({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="h-9 px-4 rounded-lg border-slate-200 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+              className="h-9 px-4 rounded-lg border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleCreateOrder}
-              className="h-9 px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-98"
+              className="h-9 px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-2xs transition-all cursor-pointer active:scale-98"
             >
               {isEditMode ? 'Save changes' : 'Create order'}
             </Button>
@@ -649,6 +699,14 @@ function NewOrderModalForm({
           ) : null}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteOrderDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        booking={editingBooking}
+        onConfirmDelete={handleConfirmDelete}
+      />
     </>
   );
 }

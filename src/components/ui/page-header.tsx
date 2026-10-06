@@ -24,12 +24,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1",
+        "flex items-start sm:items-center justify-between gap-3 sm:gap-4 pb-1",
         borderBottom && "pb-4 border-b border-border",
         className
       )}
     >
-      <div>
+      <div className="min-w-0 flex-1">
         {breadcrumbs && <div className="mb-1.5">{breadcrumbs}</div>}
         <div className="flex items-center gap-2.5 flex-wrap">
           <Heading level={2} className="tracking-tight">
@@ -49,7 +49,7 @@ export function PageHeader({
       </div>
 
       {actions && (
-        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end self-start sm:self-center">
           {actions}
         </div>
       )}

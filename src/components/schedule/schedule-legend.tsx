@@ -29,8 +29,8 @@ export function ScheduleLegend() {
 
         {/* Washout & return */}
         <div className="flex items-center gap-1.5">
-          <div className="h-4 w-5 rounded border border-slate-300 bg-slate-100 flex items-center justify-center opacity-85">
-            <div className="w-full h-full bg-[linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_50%,#e2e8f0_50%,#e2e8f0_75%,transparent_75%,transparent)] bg-[length:6px_6px] rounded" />
+          <div className="h-4 w-5 rounded border border-amber-300 bg-amber-50 flex items-center justify-center">
+            <div className="w-full h-full bg-[linear-gradient(45deg,#fde68a_25%,transparent_25%,transparent_50%,#fde68a_50%,#fde68a_75%,transparent_75%,transparent)] bg-[length:6px_6px] rounded" />
           </div>
           <span className="text-slate-600 font-medium">Washout & return</span>
         </div>

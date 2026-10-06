@@ -176,11 +176,12 @@ body[data-brand-theme="slate"] {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    font-size: 16.5px;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
@@ -208,7 +209,7 @@ body[data-brand-theme="slate"] {
 @keyframes settingsEnter {
   0% {
     opacity: 0;
-    transform: translateX(24px);
+    transform: translateX(16px);
   }
   100% {
     opacity: 1;
@@ -216,7 +217,7 @@ body[data-brand-theme="slate"] {
   }
 }
 
-/* ── Settings Overlay: Exit (Fast Pure Fade — No Directional Shift) ── */
+/* ── Settings Overlay: Exit (Smooth Crossfade + Subtle Slide-To-Right) ── */
 @keyframes settingsExit {
   0% {
     opacity: 1;
@@ -224,16 +225,16 @@ body[data-brand-theme="slate"] {
   }
   100% {
     opacity: 0;
-    transform: translateX(0);
+    transform: translateX(16px);
   }
 }
 
 .settings-overlay-enter {
-  animation: settingsEnter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: settingsEnter 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: opacity, transform;
 }
 
 .settings-overlay-exit {
-  animation: settingsExit 150ms ease-in forwards;
-  will-change: opacity;
+  animation: settingsExit 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }

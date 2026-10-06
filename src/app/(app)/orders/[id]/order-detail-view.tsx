@@ -363,7 +363,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   // ═════════════════════════════════════════════════════════════════════════
   if (isEditingOrder) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
         {/* Top Back Link */}
         <div>
           <button
@@ -378,9 +378,9 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
 
         {/* Header: Title + Subtitle + Action Buttons */}
         <form onSubmit={handleSaveOrderChanges} className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+          <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 truncate">
                 Edit order · {order.id}
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
@@ -388,25 +388,23 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5 self-start sm:self-center">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end self-start sm:self-center">
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
                 onClick={() => setIsEditingOrder(false)}
-                className="h-9 px-3.5 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 gap-1.5 shadow-2xs cursor-pointer"
+                className="h-9 px-3 sm:px-3.5 rounded-lg border-slate-200 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 gap-1.5 shadow-2xs cursor-pointer"
               >
-                <X className="h-3.5 w-3.5 text-slate-500" />
+                <X className="h-4 w-4 text-slate-500" />
                 <span>Cancel</span>
               </Button>
 
               <Button
                 type="submit"
-                size="sm"
-                className="h-9 px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-xs gap-1.5 cursor-pointer active:scale-98"
+                className="h-9 px-3.5 sm:px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-semibold shadow-xs gap-1.5 cursor-pointer active:scale-98"
               >
-                <Save className="h-3.5 w-3.5" />
-                <span>Save changes</span>
+                <Save className="h-4 w-4" />
+                <span>Save</span>
               </Button>
             </div>
           </div>
@@ -845,7 +843,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   // ── VIEW 2: NORMAL ORDER DOSSIER (Overview & Work Ticket) ──
   // ═════════════════════════════════════════════════════════════════════════
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 lg:p-8 w-full space-y-5">
       {/* ── 1. Top Link ── */}
       <div className="flex items-center justify-between text-xs">
         <Link
@@ -903,15 +901,14 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
         </div>
 
         {/* Top Right Action Buttons */}
-        <div className="flex items-center gap-2.5 self-start sm:self-center">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end self-start sm:self-center">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() => setIsEditingOrder(true)}
-            className="h-9 px-3.5 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
+            className="h-9 px-3 sm:px-3.5 rounded-lg border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
           >
-            <Pencil className="h-3.5 w-3.5 text-slate-500" />
+            <Pencil className="h-4 w-4 text-slate-500" />
             <span>Edit order</span>
           </Button>
         </div>
@@ -1263,20 +1260,20 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                 </div>
 
                 {/* Customer contact */}
-                <div className="py-2.5 flex items-center justify-between gap-4">
-                  <span className="text-slate-500 font-medium w-36 shrink-0">Customer contact</span>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <div className="font-semibold text-slate-900">{order.customerContact}</div>
-                      <div className="text-slate-500 text-[11px]">{order.customerPhone}</div>
+                <div className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                  <span className="text-slate-500 font-medium shrink-0">Customer contact</span>
+                  <div className="flex items-center justify-between sm:justify-end gap-3 min-w-0">
+                    <div className="text-left sm:text-right min-w-0">
+                      <div className="font-semibold text-slate-900 whitespace-nowrap">{order.customerContact}</div>
+                      <div className="text-slate-500 text-[11px] font-mono whitespace-nowrap">{order.customerPhone}</div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => handleCall(order.customerContact, order.customerPhone)}
-                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors"
+                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
                       >
                         <Phone className="h-3 w-3 text-brand" />
                         <span>Call</span>
@@ -1286,7 +1283,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => handleText(order.customerContact, order.customerPhone)}
-                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors"
+                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
                       >
                         <MessageSquare className="h-3 w-3 text-brand" />
                         <span>Text</span>
@@ -1329,13 +1326,13 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
               <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">
                 <h2 className="text-sm font-bold text-slate-900">Pump & operator</h2>
 
-                <div className="divide-y divide-slate-100 text-xs">
+                <div className="space-y-3 text-xs">
                   {/* Assigned pump */}
-                  <div className="py-2.5 flex items-center justify-between gap-4">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Assigned pump</span>
+                  <div className="py-2 px-0.5 flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                    <span className="text-slate-500 font-medium shrink-0">Assigned pump</span>
                     <div className="flex items-center gap-2 text-right">
-                      <Truck className="h-4 w-4 text-slate-400" />
-                      <div>
+                      <Truck className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div className="whitespace-nowrap">
                         <span className="font-bold text-slate-900">{order.assignedPumpCode}</span>
                         <span className="text-slate-500 text-[11px] ml-1.5 font-normal">
                           {order.assignedPumpType}
@@ -1344,45 +1341,47 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                     </div>
                   </div>
 
-                  {/* Operator */}
-                  <div className="py-2.5 flex items-center justify-between gap-4">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Operator</span>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 text-right">
-                        <User className="h-4 w-4 text-slate-400" />
-                        <div>
-                          <div className="font-bold text-slate-900">{order.assignedOperator}</div>
-                          {order.operatorPhone && (
-                            <div className="text-slate-500 text-[11px] font-normal">{order.operatorPhone}</div>
-                          )}
-                        </div>
+                  {/* Operator Highlight Box */}
+                  <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs text-brand font-bold text-xs">
+                        <User className="h-5 w-5 text-brand" />
                       </div>
-
-                      {order.operatorPhone && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCall(order.assignedOperator, order.operatorPhone)}
-                            className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors"
-                          >
-                            <Phone className="h-3 w-3 text-brand" />
-                            <span>Call</span>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleText(order.assignedOperator, order.operatorPhone)}
-                            className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors"
-                          >
-                            <MessageSquare className="h-3 w-3 text-brand" />
-                            <span>Text</span>
-                          </Button>
-                        </div>
-                      )}
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assigned Operator</div>
+                        <div className="font-bold text-slate-900 text-sm whitespace-nowrap truncate">{order.assignedOperator}</div>
+                        {order.operatorPhone ? (
+                          <div className="text-slate-500 text-xs font-mono whitespace-nowrap">{order.operatorPhone}</div>
+                        ) : (
+                          <div className="text-amber-600 text-xs font-medium">No phone listed</div>
+                        )}
+                      </div>
                     </div>
+
+                    {order.operatorPhone && (
+                      <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCall(order.assignedOperator, order.operatorPhone)}
+                          className="h-8 px-3 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1.5 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
+                        >
+                          <Phone className="h-3.5 w-3.5 text-brand" />
+                          <span>Call</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleText(order.assignedOperator, order.operatorPhone)}
+                          className="h-8 px-3 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1.5 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                          <span>Text</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

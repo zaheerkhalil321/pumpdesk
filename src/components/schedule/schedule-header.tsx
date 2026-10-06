@@ -23,8 +23,8 @@ export function ScheduleHeader({
       borderBottom
       actions={
         <>
-          {/* Search Input */}
-          <div className="relative w-full sm:w-72">
+          {/* Search Input - Desktop & Tablet */}
+          <div className="relative hidden sm:block w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               type="text"
@@ -35,11 +35,11 @@ export function ScheduleHeader({
             />
           </div>
 
-          {/* Primary New Booking Action */}
+          {/* Primary New Booking Action - Desktop & Tablet */}
           <Button
             variant="brand"
             onClick={onNewBookingClick}
-            className="font-semibold gap-1.5"
+            className="hidden sm:inline-flex font-semibold gap-1.5 text-sm h-9 px-3.5"
           >
             <Plus className="h-4 w-4" />
             <span>New booking</span>

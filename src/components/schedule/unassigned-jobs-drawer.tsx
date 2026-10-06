@@ -45,7 +45,7 @@ export function UnassignedJobsDrawer({
         </button>
 
         {/* Right side: Sort label */}
-        <div className="flex items-center gap-1 text-xs text-slate-500 font-medium cursor-pointer hover:text-slate-800">
+        <div className="hidden sm:flex items-center gap-1 text-xs text-slate-500 font-medium cursor-pointer hover:text-slate-800">
           <span>Sort by pour time</span>
           <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
         </div>
@@ -53,14 +53,14 @@ export function UnassignedJobsDrawer({
 
       {/* Collapsible Content */}
       {isOpen && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/40">
+        <div className="border-t border-slate-100 p-3 sm:p-4 bg-slate-50/40">
           {count === 0 ? (
             <div className="flex items-center gap-2 text-xs text-slate-400 py-1">
               <AlertCircle className="h-4 w-4 shrink-0 text-slate-300" />
               <span>All booked pours are actively assigned to pump rigs.</span>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {unassignedJobs.map((job, idx) => {
                 const hour = job.startHour;
                 const timeLabel =
@@ -73,7 +73,7 @@ export function UnassignedJobsDrawer({
                 return (
                   <div
                     key={job.id}
-                    className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-brand shadow-2xs transition-all flex flex-col justify-between min-w-[220px] max-w-[280px]"
+                    className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-brand shadow-2xs transition-all flex flex-col justify-between w-full"
                   >
                     <div>
                       <div className="flex items-center gap-2">

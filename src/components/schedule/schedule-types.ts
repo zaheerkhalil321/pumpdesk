@@ -11,6 +11,8 @@ export interface PumpLane {
   status: "active" | "standby" | "maintenance";
 }
 
+export type DispatchStatus = "unassigned" | "draft" | "dispatched";
+
 export interface ScheduleBooking {
   id: string;
   orderNumber: string;
@@ -23,6 +25,9 @@ export interface ScheduleBooking {
   volumeYards: number;
   status: BookingStatus;
   notes?: string;
+  operator?: string | null;
+  dispatchStatus?: DispatchStatus;
+  dispatchedAt?: string;
 }
 
 export interface ScheduleFilters {

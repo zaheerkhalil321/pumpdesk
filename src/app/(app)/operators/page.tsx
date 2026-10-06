@@ -49,13 +49,13 @@ const mockOperators = [
 
 export default function OperatorsPage() {
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
       {/* 1. HEADER */}
       <PageHeader
         title="Operators & Rig Crew"
         description="Manage pump truck drivers, safety certifications, and daily shift assignments."
         actions={
-          <Button variant="brand" size="sm" className="font-semibold gap-1.5">
+          <Button variant="brand" className="font-semibold gap-1.5 text-sm h-9 px-3.5">
             <Plus className="h-4 w-4" />
             <span>Add New Operator</span>
           </Button>
@@ -63,18 +63,18 @@ export default function OperatorsPage() {
       />
 
       {/* 2. FILTER & SEARCH */}
-      <div className="flex items-center justify-between gap-4 bg-card p-3 rounded-md border border-border">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border">
+        <div className="flex items-center gap-3 flex-1 w-full sm:max-w-md">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search by operator name, assigned rig, phone..."
-              className="h-8 pl-9 text-xs"
+              className="h-9 pl-9 text-xs w-full"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
           <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
             <span>All Operators 100% ACPA Compliant</span>

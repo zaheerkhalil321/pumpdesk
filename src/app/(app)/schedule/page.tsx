@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
 import { ScheduleToolbar } from "@/components/schedule/schedule-toolbar";
 import { TimelineGrid } from "@/components/schedule/timeline-grid";
+import { MobileRigCardView } from "@/components/schedule/mobile-rig-card-view";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ScheduleEmptyState } from "@/components/schedule/schedule-empty-state";
 import { UnassignedJobsDrawer } from "@/components/schedule/unassigned-jobs-drawer";
 import { ScheduleLegend } from "@/components/schedule/schedule-legend";
@@ -22,7 +24,7 @@ import {
   deleteStoredBooking,
 } from "@/lib/orders-store";
 import { toast } from "sonner";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, X, Plus } from "lucide-react";
 
 // Midcoast Concrete Pumping Fleet Roster matching specification
 const INITIAL_PUMPS: PumpLane[] = [
@@ -66,7 +68,9 @@ export default function SchedulePage() {
     new Date(2026, 8, 12, 12, 0, 0)
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<ScheduleViewMode>("day");
+  const isMobile = useIsMobile();
+  const [userViewMode, setUserViewMode] = useState<ScheduleViewMode | null>(null);
+  const viewMode: ScheduleViewMode = userViewMode ?? (isMobile ? "list" : "day");
   const [selectedPumpId, setSelectedPumpId] = useState("all");
   const [selectedOperator, setSelectedOperator] = useState("all");
 
@@ -86,13 +90,18 @@ export default function SchedulePage() {
   // Filtered pumps based on dropdown selections
   const filteredPumps = INITIAL_PUMPS.filter((pump) => {
     if (selectedPumpId !== "all" && pump.id !== selectedPumpId) return false;
-    if (selectedOperator !== "all" && pump.operator !== selectedOperator)
-      return false;
+    if (selectedOperator !== "all") {
+      const hasOperatorJob = bookings.some(
+        (b) => b.pumpId === pump.id && b.operator === selectedOperator
+      );
+      if (!hasOperatorJob) return false;
+    }
     return true;
   });
 
-  // Filtered bookings based on search query
+  // Filtered bookings based on search query & operator selection
   const filteredBookings = bookings.filter((b) => {
+    if (selectedOperator !== "all" && b.operator !== selectedOperator) return false;
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -101,6 +110,16 @@ export default function SchedulePage() {
       b.orderNumber.toLowerCase().includes(query)
     );
   });
+
+  const dispatchedCount = filteredBookings.filter(
+    (b) => b.dispatchStatus === "dispatched"
+  ).length;
+  const draftCount = filteredBookings.filter(
+    (b) => b.operator && b.dispatchStatus !== "dispatched"
+  ).length;
+  const needsOperatorCount = filteredBookings.filter(
+    (b) => !b.operator
+  ).length;
 
   const handleOpenNewBooking = (pumpId?: string, hour?: number) => {
     setEditingBooking(null);
@@ -157,12 +176,15 @@ export default function SchedulePage() {
     addOrUpdateBooking(updatedBooking);
   };
 
-  const [selectedDossierBooking, setSelectedDossierBooking] =
-    useState<ScheduleBooking | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
 
+  const selectedDossierBooking = selectedBookingId
+    ? bookings.find((b) => b.id === selectedBookingId) || null
+    : null;
+
   const handleBookingClick = (booking: ScheduleBooking) => {
-    setSelectedDossierBooking(booking);
+    setSelectedBookingId(booking.id);
     setIsDossierOpen(true);
   };
 
@@ -185,13 +207,18 @@ export default function SchedulePage() {
         currentDate={currentDate}
         onDateChange={setCurrentDate}
         bookingCount={filteredBookings.length}
+        dispatchedCount={dispatchedCount}
+        draftCount={draftCount}
+        needsOperatorCount={needsOperatorCount}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={setUserViewMode}
         pumps={INITIAL_PUMPS}
         selectedPumpId={selectedPumpId}
         onSelectPump={setSelectedPumpId}
         selectedOperator={selectedOperator}
         onSelectOperator={setSelectedOperator}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
       {/* ── Alert Banner: Jobs needing pump assignment (Screenshot 3) ── */}
@@ -223,17 +250,26 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* ── 3. Gantt Timeline Grid (5 AM - 5 PM, 4 Rigs, Drag & Drop + Multi-Hour Spanning) ── */}
-      <TimelineGrid
-        pumps={filteredPumps}
-        bookings={filteredBookings}
-        onSlotClick={(pumpId, hour) => handleOpenNewBooking(pumpId, hour)}
-        onBookingClick={handleBookingClick}
-        onRescheduleBooking={handleRescheduleBooking}
-      />
+      {/* ── 3. Schedule Content: Mobile Card View (Cards Mode) OR Gantt Timeline Grid (Grid Mode) ── */}
+      {viewMode === "list" ? (
+        <MobileRigCardView
+          pumps={filteredPumps}
+          bookings={filteredBookings}
+          onBookingClick={handleBookingClick}
+          onSlotClick={(pumpId, hour) => handleOpenNewBooking(pumpId, hour)}
+        />
+      ) : (
+        <TimelineGrid
+          pumps={filteredPumps}
+          bookings={filteredBookings}
+          onSlotClick={(pumpId, hour) => handleOpenNewBooking(pumpId, hour)}
+          onBookingClick={handleBookingClick}
+          onRescheduleBooking={handleRescheduleBooking}
+        />
+      )}
 
-      {/* ── 4. Empty State Card (Visible when schedule is clear for the day) ── */}
-      {filteredBookings.length === 0 && (
+      {/* ── 4. Empty State Card (Visible when schedule is clear for the day in Grid view) ── */}
+      {filteredBookings.length === 0 && viewMode !== "list" && (
         <ScheduleEmptyState onNewBookingClick={() => handleOpenNewBooking()} />
       )}
 
@@ -243,8 +279,10 @@ export default function SchedulePage() {
         onAssignJob={handleAssignJobFromDrawer}
       />
 
-      {/* ── 6. Bottom Helper & Legend Bar ── */}
-      <ScheduleLegend />
+      {/* ── 6. Bottom Helper & Legend Bar (Desktop) ── */}
+      <div className="hidden md:block">
+        <ScheduleLegend />
+      </div>
 
       {/* ── 7. New Order / Booking Modal (Screenshot 1: V1 + V2 Quick Dispatch Flow) ── */}
       <NewOrderModal
@@ -268,6 +306,17 @@ export default function SchedulePage() {
         pumps={INITIAL_PUMPS}
         onQuickEdit={handleQuickEditFromDossier}
       />
+
+      {/* ── 9. Mobile Floating Action Button (FAB) for 1-Hand Booking ── */}
+      <button
+        type="button"
+        onClick={() => handleOpenNewBooking()}
+        className="fixed bottom-6 right-5 z-40 md:hidden h-14 w-14 rounded-full bg-brand hover:bg-brand-hover text-white shadow-xl flex items-center justify-center active:scale-95 transition-all cursor-pointer border-2 border-white/20"
+        title="New booking"
+        aria-label="New booking"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   );
 }

@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ChevronRight,
-  CheckCircle2,
   Calendar,
   Clock,
   MapPin,
@@ -73,7 +72,7 @@ const newOrderSchema = z.object({
   status: z.enum(["Pending", "Confirmed"]),
   customer: z.string().min(1, "Customer name is required"),
   jobContact: z.string().optional(),
-  jobSite: z.string().min(5, "Job site address must be at least 5 characters"),
+  jobSite: z.string().min(2, "Town or site address is required"),
   jobName: z.string().optional(),
 
   date: z.string().min(1, "Pour date is required"),
@@ -84,7 +83,7 @@ const newOrderSchema = z.object({
   pumpingDuration: z.string(),
   cleanupDuration: z.string(),
 
-  supplier: z.string().min(1, "Concrete supplier is required"),
+  supplier: z.string().optional(),
   estimatedVolume: z.string().min(1, "Estimated volume (yd³) is required"),
   pourType: z.string().min(1, "Please select a pour type"),
   linesOnSite: z.boolean(),
@@ -105,41 +104,137 @@ const newOrderSchema = z.object({
   tags: z.string().optional(),
 });
 
+function parseMinutes(durationStr: string): number {
+  if (!durationStr) return 0;
+  const hrMatch = durationStr.match(/(\d+(?:\.\d+)?)\s*hr/i);
+  if (hrMatch) return Math.round(parseFloat(hrMatch[1]) * 60);
+  const minMatch = durationStr.match(/(\d+)\s*min/i);
+  if (minMatch) return parseInt(minMatch[1], 10);
+  return 0;
+}
+
+function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 14 * 60;
+  const match = timeStr.match(/(\d+):?(\d*)\s*(AM|PM)?/i);
+  if (!match) return 14 * 60;
+  let hour = parseInt(match[1], 10);
+  const min = match[2] ? parseInt(match[2], 10) : 0;
+  const period = match[3]?.toUpperCase();
+  if (period === 'PM' && hour < 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + min;
+}
+
+function formatMinutesToTime(totalMinutes: number): string {
+  const mins = ((totalMinutes % 1440) + 1440) % 1440;
+  const hour24 = Math.floor(mins / 60);
+  const minutes = mins % 60;
+  const period = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const minStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  return `${hour12}:${minStr} ${period}`;
+}
+
+function generateTimeOptions(startHour = 4, endHour = 22, stepMinutes = 15): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [];
+  for (let h = startHour; h <= endHour; h++) {
+    for (let m = 0; m < 60; m += stepMinutes) {
+      if (h === endHour && m > 0) break;
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayHour = h % 12 === 0 ? 12 : h % 12;
+      const displayMin = m < 10 ? `0${m}` : `${m}`;
+      const label = `${displayHour}:${displayMin} ${period}`;
+      options.push({ value: label, label });
+    }
+  }
+  return options;
+}
+
+const ALL_TIME_OPTIONS = generateTimeOptions(4, 22, 15);
+
 type NewOrderFormValues = z.infer<typeof newOrderSchema>;
 
-export default function NewOrderPage() {
+function NewOrderForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read search parameters passed from schedule slot or quick order modal
+  const paramOrderId = searchParams.get("orderId") || searchParams.get("id");
+  const paramBookingId = searchParams.get("bookingId");
+  const paramStatus = searchParams.get("status") as "Pending" | "Confirmed" | null;
+  const paramVolume = searchParams.get("volume");
+  const paramPourTime = searchParams.get("pourTime");
+  const paramHour = searchParams.get("hour");
+  const paramDate = searchParams.get("date");
+  const paramPump = searchParams.get("pumpId");
+  const paramCustomer = searchParams.get("customer");
+  const paramSite = searchParams.get("site");
+  const paramTown = searchParams.get("town");
+  const paramOperator = searchParams.get("operator");
+
+  const isEditMode = Boolean(paramOrderId);
+
+  // Determine initial pour time based on clicked time slot
+  const initialPourTime = useMemo(() => {
+    if (paramPourTime) return paramPourTime;
+    if (paramHour) {
+      const h = parseInt(paramHour, 10);
+      if (!isNaN(h)) {
+        return h === 12 ? "12:00 PM" : h < 12 ? `${h}:00 AM` : `${h - 12}:00 PM`;
+      }
+    }
+    return "7:00 AM";
+  }, [paramPourTime, paramHour]);
+
+  // Dynamically calculate initial arrival (pour - 30m) & finish (pour + 2h + 30m)
+  const initialCalculatedTimes = useMemo(() => {
+    const pourMins = parseTimeToMinutes(initialPourTime);
+    const arriveMins = pourMins - 30;
+    const finishMins = pourMins + 120 + 30;
+    return {
+      arriveBy: formatMinutesToTime(arriveMins),
+      estimatedFinish: formatMinutesToTime(finishMins),
+    };
+  }, [initialPourTime]);
+
+  const initialJobSite = useMemo(() => {
+    if (paramSite && paramTown) return `${paramSite}, ${paramTown}`;
+    if (paramSite) return paramSite;
+    if (paramTown) return paramTown;
+    return "54 Montgomery Ave, Warren, ME 04864";
+  }, [paramSite, paramTown]);
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     formState: { errors },
   } = useForm<NewOrderFormValues>({
     resolver: zodResolver(newOrderSchema),
     defaultValues: {
-      status: "Pending",
-      customer: "Concrete Services",
+      status: paramStatus || "Pending",
+      customer: paramCustomer || "Concrete Services",
       jobContact: "",
-      jobSite: "54 Montgomery Ave, Warren, ME 04864",
+      jobSite: initialJobSite,
       jobName: "",
-      date: "Oct 5, 2026",
-      pourTime: "2:00 PM",
-      arriveBy: "1:30 PM",
-      estimatedFinish: "4:30 PM",
+      date: paramDate || "Sat, Sep 12, 2026",
+      pourTime: initialPourTime,
+      arriveBy: initialCalculatedTimes.arriveBy,
+      estimatedFinish: initialCalculatedTimes.estimatedFinish,
       prepDuration: "30 min",
       pumpingDuration: "2 hr",
       cleanupDuration: "30 min",
       supplier: "Auburn Concrete",
-      estimatedVolume: "",
+      estimatedVolume: paramVolume || "60",
       pourType: "",
       linesOnSite: false,
       customerDetails: "",
       minPumpSize: "34 m",
       billingService: "",
-      assignedPump: "unassigned",
-      assignedOperator: "unassigned",
+      assignedPump: paramPump || "unassigned",
+      assignedOperator: paramOperator || "unassigned",
       operatorInstructions: "",
       equipmentItem: "",
       equipmentQuantity: "1",
@@ -153,6 +248,24 @@ export default function NewOrderPage() {
 
   const [linesOnSite, setLinesOnSite] = useState(false);
   const [collectOnDelivery, setCollectOnDelivery] = useState(false);
+
+  const updateCalculatedTimes = (
+    pourTimeVal: string,
+    prepVal: string,
+    pumpingVal: string,
+    cleanupVal: string
+  ) => {
+    const pourMins = parseTimeToMinutes(pourTimeVal || "2:00 PM");
+    const prepMins = parseMinutes(prepVal || "30 min");
+    const pumpingMins = parseMinutes(pumpingVal || "2 hr");
+    const cleanupMins = parseMinutes(cleanupVal || "30 min");
+
+    const arriveMins = pourMins - prepMins;
+    const finishMins = pourMins + pumpingMins + cleanupMins;
+
+    setValue("arriveBy", formatMinutesToTime(arriveMins), { shouldValidate: true });
+    setValue("estimatedFinish", formatMinutesToTime(finishMins), { shouldValidate: true });
+  };
 
   const toggleLinesOnSite = () => {
     const next = !linesOnSite;
@@ -196,7 +309,7 @@ export default function NewOrderPage() {
   };
 
   const handleCreateOrder = (data: NewOrderFormValues) => {
-    const orderId = generateNextOrderNumber();
+    const orderId = paramOrderId || generateNextOrderNumber();
     const isPumpAssigned = Boolean(data.assignedPump && data.assignedPump !== 'unassigned');
     const pumpInfo = isPumpAssigned ? PUMP_DETAILS_MAP[data.assignedPump] : null;
     const operatorName = data.assignedOperator && data.assignedOperator !== 'unassigned'
@@ -261,7 +374,7 @@ export default function NewOrderPage() {
 
     if (isPumpAssigned) {
       addOrUpdateBooking({
-        id: `booking-${orderId}`,
+        id: paramBookingId || `booking-${orderId}`,
         orderNumber: orderId,
         pumpId: data.assignedPump,
         customerName: data.customer,
@@ -275,7 +388,7 @@ export default function NewOrderPage() {
       });
     } else {
       addOrUpdateUnassignedJob({
-        id: `unassigned-${orderId}`,
+        id: paramBookingId || `unassigned-${orderId}`,
         orderNumber: orderId,
         pumpId: '',
         customerName: data.customer,
@@ -289,7 +402,7 @@ export default function NewOrderPage() {
       });
     }
 
-    toast.success("Order Created Successfully", {
+    toast.success(isEditMode ? "Order Updated Successfully" : "Order Created Successfully", {
       description: `${data.customer} • ${orderId} saved as ${data.status}.`,
     });
     router.push("/schedule");
@@ -314,20 +427,22 @@ export default function NewOrderPage() {
           Schedule
         </Link>
         <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-        <span className="font-semibold text-slate-900">New order</span>
+        <span className="font-semibold text-slate-900">
+          {isEditMode ? `Edit order (${paramOrderId})` : "New order"}
+        </span>
       </nav>
 
       {/* ── Top Header Bar ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          New order
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 truncate">
+          {isEditMode ? `Edit order • ${paramOrderId}` : "New order"}
         </h1>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3 w-full sm:w-auto">
           {/* Status Dropdown */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
+          <div className="flex items-center gap-1.5 text-xs text-slate-600 shrink-0">
             <span className="font-medium">Status:</span>
-            <div className="w-32">
+            <div className="w-28 sm:w-32">
               <AppSelect
                 size="sm"
                 value={watch("status")}
@@ -337,22 +452,24 @@ export default function NewOrderPage() {
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/schedule")}
-            className="h-9 px-4 rounded-lg border-slate-200 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            Cancel
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/schedule")}
+              className="h-9 px-3 sm:px-4 rounded-lg border-slate-200 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
+            >
+              Cancel
+            </Button>
 
-          <Button
-            form="full-order-form"
-            type="submit"
-            className="h-9 px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-98"
-          >
-            Create order
-          </Button>
+            <Button
+              form="full-order-form"
+              type="submit"
+              className="h-9 px-4 sm:px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-semibold shadow-2xs transition-all cursor-pointer active:scale-98 shrink-0 whitespace-nowrap"
+            >
+              {isEditMode ? "Save changes" : "Create order"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -365,14 +482,6 @@ export default function NewOrderPage() {
           </span>
         </div>
       )}
-
-      {/* ── Quick Entry Info Banner ── */}
-      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-light border border-brand/25 text-xs text-brand shadow-2xs">
-        <CheckCircle2 className="h-4 w-4 text-brand shrink-0" />
-        <span className="font-semibold">
-          Details filled from your quick entry. Review before creating.
-        </span>
-      </div>
 
       {/* ── Main Form Form Element ── */}
       <form
@@ -446,9 +555,12 @@ export default function NewOrderPage() {
 
               {/* Job site */}
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Job site <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Town or site address <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10.5px] text-amber-700 font-medium">Town required for dispatch</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <input
@@ -460,7 +572,7 @@ export default function NewOrderPage() {
                           ? "border-red-500 focus:border-red-500 text-red-900 bg-red-50/20"
                           : "border-slate-200 text-slate-900 focus:border-brand"
                       )}
-                      placeholder="Enter site address"
+                      placeholder="Enter town, cross streets, or street address"
                     />
                     <MapPin className="h-4 w-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
@@ -501,16 +613,16 @@ export default function NewOrderPage() {
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                {/* Concrete supplier */}
+                {/* Concrete supplier (Optional) */}
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Concrete supplier <span className="text-red-500">*</span>
+                    Concrete supplier <span className="text-slate-400 font-normal">(optional)</span>
                   </label>
                   <AppSelect
-                    value={watch("supplier")}
+                    value={watch("supplier") || ""}
                     onChange={(val) => setValue("supplier", val, { shouldValidate: true })}
                     options={SAMPLE_SUPPLIERS}
-                    placeholder="Select supplier *"
+                    placeholder="Select supplier (optional)"
                     error={Boolean(errors.supplier)}
                   />
                   {errors.supplier && (
@@ -707,17 +819,12 @@ export default function NewOrderPage() {
                   </label>
                   <AppSelect
                     value={watch("pourTime")}
-                    onChange={(val) => setValue("pourTime", val, { shouldValidate: true })}
+                    onChange={(val) => {
+                      setValue("pourTime", val, { shouldValidate: true });
+                      updateCalculatedTimes(val, getValues("prepDuration"), getValues("pumpingDuration"), getValues("cleanupDuration"));
+                    }}
                     icon={Clock}
-                    options={[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((h) => {
-                      const label =
-                        h === 12
-                          ? "12:00 PM"
-                          : h < 12
-                          ? `${h}:00 AM`
-                          : `${h - 12}:00 PM`;
-                      return { value: label, label };
-                    })}
+                    options={ALL_TIME_OPTIONS}
                     error={Boolean(errors.pourTime)}
                   />
                   {errors.pourTime && (
@@ -731,24 +838,21 @@ export default function NewOrderPage() {
               {/* Arrive by & Estimated finish */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Arrive by
-                  </label>
-                  <div className="relative">
-                    <div
-                      className={cn(
-                        "w-full h-9 pl-3 pr-8 rounded-lg border bg-white flex items-center gap-2",
-                        errors.arriveBy ? "border-red-500" : "border-slate-200"
-                      )}
-                    >
-                      <Clock className="h-4 w-4 text-slate-400 shrink-0" />
-                      <input
-                        type="text"
-                        {...register("arriveBy")}
-                        className="text-xs text-slate-900 bg-transparent outline-none w-full"
-                      />
-                    </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 block">
+                      Arrive by
+                    </label>
+                    <span className="text-[10px] font-semibold text-brand bg-brand-light px-1.5 py-0.2 rounded">
+                      Auto
+                    </span>
                   </div>
+                  <AppSelect
+                    value={watch("arriveBy") || "8:30 AM"}
+                    onChange={(val) => setValue("arriveBy", val, { shouldValidate: true })}
+                    icon={Clock}
+                    options={ALL_TIME_OPTIONS}
+                    error={Boolean(errors.arriveBy)}
+                  />
                   {errors.arriveBy && (
                     <p className="text-[11px] text-red-500 font-medium mt-1">
                       {errors.arriveBy.message}
@@ -757,24 +861,21 @@ export default function NewOrderPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Estimated finish
-                  </label>
-                  <div className="relative">
-                    <div
-                      className={cn(
-                        "w-full h-9 pl-3 pr-8 rounded-lg border bg-white flex items-center gap-2",
-                        errors.estimatedFinish ? "border-red-500" : "border-slate-200"
-                      )}
-                    >
-                      <Clock className="h-4 w-4 text-slate-400 shrink-0" />
-                      <input
-                        type="text"
-                        {...register("estimatedFinish")}
-                        className="text-xs text-slate-900 bg-transparent outline-none w-full"
-                      />
-                    </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 block">
+                      Estimated finish
+                    </label>
+                    <span className="text-[10px] font-semibold text-brand bg-brand-light px-1.5 py-0.2 rounded">
+                      Auto
+                    </span>
                   </div>
+                  <AppSelect
+                    value={watch("estimatedFinish") || "11:30 AM"}
+                    onChange={(val) => setValue("estimatedFinish", val, { shouldValidate: true })}
+                    icon={Clock}
+                    options={ALL_TIME_OPTIONS}
+                    error={Boolean(errors.estimatedFinish)}
+                  />
                   {errors.estimatedFinish && (
                     <p className="text-[11px] text-red-500 font-medium mt-1">
                       {errors.estimatedFinish.message}
@@ -792,7 +893,10 @@ export default function NewOrderPage() {
                   <AppSelect
                     size="sm"
                     value={watch("prepDuration")}
-                    onChange={(val) => setValue("prepDuration", val)}
+                    onChange={(val) => {
+                      setValue("prepDuration", val);
+                      updateCalculatedTimes(getValues("pourTime"), val, getValues("pumpingDuration"), getValues("cleanupDuration"));
+                    }}
                     options={["15 min", "30 min", "45 min", "1 hr"]}
                   />
                 </div>
@@ -804,7 +908,10 @@ export default function NewOrderPage() {
                   <AppSelect
                     size="sm"
                     value={watch("pumpingDuration")}
-                    onChange={(val) => setValue("pumpingDuration", val)}
+                    onChange={(val) => {
+                      setValue("pumpingDuration", val);
+                      updateCalculatedTimes(getValues("pourTime"), getValues("prepDuration"), val, getValues("cleanupDuration"));
+                    }}
                     options={["1 hr", "2 hr", "3 hr", "4 hr", "5 hr"]}
                   />
                 </div>
@@ -816,14 +923,17 @@ export default function NewOrderPage() {
                   <AppSelect
                     size="sm"
                     value={watch("cleanupDuration")}
-                    onChange={(val) => setValue("cleanupDuration", val)}
+                    onChange={(val) => {
+                      setValue("cleanupDuration", val);
+                      updateCalculatedTimes(getValues("pourTime"), getValues("prepDuration"), getValues("pumpingDuration"), val);
+                    }}
                     options={["15 min", "30 min", "45 min", "1 hr"]}
                   />
                 </div>
               </div>
 
               <p className="text-[10.5px] text-slate-400 leading-tight">
-                Arrival and finish calculated from durations.
+                Arrival and finish automatically calculated from durations.
               </p>
             </div>
 
@@ -1005,12 +1115,12 @@ export default function NewOrderPage() {
           <span>Save as pending now. Assign a pump and operator before dispatch.</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
           <Button
             type="button"
             variant="outline"
             onClick={() => router.push("/schedule")}
-            className="h-9 px-4 rounded-lg border-slate-200 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+            className="flex-1 sm:flex-none h-9 px-4 rounded-lg border-slate-200 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
           >
             Cancel
           </Button>
@@ -1018,12 +1128,27 @@ export default function NewOrderPage() {
           <Button
             form="full-order-form"
             type="submit"
-            className="h-9 px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-98"
+            className="flex-1 sm:flex-none h-9 px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-semibold shadow-2xs transition-all cursor-pointer active:scale-98 shrink-0 whitespace-nowrap"
           >
-            Create order
+            {isEditMode ? "Save changes" : "Create order"}
           </Button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewOrderPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 w-full space-y-4">
+          <div className="h-8 w-48 bg-slate-100 rounded-lg animate-pulse" />
+          <div className="h-64 bg-slate-50 rounded-2xl border border-slate-200 animate-pulse" />
+        </div>
+      }
+    >
+      <NewOrderForm />
+    </Suspense>
   );
 }

@@ -8,14 +8,12 @@ import {
   Phone,
   MessageSquare,
   ChevronRight,
-  Info,
   X,
-  Building2,
-  Users,
-  MapPin,
   CheckCircle2,
   Copy,
   ExternalLink,
+  LayoutGrid,
+  Table as TableIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +27,8 @@ import {
 import { AppSelect } from '@/components/ui/app-select';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
+import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import { CustomerTileCard } from '@/components/customers/customer-tile-card';
 
 export interface CustomerItem {
   id: string;
@@ -162,6 +162,7 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
 
 type StatusFilter = 'All' | 'Active' | 'Inactive';
 type SortOption = 'name_asc' | 'name_desc' | 'newest' | 'oldest';
+type ViewLayout = 'table' | 'tiles';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerItem[]>(INITIAL_CUSTOMERS);
@@ -170,14 +171,31 @@ export default function CustomersPage() {
   const [sortBy, setSortBy] = useState<SortOption>('name_asc');
   const [selectedCustomerForQuickView, setSelectedCustomerForQuickView] = useState<CustomerItem | null>(null);
 
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
+  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
+
   // Add New Customer Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerNameError, setNewCustomerNameError] = useState<string | null>(null);
   const [newContactPerson, setNewContactPerson] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerTier, setNewCustomerTier] = useState('Commercial Tier 1');
   const [newCustomerStatus, setNewCustomerStatus] = useState<'Active' | 'Inactive'>('Active');
+
+  const handleOpenAddModal = () => {
+    setNewCustomerNameError(null);
+    setNewCustomerName('');
+    setNewContactPerson('');
+    setNewCustomerPhone('');
+    setNewCustomerEmail('');
+    setNewCustomerTier('Commercial Tier 1');
+    setNewCustomerStatus('Active');
+    setIsAddModalOpen(true);
+  };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -220,6 +238,10 @@ export default function CustomersPage() {
         return true;
       })
       .sort((a, b) => {
+        // Keep inactive customers at the bottom by default
+        if (a.status !== b.status) {
+          return a.status === 'Inactive' ? 1 : -1;
+        }
         if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
         if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
         if (sortBy === 'newest') return new Date(b.createdAtRaw).getTime() - new Date(a.createdAtRaw).getTime();
@@ -231,13 +253,12 @@ export default function CustomersPage() {
   // Aggregate Metrics
   const activeCount = useMemo(() => customers.filter((c) => c.status === 'Active').length, [customers]);
   const inactiveCount = useMemo(() => customers.filter((c) => c.status === 'Inactive').length, [customers]);
-  const totalSitesCount = useMemo(() => customers.reduce((sum, c) => sum + c.activeSites, 0), [customers]);
 
   // Handle Create Customer
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustomerName.trim()) {
-      toast.error('Customer company name is required');
+      setNewCustomerNameError('Company name is required');
       return;
     }
 
@@ -263,6 +284,7 @@ export default function CustomersPage() {
     };
 
     setCustomers((prev) => [newCust, ...prev]);
+    setNewCustomerNameError(null);
     setIsAddModalOpen(false);
     setNewCustomerName('');
     setNewContactPerson('');
@@ -307,21 +329,16 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
       {/* ── 1. Page Header ── */}
       <PageHeader
         title="Customers"
-        badge={
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-muted text-muted-foreground border border-border">
-            CRM Master
-          </span>
-        }
         description="Find customer details, contacts, and orders."
         actions={
           <Button
             variant="brand"
-            onClick={() => setIsAddModalOpen(true)}
-            className="font-semibold gap-1.5"
+            onClick={handleOpenAddModal}
+            className="font-semibold gap-1.5 text-sm h-9 px-3.5"
           >
             <Plus className="h-4 w-4" />
             <span>New customer</span>
@@ -329,58 +346,11 @@ export default function CustomersPage() {
         }
       />
 
-      {/* ── 2. KPI / Metrics Summary Bar ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Total Accounts</span>
-            <Building2 className="h-4 w-4 text-slate-400" />
-          </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900 tabular-nums">{customers.length}</span>
-            <span className="text-[11px] text-slate-400 font-medium">registered</span>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Active Pumping</span>
-            <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
-          </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-brand tabular-nums">{activeCount}</span>
-            <span className="text-[11px] text-brand/80 font-medium">good standing</span>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Authorized Sites</span>
-            <MapPin className="h-4 w-4 text-slate-400" />
-          </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900 tabular-nums">{totalSitesCount}</span>
-            <span className="text-[11px] text-slate-400 font-medium">job locations</span>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Inactive / On Hold</span>
-            <Users className="h-4 w-4 text-slate-400" />
-          </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-700 tabular-nums">{inactiveCount}</span>
-            <span className="text-[11px] text-slate-400 font-medium">dormant</span>
-          </div>
-        </div>
-      </div>
-
       {/* ── 3. Filters & Search Control Bar ── */}
       <div className="space-y-3">
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100/90 border border-slate-200/60 w-fit">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100/90 border border-slate-200/60 w-full sm:w-fit overflow-x-auto">
             <button
               type="button"
               onClick={() => setStatusFilter('All')}
@@ -439,7 +409,7 @@ export default function CustomersPage() {
         </div>
 
         {/* Search Bar Row (More filters excluded as V2) */}
-        <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
+        <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
           <div className="relative flex-1 group">
             <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-brand transition-colors" />
             <Input
@@ -465,64 +435,111 @@ export default function CustomersPage() {
             )}
           </div>
 
-          {/* Sort Selector */}
-          <div className="w-36 shrink-0">
-            <AppSelect
-              size="sm"
-              value={sortBy}
-              onChange={(val) => setSortBy(val as SortOption)}
-              options={[
-                { value: "name_asc", label: "Name A – Z" },
-                { value: "name_desc", label: "Name Z – A" },
-                { value: "newest", label: "Newest first" },
-                { value: "oldest", label: "Oldest first" },
-              ]}
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0">
+            {/* View Mode Switcher: Tiles vs Table */}
+            <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 shadow-2xs shrink-0">
+              <button
+                type="button"
+                onClick={() => setUserLayout('tiles')}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer",
+                  currentLayout === 'tiles'
+                    ? "bg-white text-slate-900 shadow-2xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+                title="Tiles view"
+                aria-label="Tiles view"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Tiles</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserLayout('table')}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer",
+                  currentLayout === 'table'
+                    ? "bg-white text-slate-900 shadow-2xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+                title="Table view"
+                aria-label="Table view"
+              >
+                <TableIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Table</span>
+              </button>
+            </div>
+
+            {/* Sort Selector */}
+            <div className="w-36 sm:w-44 shrink-0">
+              <AppSelect
+                size="sm"
+                value={sortBy}
+                onChange={(val) => setSortBy(val as SortOption)}
+                options={[
+                  { value: "name_asc", label: "Name A – Z" },
+                  { value: "name_desc", label: "Name Z – A" },
+                  { value: "newest", label: "Newest first" },
+                  { value: "oldest", label: "Oldest first" },
+                ]}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── 4. Customers Master Directory Table ── */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs sm:text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 font-semibold select-none">
-                <th className="py-3 px-4 sm:px-6 w-[28%]">Customer</th>
-                <th className="py-3 px-4 w-[16%]">Phone</th>
-                <th className="py-3 px-4 w-[20%]">Email</th>
-                <th className="py-3 px-4 w-[14%]">Created</th>
-                <th className="py-3 px-4 w-[10%]">Status</th>
-                <th className="py-3 px-4 text-right sm:pr-6 w-[12%]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-14 text-center text-slate-400">
-                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
-                      <Search className="h-5 w-5" />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-700">No customers found</p>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                      {searchQuery
-                        ? `No matching records found for "${searchQuery}". Check spelling or try a different filter.`
-                        : 'No customer accounts in this category.'}
-                    </p>
-                    {searchQuery && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSearchQuery('')}
-                        className="mt-3.5 h-8 text-xs font-semibold cursor-pointer"
-                      >
-                        Reset search
-                      </Button>
-                    )}
-                  </td>
+      {/* ── 4. Customers Master Directory (Tiles Grid vs Table) ── */}
+      {filteredCustomers.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs py-14 px-4 text-center text-slate-400">
+          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+            <Search className="h-5 w-5" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700">No customers found</p>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            {searchQuery
+              ? `No matching records found for "${searchQuery}". Check spelling or try a different filter.`
+              : 'No customer accounts in this category.'}
+          </p>
+          {searchQuery && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchQuery('')}
+              className="mt-3.5 h-8 text-xs font-semibold cursor-pointer"
+            >
+              Reset search
+            </Button>
+          )}
+        </div>
+      ) : currentLayout === 'tiles' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4">
+          {filteredCustomers.map((cust) => (
+            <CustomerTileCard
+              key={cust.id}
+              customer={cust}
+              onClick={() => setSelectedCustomerForQuickView(cust)}
+              onCall={handleCall}
+              onText={handleText}
+              onCopyPhone={handleCopyPhone}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 font-semibold select-none">
+                  <th className="py-3 px-4 sm:px-6 w-[28%]">Customer</th>
+                  <th className="py-3 px-4 w-[16%]">Phone</th>
+                  <th className="py-3 px-4 w-[20%]">Email</th>
+                  <th className="py-3 px-4 w-[14%]">Created</th>
+                  <th className="py-3 px-4 w-[10%]">Status</th>
+                  <th className="py-3 px-4 text-right sm:pr-6 w-[12%]">Actions</th>
                 </tr>
-              ) : (
-                filteredCustomers.map((cust) => (
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredCustomers.map((cust) => (
                   <tr
                     key={cust.id}
                     className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
@@ -569,7 +586,7 @@ export default function CustomersPage() {
 
                     {/* Email */}
                     <td
-                      className="py-3.5 px-4 font-normal text-slate-600 truncate max-w-[200px]"
+                      className="py-3.5 px-4 font-normal text-slate-600 truncate max-w-[320px]"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <a
@@ -640,43 +657,23 @@ export default function CustomersPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ── 5. Bottom Info & Quick Filter Banner ── */}
-      <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
-        <div className="flex items-center gap-2">
-          <Info className="h-4 w-4 text-slate-400 shrink-0" />
-          <span>Select any customer row to preview details, contacts, and active job sites.</span>
-        </div>
-
-        <div className="flex items-center gap-3 self-end sm:self-auto text-slate-500 font-medium">
-          <div className="flex items-center gap-1.5">
-            <span>Show:</span>
-            <div className="w-36">
-              <AppSelect
-                size="sm"
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val as StatusFilter)}
-                options={[
-                  { value: "All", label: "All customers" },
-                  { value: "Active", label: "Active only" },
-                  { value: "Inactive", label: "Inactive only" },
-                ]}
-              />
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <span className="text-slate-300">|</span>
-          <span>Showing all {filteredCustomers.length} customers</span>
         </div>
-      </div>
+      )}
+
+
 
       {/* ── 6. Dialog: Add New Customer ── */}
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+      <Dialog
+        open={isAddModalOpen}
+        onOpenChange={(open) => {
+          setIsAddModalOpen(open);
+          if (!open) setNewCustomerNameError(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[440px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
@@ -684,16 +681,30 @@ export default function CustomersPage() {
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleCreateCustomer} className="space-y-4 pt-1">
+          <form onSubmit={handleCreateCustomer} noValidate className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Company name *</label>
+              <label className="text-xs font-semibold text-slate-700 block">
+                Company name <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={newCustomerName}
-                onChange={(e) => setNewCustomerName(e.target.value)}
+                onChange={(e) => {
+                  setNewCustomerName(e.target.value);
+                  if (newCustomerNameError) setNewCustomerNameError(null);
+                }}
                 placeholder="e.g. Acme Concrete Contractors"
-                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
-                required
+                className={cn(
+                  "h-10 text-xs sm:text-sm font-medium rounded-lg shadow-2xs transition-colors",
+                  newCustomerNameError
+                    ? "border-red-500 focus-visible:border-red-500 text-red-900 bg-red-50/20 ring-1 ring-red-500/20"
+                    : "border-slate-200 text-slate-900 bg-white placeholder:text-slate-400 focus-visible:border-brand"
+                )}
               />
+              {newCustomerNameError && (
+                <p className="text-[11px] text-red-500 font-medium mt-1">
+                  {newCustomerNameError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -762,13 +773,13 @@ export default function CustomersPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
-                className="h-9 px-4 text-xs font-semibold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg cursor-pointer shadow-2xs transition-colors focus-visible:outline-none"
+                className="h-9 px-4 text-sm font-medium border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg cursor-pointer shadow-2xs transition-colors focus-visible:outline-none"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="h-9 px-4.5 text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs transition-colors focus-visible:outline-none"
+                className="h-9 px-4.5 text-sm font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs transition-colors focus-visible:outline-none"
               >
                 Add customer
               </Button>
@@ -862,7 +873,7 @@ export default function CustomersPage() {
                   href={`/customers/${selectedCustomerForQuickView.id}`}
                   className="h-8.5 px-3.5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
                 >
-                  <span>Open dossier</span>
+                  <span>View Full Customer Info</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </div>

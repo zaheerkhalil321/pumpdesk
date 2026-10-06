@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,10 +16,11 @@ import { AppSelect } from "@/components/ui/app-select";
 import { BookingStatus, PumpLane, ScheduleBooking } from "./schedule-types";
 import { toast } from "sonner";
 import { Clock, HardHat, MapPin, Truck, Trash2, Activity } from "lucide-react";
+import { DeleteOrderDialog } from "./delete-order-dialog";
 
 const bookingSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
-  jobSiteName: z.string().min(2, "Job site name is required"),
+  jobSiteName: z.string().min(2, "Town or site location is required"),
   pumpId: z.string().min(1, "Please select a pump"),
   startHour: z.number().min(5).max(17),
   durationHours: z.number().min(1).max(12),
@@ -84,7 +85,7 @@ export function QuickBookingDrawer({
       pumps.map((p) => ({
         value: p.id,
         label: `${p.code} · ${p.name}`,
-        description: p.operator || "No Operator",
+        description: p.boomLength,
       })),
     [pumps]
   );
@@ -185,12 +186,15 @@ export function QuickBookingDrawer({
     onOpenChange(false);
   };
 
-  const handleDelete = () => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleConfirmDelete = () => {
     if (editingBooking && onDeleteBooking) {
       onDeleteBooking(editingBooking.id);
       toast.info("Booking Cancelled", {
         description: `Order ${editingBooking.orderNumber} was removed from the schedule.`,
       });
+      setIsDeleteDialogOpen(false);
       onOpenChange(false);
     }
   };
@@ -245,13 +249,17 @@ export function QuickBookingDrawer({
 
             {/* Job Site */}
             <div>
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
-                <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                <span>Job Site Location</span>
+              <label className="text-xs font-semibold text-slate-700 flex items-center justify-between mb-1">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Town or site location</span>
+                  <span className="text-red-500">*</span>
+                </span>
+                <span className="text-[10px] text-amber-700 font-medium">Town required</span>
               </label>
               <input
                 {...register("jobSiteName")}
-                placeholder="e.g. Dallas Medical Tower Phase 2"
+                placeholder="Town (required) or cross streets / site address"
                 className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand transition-all"
               />
               {errors.jobSiteName && (
@@ -348,8 +356,8 @@ export function QuickBookingDrawer({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={handleDelete}
-                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-medium gap-1.5 rounded-lg"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-medium gap-1.5 rounded-lg cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
                 <span>Delete</span>
@@ -360,7 +368,7 @@ export function QuickBookingDrawer({
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  className="h-9 px-3 rounded-lg border-slate-200 text-xs text-slate-600 hover:text-slate-900"
+                  className="h-9 px-3 rounded-lg border-slate-200 text-xs text-slate-600 hover:text-slate-900 cursor-pointer"
                 >
                   Cancel
                 </Button>
@@ -368,7 +376,7 @@ export function QuickBookingDrawer({
                   form="quick-booking-form"
                   type="submit"
                   disabled={isSubmitting}
-                  className="h-9 px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs"
+                  className="h-9 px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-2xs cursor-pointer"
                 >
                   Save Changes
                 </Button>
@@ -380,7 +388,7 @@ export function QuickBookingDrawer({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 h-9 rounded-lg border-slate-200 text-xs text-slate-600 hover:text-slate-900"
+                className="flex-1 h-9 rounded-lg border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </Button>
@@ -388,13 +396,21 @@ export function QuickBookingDrawer({
                 form="quick-booking-form"
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 h-9 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-2xs"
+                className="flex-1 h-9 rounded-lg bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-2xs cursor-pointer"
               >
                 Confirm Booking
               </Button>
             </>
           )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <DeleteOrderDialog
+          isOpen={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          booking={editingBooking}
+          onConfirmDelete={handleConfirmDelete}
+        />
       </SheetContent>
     </Sheet>
   );

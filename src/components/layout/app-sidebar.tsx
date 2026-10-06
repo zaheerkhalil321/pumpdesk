@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useSettings } from '@/components/providers/settings-provider';
+import { useIsTablet } from '@/hooks/use-mobile';
 
 interface YardLocation {
   id: string;
@@ -77,7 +78,7 @@ const navItems: NavItem[] = [
     title: 'Schedule',
     href: '/schedule',
     icon: Calendar,
-    isLive: true,
+    badge: '2 today',
     matchPrefix: true,
   },
   {
@@ -97,12 +98,21 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isTablet = useIsTablet();
+  const [isManuallyCollapsed, setIsManuallyCollapsed] = useState<boolean | null>(null);
+  const isCollapsed = isManuallyCollapsed !== null ? isManuallyCollapsed : isTablet;
   const router = useRouter();
   const [selectedYard, setSelectedYard] = useState<YardLocation>(dummyYards[0]);
   const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
-  const { isOpen: isSettingsOpen, toggleSettings: toggleSettingsModal } = useSettings();
+  const { isOpen: isSettingsOpen, toggleSettings: toggleSettingsModal, closeSettings } = useSettings();
   const isSettingsActive = isSettingsOpen || pathname === '/settings' || pathname.startsWith('/settings');
+
+  const handleNavClick = useCallback(() => {
+    if (isSettingsOpen) {
+      closeSettings();
+    }
+  }, [isSettingsOpen, closeSettings]);
+
   // Track the last non-settings route so clicking settings again closes and restores work
   useEffect(() => {
     if (pathname && !pathname.startsWith('/settings')) {
@@ -133,8 +143,11 @@ export function AppSidebar() {
 
   // Keyboard shortcut: Pressing '[' or 'Cmd/Ctrl + B' toggles the sidebar
   const toggleCollapse = useCallback(() => {
-    setIsCollapsed((prev) => !prev);
-  }, []);
+    setIsManuallyCollapsed((prev) => {
+      const current = prev !== null ? prev : isTablet;
+      return !current;
+    });
+  }, [isTablet]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -162,7 +175,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        'relative border-r border-border bg-card flex flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-50',
+        'hidden md:flex relative border-r border-border bg-card flex-col h-screen select-none shrink-0 justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-50',
         isCollapsed ? 'w-[68px]' : 'w-64',
       )}
     >
@@ -182,16 +195,17 @@ export function AppSidebar() {
         {/* 1. BRAND HEADER */}
         <Link
           href="/schedule"
+          onClick={handleNavClick}
           className={cn(
             'h-15 flex items-center border-b border-slate-100 transition-all duration-300 hover:bg-slate-50/50 cursor-pointer',
             isCollapsed ? 'justify-center px-2' : 'px-3.5 gap-2.5',
           )}
           title="PumpDesk — Schedule Board"
         >
-          {/* Logo Mark: Deep slate squircle with brand accent */}
-          <div className="h-8.5 w-8.5 rounded-[8px] bg-slate-950 flex items-center justify-center shadow-xs shrink-0 border border-white/10">
-            <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none pl-0.5">
-              P<span className="text-brand">.</span>
+          {/* Logo Mark: Dynamic brand squircle */}
+          <div className="h-8.5 w-8.5 rounded-[8px] bg-brand flex items-center justify-center shadow-xs shrink-0 border border-white/15 transition-colors">
+            <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none">
+              P
             </span>
           </div>
 
@@ -235,7 +249,7 @@ export function AppSidebar() {
                 )}
               >
                 {/* Monogram Badge */}
-                <div className="h-7.5 w-7.5 rounded-[8px] bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs border border-slate-800 transition-colors">
+                <div className="h-7.5 w-7.5 rounded-[8px] bg-brand-light text-brand font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs border border-brand/25 transition-colors">
                   {selectedYard.code}
                 </div>
 
@@ -339,6 +353,7 @@ export function AppSidebar() {
                 <div key={item.title} className="relative group">
                   <Link
                     href={item.href}
+                    onClick={handleNavClick}
                     className={cn(
                       'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
                       isActive
@@ -347,11 +362,8 @@ export function AppSidebar() {
                     )}
                   >
                     <Icon className="h-4.5 w-4.5 shrink-0" />
-                    {item.isLive && (
+                    {item.badge && (
                       <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-brand border border-white" />
-                    )}
-                    {item.badge && !item.isLive && (
-                      <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-slate-400 border border-white" />
                     )}
                   </Link>
 
@@ -361,11 +373,6 @@ export function AppSidebar() {
                     {item.badge && (
                       <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded">
                         {item.badge}
-                      </span>
-                    )}
-                    {item.isLive && (
-                      <span className="text-[10px] font-bold text-brand bg-slate-950 px-1.5 py-0.2 rounded">
-                        LIVE
                       </span>
                     )}
                     <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
@@ -379,6 +386,7 @@ export function AppSidebar() {
               <Link
                 key={item.title}
                 href={item.href}
+                onClick={handleNavClick}
                 className={cn(
                   'flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden',
                   isActive
@@ -402,25 +410,35 @@ export function AppSidebar() {
                 <span className="truncate">{item.title}</span>
 
                 {/* Badges */}
-                {item.isLive && (
-                  <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-brand bg-brand-light border border-brand/25 px-1.5 py-0.5 rounded-full tracking-wide">
-                    <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-                    LIVE
-                  </span>
-                )}
-
-                {item.badge && (
+                {item.title === 'Schedule' ? (
                   <span
                     className={cn(
-                      'ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0',
+                      'ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold transition-all shrink-0',
                       isActive
-                        ? 'bg-brand text-white'
-                        : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700',
+                        ? 'bg-brand text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/80 group-hover:text-slate-900'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'h-1.5 w-1.5 rounded-full shrink-0',
+                        isActive ? 'bg-emerald-300 animate-pulse' : 'bg-emerald-500 animate-pulse'
+                      )}
+                    />
+                    <span>2 today</span>
+                  </span>
+                ) : item.badge ? (
+                  <span
+                    className={cn(
+                      'ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 transition-colors',
+                      isActive
+                        ? 'bg-brand text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'
                     )}
                   >
                     {item.badge}
                   </span>
-                )}
+                ) : null}
               </Link>
             );
           })}
@@ -486,8 +504,10 @@ export function AppSidebar() {
           <div className="space-y-2">
             <div
               className={cn(
-                'flex items-center justify-between p-1.5 rounded-xl transition-colors group',
-                isSettingsActive ? 'bg-brand-light/60 border border-brand/20' : 'hover:bg-slate-200/50'
+                'flex items-center justify-between p-1.5 rounded-xl transition-colors group border',
+                isSettingsActive
+                  ? 'bg-brand-light/60 border-brand/20'
+                  : 'border-transparent hover:bg-slate-200/50'
               )}
             >
               <button

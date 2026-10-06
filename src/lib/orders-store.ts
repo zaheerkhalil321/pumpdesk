@@ -16,6 +16,7 @@ export interface OrderItem {
   isUnassigned?: boolean;
   status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
   invoiceStatus: 'Not created' | 'Create invoice' | 'Paid';
+  volumeYards?: number;
 }
 
 export interface FullOrderData {
@@ -68,6 +69,7 @@ export const INITIAL_ORDERS: OrderItem[] = [
     isUnassigned: true,
     status: 'Pending',
     invoiceStatus: 'Not created',
+    volumeYards: 120,
   },
   {
     id: 'ORD-1524',
@@ -77,10 +79,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Pine Tree Concrete',
     jobSite: '42 Union Street, Camden',
     pump: '02 · 28M',
-    pumpModel: '28M',
+    pumpModel: '28M Putzmeister',
     operator: 'Rob Black',
     status: 'Confirmed',
     invoiceStatus: 'Not created',
+    volumeYards: 85,
   },
   {
     id: 'ORD-1523',
@@ -90,10 +93,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Harbor Builders',
     jobSite: '9 Water Street, Belfast',
     pump: '01 · 34M',
-    pumpModel: '34M',
+    pumpModel: '34M Putzmeister',
     operator: 'Dave Smith',
     status: 'Confirmed',
     invoiceStatus: 'Not created',
+    volumeYards: 140,
   },
   {
     id: 'ORD-1522',
@@ -103,10 +107,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Accurate Concrete',
     jobSite: '61 Elm Street, Rockport',
     pump: '02 · 28M',
-    pumpModel: '28M',
+    pumpModel: '28M Putzmeister',
     operator: 'Rob Black',
     status: 'Confirmed',
     invoiceStatus: 'Not created',
+    volumeYards: 65,
   },
   {
     id: 'ORD-1521',
@@ -116,10 +121,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Granite State Builders',
     jobSite: '12 Knox Street, Thomaston',
     pump: '03 · 47M',
-    pumpModel: '47M',
+    pumpModel: '47M Schwing',
     operator: 'Dave Smith',
     status: 'Pending',
     invoiceStatus: 'Not created',
+    volumeYards: 110,
   },
   {
     id: 'ORD-1520',
@@ -129,10 +135,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Harbor Builders',
     jobSite: '27 Bay Road, Camden',
     pump: '01 · 34M',
-    pumpModel: '34M',
+    pumpModel: '34M Putzmeister',
     operator: 'Rob Black',
     status: 'Cancelled',
     invoiceStatus: 'Not created',
+    volumeYards: 45,
   },
   {
     id: 'ORD-1518',
@@ -142,10 +149,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Turner Construction',
     jobSite: '24 Bay View Street, Camden',
     pump: '01 · 34M',
-    pumpModel: '34M',
+    pumpModel: '34M Putzmeister',
     operator: 'Rob Black',
     status: 'Completed',
     invoiceStatus: 'Create invoice',
+    volumeYards: 95,
   },
   {
     id: 'ORD-1517',
@@ -155,10 +163,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Coastal Foundations',
     jobSite: '8 School Street, Waldoboro',
     pump: '04 · Line pump',
-    pumpModel: 'Line pump',
+    pumpModel: 'Trailer Line Pump',
     operator: 'Tony Perez',
     status: 'Completed',
     invoiceStatus: 'Paid',
+    volumeYards: 35,
   },
   {
     id: 'ORD-1516',
@@ -168,10 +177,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Midcoast Precast',
     jobSite: '15 Industrial Park, Rockland',
     pump: '02 · 28M',
-    pumpModel: '28M',
+    pumpModel: '28M Putzmeister',
     operator: 'Rob Black',
     status: 'Confirmed',
     invoiceStatus: 'Not created',
+    volumeYards: 160,
   },
   {
     id: 'ORD-1515',
@@ -186,6 +196,7 @@ export const INITIAL_ORDERS: OrderItem[] = [
     isUnassigned: true,
     status: 'Pending',
     invoiceStatus: 'Not created',
+    volumeYards: 75,
   },
   {
     id: 'ORD-1514',
@@ -195,10 +206,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Accurate Concrete',
     jobSite: '100 Commercial St, Rockport',
     pump: '03 · 47M',
-    pumpModel: '47M',
+    pumpModel: '47M Schwing',
     operator: 'Dave Smith',
     status: 'Completed',
     invoiceStatus: 'Paid',
+    volumeYards: 130,
   },
   {
     id: 'ORD-1513',
@@ -208,10 +220,11 @@ export const INITIAL_ORDERS: OrderItem[] = [
     customer: 'Granite State Builders',
     jobSite: '5 Route 1, Thomaston',
     pump: '01 · 34M',
-    pumpModel: '34M',
+    pumpModel: '34M Putzmeister',
     operator: 'Tony Perez',
     status: 'Completed',
     invoiceStatus: 'Paid',
+    volumeYards: 50,
   },
 ];
 
@@ -253,6 +266,9 @@ export const INITIAL_SCHEDULE_BOOKINGS: ScheduleBooking[] = [
     volumeYards: 80,
     status: 'onsite',
     notes: 'Use the north gate. Washout area beside the gravel pad.',
+    operator: 'Rob Black',
+    dispatchStatus: 'dispatched',
+    dispatchedAt: '6:45 AM',
   },
   {
     id: 'booking-seed-2',
@@ -265,6 +281,8 @@ export const INITIAL_SCHEDULE_BOOKINGS: ScheduleBooking[] = [
     durationHours: 4.0,
     volumeYards: 65,
     status: 'travel',
+    operator: 'Dave Smith',
+    dispatchStatus: 'draft',
   },
   {
     id: 'booking-seed-3',
@@ -277,6 +295,8 @@ export const INITIAL_SCHEDULE_BOOKINGS: ScheduleBooking[] = [
     durationHours: 4.5,
     volumeYards: 120,
     status: 'travel',
+    operator: null,
+    dispatchStatus: 'unassigned',
   },
 ];
 

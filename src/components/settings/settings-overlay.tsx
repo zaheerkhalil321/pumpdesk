@@ -9,23 +9,23 @@ import { cn } from '@/lib/utils';
 export function SettingsOverlay() {
   const { isOpen, closeSettings } = useSettings();
   const { brandTheme, setBrandTheme, themes } = useBrandTheme();
-  const [isClosing, setIsClosing] = React.useState(false);
-  const prevIsOpen = React.useRef(isOpen);
+  const [isRendered, setIsRendered] = React.useState(isOpen);
+
+  if (isOpen && !isRendered) {
+    setIsRendered(true);
+  }
 
   React.useEffect(() => {
-    if (prevIsOpen.current && !isOpen) {
-      // Just transitioned from open -> closed: show exit animation for 150ms
-      setIsClosing(true);
+    if (!isOpen && isRendered) {
       const timer = setTimeout(() => {
-        setIsClosing(false);
-      }, 150);
+        setIsRendered(false);
+      }, 200);
       return () => clearTimeout(timer);
     }
-    prevIsOpen.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, isRendered]);
 
-  // Never render into the DOM if settings is closed and not actively animating out
-  if (!isOpen && !isClosing) {
+  // Never render into the DOM if settings is closed and finished animating out
+  if (!isRendered && !isOpen) {
     return null;
   }
 

@@ -15,6 +15,8 @@ export interface SelectOption {
   label: string;
   description?: string;
   badge?: string;
+  badgeClassName?: string;
+  className?: string;
   icon?: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
@@ -132,6 +134,16 @@ export function AppSelect({
             >
               {selectedOption ? selectedOption.label : placeholder}
             </span>
+            {selectedOption?.badge && (
+              <span
+                className={cn(
+                  "px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 transition-colors",
+                  selectedOption.badgeClassName || "bg-slate-100 text-slate-700 border border-slate-200"
+                )}
+              >
+                {selectedOption.badge}
+              </span>
+            )}
           </div>
 
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-1.5 transition-transform duration-200" />
@@ -159,6 +171,7 @@ export function AppSelect({
                   isSelected
                     ? "bg-primary/10 text-primary font-semibold dark:bg-primary/20"
                     : "text-foreground hover:bg-muted font-normal",
+                  option.className,
                   option.disabled && "opacity-40 cursor-not-allowed pointer-events-none"
                 )}
               >
@@ -186,7 +199,12 @@ export function AppSelect({
                 )}
 
                 {option.badge && (
-                  <span className="ml-2 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-muted text-muted-foreground shrink-0">
+                  <span
+                    className={cn(
+                      "ml-2 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-muted text-muted-foreground shrink-0 transition-colors",
+                      option.badgeClassName
+                    )}
+                  >
                     {option.badge}
                   </span>
                 )}

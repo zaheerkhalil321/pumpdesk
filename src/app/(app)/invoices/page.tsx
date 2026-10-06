@@ -41,13 +41,13 @@ const mockInvoices = [
 
 export default function InvoicesPage() {
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
       {/* 1. HEADER */}
       <PageHeader
         title="Tickets & Billing"
         description="Audit signed digital field work tickets and synchronize invoices to accounting."
         actions={
-          <Button variant="brand" size="sm" className="font-semibold gap-1.5">
+          <Button variant="brand" className="font-semibold gap-1.5 text-sm h-9 px-3.5">
             <DollarSign className="h-4 w-4" />
             <span>Sync All to QuickBooks</span>
           </Button>
