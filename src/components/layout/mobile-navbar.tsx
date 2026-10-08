@@ -9,12 +9,15 @@ import {
   Calendar,
   FileText,
   Users,
+  Contact,
+  Truck,
+  UserCheck,
   Settings,
   ChevronDown,
   Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSettings } from '@/components/providers/settings-provider';
+
 import {
   Sheet,
   SheetContent,
@@ -98,6 +101,24 @@ const NAV_ITEMS: NavItem[] = [
     icon: Users,
     matchPrefix: true,
   },
+  {
+    title: 'Contacts',
+    href: '/contacts',
+    icon: Contact,
+    matchPrefix: true,
+  },
+  {
+    title: 'Pumps',
+    href: '/pumps',
+    icon: Truck,
+    matchPrefix: true,
+  },
+  {
+    title: 'Operators',
+    href: '/operators',
+    icon: UserCheck,
+    matchPrefix: true,
+  },
 ];
 
 export function MobileNavbar() {
@@ -106,7 +127,7 @@ export function MobileNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedYard, setSelectedYard] = useState<YardLocation>(DUMMY_YARDS[0]);
   const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
-  const { toggleSettings } = useSettings();
+
 
   const handleNavClick = (href: string) => {
     setIsOpen(false);
@@ -115,7 +136,7 @@ export function MobileNavbar() {
 
   const handleOpenSettings = () => {
     setIsOpen(false);
-    toggleSettings();
+    router.push('/settings');
   };
 
   return (

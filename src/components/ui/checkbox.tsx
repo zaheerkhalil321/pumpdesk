@@ -1,29 +1,79 @@
 "use client"
 
-import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
-
+import * as React from "react"
+import { Check, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Tick02Icon } from "@hugeicons/core-free-icons"
 
-function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
-  return (
-    <CheckboxPrimitive.Root
-      data-slot="checkbox"
-      className={cn(
-        "peer relative flex size-4 shrink-0 items-center justify-center rounded-[6px] border border-slate-300 transition-colors outline-none group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:outline-none focus-visible:border-brand disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-checked:border-brand data-checked:bg-brand data-checked:text-white",
-        className
-      )}
-      {...props}
-    >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
-      >
-        <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
-  )
+export interface CheckboxProps {
+  checked?: boolean
+  indeterminate?: boolean
+  onCheckedChange?: (checked: boolean) => void
+  disabled?: boolean
+  className?: string
+  id?: string
+  "aria-label"?: string
 }
 
-export { Checkbox }
+export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
+  (
+    {
+      checked = false,
+      indeterminate = false,
+      onCheckedChange,
+      disabled = false,
+      className,
+      id,
+      "aria-label": ariaLabel,
+    },
+    ref
+  ) => {
+    const isSelected = checked || indeterminate
+
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (disabled) return
+      onCheckedChange?.(!checked)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault()
+        e.stopPropagation()
+        if (disabled) return
+        onCheckedChange?.(!checked)
+      }
+    }
+
+    return (
+      <button
+        ref={ref}
+        type="button"
+        role="checkbox"
+        id={id}
+        aria-label={ariaLabel}
+        aria-checked={indeterminate ? "mixed" : checked}
+        disabled={disabled}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        className={cn(
+          "peer relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border transition-all duration-150 outline-none cursor-pointer select-none",
+          "focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:border-brand",
+          isSelected
+            ? "bg-brand border-brand text-white shadow-2xs"
+            : "bg-white border-slate-300 hover:border-brand/60 hover:bg-brand-light/20 shadow-2xs",
+          disabled && "opacity-50 cursor-not-allowed",
+          className
+        )}
+      >
+        {checked && !indeterminate && (
+          <Check className="h-3 w-3 stroke-[3] text-white" />
+        )}
+        {indeterminate && (
+          <Minus className="h-3 w-3 stroke-[3] text-white" />
+        )}
+      </button>
+    )
+  }
+)
+
+Checkbox.displayName = "Checkbox"

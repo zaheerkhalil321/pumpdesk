@@ -7,6 +7,9 @@ import {
   Calendar,
   FileText,
   Users,
+  Contact,
+  Truck,
+  UserCheck,
   Settings,
   ChevronDown,
   Check,
@@ -94,6 +97,24 @@ const navItems: NavItem[] = [
     icon: Users,
     matchPrefix: true,
   },
+  {
+    title: 'Contacts',
+    href: '/contacts',
+    icon: Contact,
+    matchPrefix: true,
+  },
+  {
+    title: 'Pumps',
+    href: '/pumps',
+    icon: Truck,
+    matchPrefix: true,
+  },
+  {
+    title: 'Operators',
+    href: '/operators',
+    icon: UserCheck,
+    matchPrefix: true,
+  },
 ];
 
 export function AppSidebar() {
@@ -104,7 +125,7 @@ export function AppSidebar() {
   const router = useRouter();
   const [selectedYard, setSelectedYard] = useState<YardLocation>(dummyYards[0]);
   const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
-  const { isOpen: isSettingsOpen, toggleSettings: toggleSettingsModal, closeSettings } = useSettings();
+  const { isOpen: isSettingsOpen, closeSettings } = useSettings();
   const isSettingsActive = isSettingsOpen || pathname === '/settings' || pathname.startsWith('/settings');
 
   const handleNavClick = useCallback(() => {
@@ -135,10 +156,10 @@ export function AppSidebar() {
         const target = stored && stored !== '/settings' ? stored : '/schedule';
         router.push(target);
       } else {
-        toggleSettingsModal();
+        router.push('/settings');
       }
     },
-    [pathname, router, toggleSettingsModal]
+    [pathname, router]
   );
 
   // Keyboard shortcut: Pressing '[' or 'Cmd/Ctrl + B' toggles the sidebar
@@ -443,6 +464,59 @@ export function AppSidebar() {
             );
           })}
         </nav>
+      </div>
+
+      {/* ── Settings Nav Link (matching settings 1.png) ── */}
+      <div
+        className={cn(
+          'transition-all duration-300 py-1.5 border-t border-slate-100',
+          isCollapsed ? 'px-2' : 'px-3'
+        )}
+      >
+        {isCollapsed ? (
+          <div className="relative group">
+            <Link
+              href="/settings"
+              onClick={handleNavClick}
+              className={cn(
+                'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative cursor-pointer',
+                isSettingsActive
+                  ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
+              )}
+            >
+              <Settings className="h-4.5 w-4.5 shrink-0" />
+            </Link>
+            <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+              Settings
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
+            </div>
+          </div>
+        ) : (
+          <Link
+            href="/settings"
+            onClick={handleNavClick}
+            className={cn(
+              'flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden cursor-pointer',
+              isSettingsActive
+                ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/70'
+            )}
+          >
+            {isSettingsActive && (
+              <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-brand origin-center animate-expand-vertical" />
+            )}
+            <Settings
+              className={cn(
+                'h-4.5 w-4.5 shrink-0 transition-colors duration-150 mr-2.5',
+                isSettingsActive
+                  ? 'text-brand'
+                  : 'text-slate-400 group-hover:text-slate-700'
+              )}
+            />
+            <span className="truncate">Settings</span>
+          </Link>
+        )}
       </div>
 
       {/* ── Bottom Portion: User Profile Dock & Quick Settings ── */}

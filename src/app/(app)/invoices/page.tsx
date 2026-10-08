@@ -1,3 +1,6 @@
+'use client';
+
+import { useRouter } from "next/navigation";
 import { Receipt, Download, DollarSign, FileCheck, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -40,6 +43,7 @@ const mockInvoices = [
 ];
 
 export default function InvoicesPage() {
+  const router = useRouter();
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
       {/* 1. HEADER */}
@@ -88,7 +92,11 @@ export default function InvoicesPage() {
           </TableHeader>
           <TableBody className="divide-y divide-border">
             {mockInvoices.map((inv) => (
-              <TableRow key={inv.id} className="hover:bg-muted/20 transition-colors cursor-pointer border-border group">
+              <TableRow
+                key={inv.id}
+                onClick={() => router.push(`/orders/${inv.orderId}`)}
+                className="hover:bg-muted/20 transition-colors cursor-pointer border-border group"
+              >
                 <TableCell>
                   <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-foreground font-semibold text-xs border border-border">

@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AppSelect } from '@/components/ui/app-select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format, parse } from 'date-fns';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
@@ -741,11 +742,10 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                 <h2 className="text-sm font-bold text-slate-900">Update notification</h2>
 
                 <label className="flex items-start gap-2.5 cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={editNotify}
-                    onChange={(e) => setEditNotify(e.target.checked)}
-                    className="h-4 w-4 mt-0.5 rounded border-slate-300 text-brand focus:outline-none cursor-pointer accent-brand"
+                    onCheckedChange={setEditNotify}
+                    className="mt-0.5"
                   />
                   <div>
                     <div className="text-xs font-semibold text-slate-900">

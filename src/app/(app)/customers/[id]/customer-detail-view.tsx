@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronDown,
@@ -191,6 +192,7 @@ const CUSTOMERS_DB: Record<string, CustomerFullData> = {
 type ActiveTab = 'overview' | 'contacts_sites';
 
 export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
+  const router = useRouter();
   const initial = CUSTOMERS_DB[customerId] || {
     ...CUSTOMERS_DB['CUST-101'],
     id: customerId,
@@ -931,10 +933,16 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredContacts.map((contact) => (
-                      <tr key={contact.id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr
+                        key={contact.id}
+                        onClick={() => router.push(`/contacts/${contact.id}`)}
+                        className="hover:bg-slate-50/60 transition-colors cursor-pointer group"
+                      >
                         {/* Name & Title */}
                         <td className="py-3.5 px-4 sm:px-6">
-                          <div className="font-semibold text-slate-900">{contact.name}</div>
+                          <div className="font-semibold text-slate-900 group-hover:text-brand underline underline-offset-2 transition-colors">
+                            {contact.name}
+                          </div>
                           <div className="text-xs text-slate-400 mt-0.5">{contact.title}</div>
                         </td>
 
@@ -968,7 +976,10 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-right sm:pr-6 whitespace-nowrap">
+                        <td
+                          className="py-3.5 px-4 text-right sm:pr-6 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="inline-flex items-center justify-end gap-1.5">
                             <Button
                               variant="outline"

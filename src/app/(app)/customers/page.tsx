@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Plus,
@@ -165,6 +166,7 @@ type SortOption = 'name_asc' | 'name_desc' | 'newest' | 'oldest';
 type ViewLayout = 'table' | 'tiles';
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<CustomerItem[]>(INITIAL_CUSTOMERS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
@@ -535,7 +537,7 @@ export default function CustomersPage() {
                   <th className="py-3 px-4 w-[20%]">Email</th>
                   <th className="py-3 px-4 w-[14%]">Created</th>
                   <th className="py-3 px-4 w-[10%]">Status</th>
-                  <th className="py-3 px-4 text-right sm:pr-6 w-[12%]">Actions</th>
+                  <th className="py-3 px-4 text-left sm:pr-6 w-[12%]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -543,7 +545,7 @@ export default function CustomersPage() {
                   <tr
                     key={cust.id}
                     className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                    onClick={() => setSelectedCustomerForQuickView(cust)}
+                    onClick={() => router.push(`/customers/${cust.id}`)}
                   >
                     {/* Customer Info with Monogram Badge */}
                     <td className="py-3.5 px-4 sm:px-6">
@@ -569,13 +571,13 @@ export default function CustomersPage() {
                     </td>
 
                     {/* Phone with copy-on-click */}
-                    <td
-                      className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <td className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => handleCopyPhone(cust.phone, cust.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyPhone(cust.phone, cust.name);
+                        }}
                         className="inline-flex items-center gap-1 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone"
                         title="Click to copy phone"
                       >
@@ -585,12 +587,10 @@ export default function CustomersPage() {
                     </td>
 
                     {/* Email */}
-                    <td
-                      className="py-3.5 px-4 font-normal text-slate-600 truncate max-w-[320px]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <td className="py-3.5 px-4 font-normal text-slate-600 truncate max-w-[320px]">
                       <a
                         href={`mailto:${cust.email}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="hover:text-slate-900 hover:underline transition-colors"
                         title={`Send email to ${cust.email}`}
                       >
@@ -621,10 +621,10 @@ export default function CustomersPage() {
 
                     {/* Actions Column */}
                     <td
-                      className="py-3.5 px-4 text-right sm:pr-6 whitespace-nowrap"
+                      className="py-3.5 px-4 text-left sm:pr-6 whitespace-nowrap"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="inline-flex items-center justify-end gap-1.5">
+                      <div className="inline-flex items-center justify-start gap-1.5">
                         <Button
                           variant="outline"
                           size="sm"
@@ -649,6 +649,7 @@ export default function CustomersPage() {
 
                         <Link
                           href={`/customers/${cust.id}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors ml-0.5 cursor-pointer"
                           title="Open customer dossier"
                         >
