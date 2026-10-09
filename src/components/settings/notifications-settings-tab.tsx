@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Info,
@@ -24,6 +24,24 @@ export function NotificationsSettingsTab() {
   const [activeLatePopover, setActiveLatePopover] = useState(false);
   const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
 
+  const navRef = useRef<HTMLElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const nav = navRef.current;
+    const button = tabRefs.current[activeSubTab];
+    if (nav && button) {
+      const buttonRect = button.getBoundingClientRect();
+      const navRect = nav.getBoundingClientRect();
+      const buttonCenter = buttonRect.left + buttonRect.width / 2;
+      const navCenter = navRect.left + navRect.width / 2;
+      nav.scrollBy({
+        left: buttonCenter - navCenter,
+        behavior: 'smooth',
+      });
+    }
+  }, [activeSubTab]);
+
   const handleToggleCustomer = (id: string, current: boolean) => {
     updateCustomerNotification(id, { enabled: !current });
     const target = customerNotifications.find((r) => r.id === id);
@@ -39,8 +57,11 @@ export function NotificationsSettingsTab() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* ── Sub-tabs Header (Customers, Operators, Office alerts, Templates) ── */}
-      <div className="border-b border-slate-200">
-        <nav className="flex space-x-6">
+      <div className="border-b border-slate-200/90 pb-0">
+        <nav
+          ref={navRef}
+          className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-none scroll-smooth -mb-px py-1"
+        >
           {[
             { id: 'customers' as const, label: 'Customers' },
             { id: 'operators' as const, label: 'Operators' },
@@ -51,10 +72,13 @@ export function NotificationsSettingsTab() {
             return (
               <button
                 key={tab.id}
+                ref={(el) => {
+                  tabRefs.current[tab.id] = el;
+                }}
                 type="button"
                 onClick={() => setActiveSubTab(tab.id)}
                 className={cn(
-                  'pb-3 text-sm font-semibold transition-colors relative cursor-pointer',
+                  'pb-3 pt-1 text-xs sm:text-sm font-semibold transition-colors relative cursor-pointer shrink-0 whitespace-nowrap',
                   isActive
                     ? 'text-brand'
                     : 'text-slate-500 hover:text-slate-900'
@@ -62,7 +86,7 @@ export function NotificationsSettingsTab() {
               >
                 {tab.label}
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full transition-all" />
                 )}
               </button>
             );
@@ -80,8 +104,91 @@ export function NotificationsSettingsTab() {
           </p>
 
           <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+            {/* Mobile / Tablet Card View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {customerNotifications.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="p-4 space-y-3 hover:bg-slate-50/70 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">
+                        {rule.message}
+                      </span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveTooltipId(
+                              activeTooltipId === rule.id ? null : rule.id
+                            )
+                          }
+                          className="text-slate-400 hover:text-brand p-0.5 cursor-pointer"
+                          title={rule.info}
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                        {activeTooltipId === rule.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute left-6 top-0 z-30 w-64 p-3 rounded-xl bg-slate-900 text-white text-xs shadow-xl space-y-1.5"
+                          >
+                            <p className="font-bold">{rule.message}</p>
+                            <p className="text-slate-300">{rule.info}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Switch */}
+                    <div className="inline-flex items-center gap-2 shrink-0">
+                      <Switch
+                        checked={rule.enabled}
+                        onCheckedChange={() =>
+                          handleToggleCustomer(rule.id, rule.enabled)
+                        }
+                      />
+                      <span
+                        className={cn(
+                          'text-xs font-semibold w-7 text-left',
+                          rule.enabled ? 'text-brand' : 'text-slate-400'
+                        )}
+                      >
+                        {rule.enabled ? 'On' : 'Off'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-500">
+                    <span className="text-slate-400 font-medium">When: </span>
+                    <span>{rule.when}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className="text-xs font-medium text-slate-500 shrink-0">Channel:</span>
+                    <AppSelect
+                      value={rule.channel}
+                      onChange={(val) =>
+                        updateCustomerNotification(rule.id, {
+                          channel: val as 'Email & text' | 'Text' | 'Email',
+                        })
+                      }
+                      options={[
+                        { value: 'Email & text', label: 'Email & text' },
+                        { value: 'Text', label: 'Text' },
+                        { value: 'Email', label: 'Email' },
+                      ]}
+                      className="w-full sm:w-44 h-8.5 rounded-lg text-xs"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[620px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
                     <th className="py-3 px-4 sm:px-6 w-1/3">Message</th>
@@ -208,8 +315,64 @@ export function NotificationsSettingsTab() {
           </p>
 
           <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+            {/* Mobile / Tablet Card View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {[
+                {
+                  id: 'op-1',
+                  title: 'Daily shift schedule',
+                  when: '6:00 PM day prior',
+                  channel: 'Text & app notification',
+                  enabled: true,
+                },
+                {
+                  id: 'op-2',
+                  title: 'Live schedule changes',
+                  when: 'Instant on dispatch shift edit',
+                  channel: 'SMS priority',
+                  enabled: true,
+                },
+                {
+                  id: 'op-3',
+                  title: 'Job site turn-by-turn directions',
+                  when: 'When marked en route',
+                  channel: 'SMS with GPS link',
+                  enabled: true,
+                },
+                {
+                  id: 'op-4',
+                  title: 'Severe weather rain/frost hold',
+                  when: 'Immediately on weather alert',
+                  channel: 'SMS emergency',
+                  enabled: true,
+                },
+              ].map((rule) => (
+                <div
+                  key={rule.id}
+                  className="p-4 space-y-2 hover:bg-slate-50/70 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-bold text-sm text-slate-900">
+                      {rule.title}
+                    </span>
+                    <div className="inline-flex items-center gap-2 shrink-0">
+                      <Switch defaultChecked={rule.enabled} />
+                      <span className="text-xs font-semibold w-7 text-left text-brand">
+                        On
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-500">
+                    <span><strong className="text-slate-700">Timing:</strong> {rule.when}</span>
+                    <span><strong className="text-slate-700">Method:</strong> {rule.channel}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[550px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
                     <th className="py-3 px-4 sm:px-6 w-1/3">Operator Alert</th>
@@ -289,8 +452,127 @@ export function NotificationsSettingsTab() {
           </p>
 
           <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden relative">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+            {/* Mobile / Tablet Card View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {officeAlerts.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="p-4 space-y-3 hover:bg-slate-50/70 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">
+                        {rule.alert}
+                      </span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveTooltipId(
+                              activeTooltipId === rule.id ? null : rule.id
+                            )
+                          }
+                          className="text-slate-400 hover:text-brand p-0.5 cursor-pointer"
+                          title={rule.info}
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                        {activeTooltipId === rule.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute left-6 top-0 z-30 w-64 p-3 rounded-xl bg-slate-900 text-white text-xs shadow-xl space-y-1.5"
+                          >
+                            <p className="font-bold">{rule.alert}</p>
+                            <p className="text-slate-300">{rule.info}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="inline-flex items-center gap-2 shrink-0">
+                      <Switch
+                        checked={rule.enabled}
+                        onCheckedChange={() =>
+                          handleToggleOffice(rule.id, rule.enabled)
+                        }
+                      />
+                      <span
+                        className={cn(
+                          'text-xs font-semibold w-7 text-left',
+                          rule.enabled ? 'text-brand' : 'text-slate-400'
+                        )}
+                      >
+                        {rule.enabled ? 'ON' : 'OFF'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                        When:
+                      </label>
+                      <AppSelect
+                        value={rule.when}
+                        onChange={(val) =>
+                          updateOfficeAlert(rule.id, { when: val })
+                        }
+                        options={[
+                          { value: rule.when, label: rule.when },
+                          { value: 'Immediately', label: 'Immediately' },
+                          { value: '15 min before', label: '15 min before' },
+                          { value: '30 min before departure', label: '30 min before departure' },
+                          { value: '60 min before arrival', label: '60 min before arrival' },
+                          { value: 'ETA 10+ min late', label: 'ETA 10+ min late' },
+                          { value: '2 hours after job ends', label: '2 hours after job ends' },
+                        ]}
+                        className="w-full h-8.5 rounded-lg text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                        Notify:
+                      </label>
+                      <AppSelect
+                        value={rule.notify}
+                        onChange={(val) =>
+                          updateOfficeAlert(rule.id, { notify: val })
+                        }
+                        options={[
+                          { value: 'Dispatcher', label: 'Dispatcher' },
+                          { value: 'Dispatcher + owner', label: 'Dispatcher + owner' },
+                          { value: 'Billing', label: 'Billing' },
+                        ]}
+                        className="w-full h-8.5 rounded-lg text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                        Channel:
+                      </label>
+                      <AppSelect
+                        value={rule.channel}
+                        onChange={(val) =>
+                          updateOfficeAlert(rule.id, { channel: val as 'In-app + text' | 'In-app' | 'Text' })
+                        }
+                        options={[
+                          { value: 'In-app + text', label: 'In-app + text' },
+                          { value: 'In-app', label: 'In-app' },
+                          { value: 'Text', label: 'Text' },
+                        ]}
+                        className="w-full h-8.5 rounded-lg text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[650px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
                     <th className="py-3 px-4 sm:px-5 w-1/4">Alert</th>

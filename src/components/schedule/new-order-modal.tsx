@@ -117,11 +117,28 @@ function NewOrderModalForm({
   );
   const [supplier, setSupplier] = useState('');
 
-  // Job Site States
-  const [siteAddress, setSiteAddress] = useState(
-    () => editingBooking?.jobSiteName || '',
+  // Single Unified Address State (accepts full address, street + city, or city/state)
+  const [address, setAddress] = useState(() => {
+    if (!editingBooking) return '';
+    if (editingBooking.jobSiteName && editingBooking.address) {
+      if (editingBooking.jobSiteName === editingBooking.address) {
+        return editingBooking.jobSiteName;
+      }
+      if (editingBooking.address.includes(editingBooking.jobSiteName)) {
+        return editingBooking.address;
+      }
+      return `${editingBooking.jobSiteName}, ${editingBooking.address}`;
+    }
+    return editingBooking.jobSiteName || editingBooking.address || '';
+  });
+
+  // Pour Type & Estimated Volume States
+  const [pourType, setPourType] = useState(
+    () => editingBooking?.pourType || 'Foundation',
   );
-  const [townCity, setTownCity] = useState(() => editingBooking?.address || '');
+  const [volumeYards, setVolumeYards] = useState<number | string>(
+    () => editingBooking?.volumeYards ?? 80,
+  );
 
   // Pump & Operator States
   const [minPumpSize, setMinPumpSize] = useState('34 meters');
@@ -134,8 +151,7 @@ function NewOrderModalForm({
 
   const [formErrors, setFormErrors] = useState<{
     customer?: string;
-    siteAddress?: string;
-    townCity?: string;
+    address?: string;
   }>({});
 
   const pourTimeOptions = useMemo(
@@ -188,6 +204,21 @@ function NewOrderModalForm({
     []
   );
 
+  const pourTypeOptions = useMemo(
+    () => [
+      { value: 'Foundation', label: 'Foundation' },
+      { value: 'Footings', label: 'Footings' },
+      { value: 'House slab', label: 'House slab' },
+      { value: 'Slab on grade', label: 'Slab on grade' },
+      { value: 'Cast-in-place wall', label: 'Cast-in-place wall' },
+      { value: 'ICF wall', label: 'ICF wall' },
+      { value: 'Commercial deck', label: 'Commercial deck' },
+      { value: 'Columns', label: 'Columns' },
+      { value: 'Driveway', label: 'Driveway' },
+    ],
+    []
+  );
+
   const formattedDate = formatInTimeZone(
     selectedDate,
     TIMEZONE,
@@ -197,15 +228,14 @@ function NewOrderModalForm({
   const handleCreateOrder = () => {
     const errors: {
       customer?: string;
-      siteAddress?: string;
-      townCity?: string;
+      address?: string;
     } = {};
 
     if (!customer.trim()) {
       errors.customer = 'Customer is required.';
     }
-    if (!townCity.trim()) {
-      errors.townCity = 'Town is required.';
+    if (!address.trim()) {
+      errors.address = 'Job site address or city/town is required.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -213,7 +243,7 @@ function NewOrderModalForm({
       toast.error('Required Information Missing', {
         description:
           errors.customer ||
-          errors.townCity ||
+          errors.address ||
           'Please enter required job site details.',
       });
       return;
@@ -234,8 +264,17 @@ function NewOrderModalForm({
       hour = h;
     }
 
-    const finalJobSite = siteAddress.trim() || townCity.trim();
-    const finalAddress = siteAddress.trim() ? `${siteAddress.trim()}, ${townCity.trim()}` : townCity.trim();
+    const trimmedAddress = address.trim();
+    let finalJobSite = trimmedAddress;
+    let finalAddress = trimmedAddress;
+
+    if (trimmedAddress.includes(',')) {
+      const parts = trimmedAddress.split(',').map((p) => p.trim());
+      finalJobSite = parts[0];
+      finalAddress = parts.slice(1).join(', ');
+    }
+
+    const parsedVolume = Number(volumeYards) || 80;
     const finalOperator = assignedOperator !== 'unassigned' ? assignedOperator : undefined;
     const finalDispatchStatus = finalOperator ? (editingBooking?.dispatchStatus || 'draft') : 'unassigned';
 
@@ -244,7 +283,9 @@ function NewOrderModalForm({
         ...editingBooking,
         customerName: customer,
         jobSiteName: finalJobSite,
-        address: finalAddress || editingBooking.address,
+        address: finalAddress,
+        pourType: pourType,
+        volumeYards: parsedVolume,
         pumpId: isAssignLater ? '' : assignedPumpId,
         startHour: hour,
         operator: finalOperator,
@@ -268,9 +309,10 @@ function NewOrderModalForm({
         customerName: customer,
         jobSiteName: finalJobSite,
         address: finalAddress,
+        pourType: pourType,
         startHour: hour,
         durationHours: 3,
-        volumeYards: 120,
+        volumeYards: parsedVolume,
         status: isAssignLater ? 'travel' : 'onsite',
         operator: finalOperator,
         dispatchStatus: finalDispatchStatus,
@@ -283,7 +325,7 @@ function NewOrderModalForm({
           onAddBooking(newOrder);
         }
         toast.info('Pending Order Created', {
-          description: `${customer} in ${townCity} added to Unassigned Jobs.`,
+          description: `${customer} in ${finalAddress} added to Unassigned Jobs.`,
         });
       } else {
         onAddBooking(newOrder);
@@ -447,112 +489,132 @@ function NewOrderModalForm({
           </div>
         </div>
 
-        {/* Row 3: Job Site Address (Optional) & Town (Required) */}
-        <div className="space-y-3">
-          {/* Street Address / Cross Streets (Optional) */}
+        {/* Row 3: Pour Type & Estimated Volume (yd³) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-slate-700">
-                Job site address <span className="text-slate-400 font-normal">(optional)</span>
-              </label>
-              <span className="text-[10.5px] text-slate-400">Cross streets or street number</span>
-            </div>
-            <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-slate-200 bg-white focus-within:border-brand transition-colors shadow-2xs">
-              <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
-              <input
-                type="text"
-                value={siteAddress}
-                onChange={(e) => setSiteAddress(e.target.value)}
-                placeholder="Street address, cross streets, or landmark (optional)"
-                className="text-xs font-medium text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-400"
-              />
-            </div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Pour type
+            </label>
+            <AppSelect
+              value={pourType}
+              onChange={setPourType}
+              options={pourTypeOptions}
+              placeholder="Select pour type..."
+              className="h-10"
+            />
           </div>
 
-          {/* Town / City (Strictly Required) */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-semibold text-slate-700">
-                Town / City <span className="text-red-500">*</span>
+                Estimated volume
               </label>
-              <span className="text-[10.5px] text-amber-700 font-medium">Required for dispatch routing</span>
+              <span className="text-[10.5px] text-slate-400">Cubic yards (yd³)</span>
             </div>
-            <div
-              className={cn(
-                'flex items-center gap-2 h-10 px-3 rounded-lg border transition-colors shadow-2xs',
-                formErrors.townCity
-                  ? 'border-red-500 bg-red-50/20'
-                  : 'border-slate-200 bg-white focus-within:border-brand',
-              )}
-            >
-              <Building2
-                className={cn(
-                  'h-4 w-4 shrink-0',
-                  formErrors.townCity ? 'text-red-500' : 'text-slate-400',
-                )}
-              />
+            <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-slate-200 bg-white focus-within:border-brand transition-colors shadow-2xs">
               <input
-                type="text"
-                value={townCity}
-                onChange={(e) => {
-                  setTownCity(e.target.value);
-                  if (formErrors.townCity) {
+                type="number"
+                min={1}
+                step={1}
+                value={volumeYards}
+                onChange={(e) => setVolumeYards(e.target.value)}
+                placeholder="e.g. 80"
+                className="text-xs font-medium text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-400"
+              />
+              <span className="text-xs font-semibold text-slate-400 shrink-0">yd³</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 4: Job Site Address (Single Unified Field) */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-700">
+              Job site address <span className="text-red-500">*</span>
+            </label>
+            <span className="text-[10.5px] text-slate-400">
+              Full address, street, or city/town
+            </span>
+          </div>
+          <div
+            className={cn(
+              'flex items-center gap-2 h-10 px-3 rounded-lg border transition-colors shadow-2xs',
+              formErrors.address
+                ? 'border-red-500 bg-red-50/20'
+                : 'border-slate-200 bg-white focus-within:border-brand',
+            )}
+          >
+            <MapPin
+              className={cn(
+                'h-4 w-4 shrink-0',
+                formErrors.address ? 'text-red-500' : 'text-slate-400',
+              )}
+            />
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                if (formErrors.address) {
+                  setFormErrors((prev) => ({
+                    ...prev,
+                    address: undefined,
+                  }));
+                }
+              }}
+              placeholder="e.g. 24 Bay View Street, Camden or Camden, ME *"
+              className="text-xs text-slate-900 bg-transparent placeholder:text-slate-400 outline-none w-full font-medium"
+            />
+            {address.trim() && (
+              <Check className="h-3.5 w-3.5 text-brand shrink-0" />
+            )}
+          </div>
+
+          {/* Quick Town Suggestions */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[10px] text-slate-400 font-medium">
+              Quick select town:
+            </span>
+            {[
+              'Warren, ME',
+              'Camden, ME',
+              'Rockport, ME',
+              'Rockland, ME',
+            ].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  if (address.trim() && !address.toLowerCase().includes(t.toLowerCase().split(',')[0])) {
+                    setAddress(`${address.trim()}, ${t}`);
+                  } else {
+                    setAddress(t);
+                  }
+                  if (formErrors.address) {
                     setFormErrors((prev) => ({
                       ...prev,
-                      townCity: undefined,
+                      address: undefined,
                     }));
                   }
                 }}
-                placeholder="Enter town or city (e.g. Camden, ME) *"
-                className="text-xs text-slate-900 bg-transparent placeholder:text-slate-400 outline-none w-full font-medium"
-              />
-              {townCity && (
-                <Check className="h-3.5 w-3.5 text-brand shrink-0" />
-              )}
-            </div>
-
-            {/* Quick Town Suggestions */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
-              <span className="text-[10px] text-slate-400 font-medium">
-                Quick select town:
-              </span>
-              {[
-                'Warren, ME',
-                'Camden, ME',
-                'Rockport, ME',
-                'Rockland, ME',
-              ].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => {
-                    setTownCity(t);
-                    if (formErrors.townCity) {
-                      setFormErrors((prev) => ({
-                        ...prev,
-                        townCity: undefined,
-                      }));
-                    }
-                  }}
-                  className={cn(
-                    'text-[10.5px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer',
-                    townCity === t
-                      ? 'bg-brand-light border-brand text-brand font-semibold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900',
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            {formErrors.townCity ? (
-              <p className="text-[11px] text-red-500 font-semibold mt-1 px-0.5 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3 shrink-0" />
-                <span>{formErrors.townCity}</span>
-              </p>
-            ) : null}
+                className={cn(
+                  'text-[10.5px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer',
+                  address.includes(t)
+                    ? 'bg-brand-light border-brand text-brand font-semibold'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900',
+                )}
+              >
+                {t}
+              </button>
+            ))}
           </div>
+
+          {formErrors.address ? (
+            <p className="text-[11px] text-red-500 font-semibold mt-1 px-0.5 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              <span>{formErrors.address}</span>
+            </p>
+          ) : null}
         </div>
 
         {/* Row 4: Minimum Pump Size & Assigned Pump Dropdowns */}
@@ -640,14 +702,14 @@ function NewOrderModalForm({
           href={`/orders/new?${new URLSearchParams({
             ...(editingBooking?.orderNumber ? { orderId: editingBooking.orderNumber } : {}),
             ...(editingBooking?.id ? { bookingId: editingBooking.id } : {}),
-            ...(editingBooking?.volumeYards ? { volume: String(editingBooking.volumeYards) } : {}),
+            ...(volumeYards ? { volume: String(volumeYards) } : {}),
+            ...(pourType ? { pourType } : {}),
             ...(editingBooking?.dispatchStatus === 'dispatched' ? { status: 'Confirmed' } : {}),
             pourTime,
             date: formattedDate,
             ...(assignedPumpId && assignedPumpId !== 'assign-later' ? { pumpId: assignedPumpId } : {}),
             ...(customer ? { customer } : {}),
-            ...(siteAddress ? { site: siteAddress } : {}),
-            ...(townCity ? { town: townCity } : {}),
+            ...(address ? { address } : {}),
             ...(assignedOperator && assignedOperator !== 'unassigned' ? { operator: assignedOperator } : {}),
           }).toString()}`}
           onClick={() => onOpenChange(false)}
@@ -692,9 +754,9 @@ function NewOrderModalForm({
               <AlertCircle className="h-3 w-3 shrink-0" />
               <span>Fill required fields to create order</span>
             </span>
-          ) : !townCity ? (
+          ) : !address.trim() ? (
             <span className="text-[10.5px] text-slate-400 pr-1">
-              Confirm the job-site town to continue.
+              Confirm the job-site address to continue.
             </span>
           ) : null}
         </div>

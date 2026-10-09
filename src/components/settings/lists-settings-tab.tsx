@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -34,6 +34,31 @@ export function ListsSettingsTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
   const [sortOrder, setSortOrder] = useState<'favorites' | 'alphabetical'>('favorites');
+
+  const navRef = useRef<HTMLElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const handleSubTabChange = (
+    tabId: 'suppliers' | 'pourTypes' | 'tags' | 'inventory'
+  ) => {
+    setActiveSubTab(tabId);
+    setSearchQuery('');
+  };
+
+  useEffect(() => {
+    const nav = navRef.current;
+    const button = tabRefs.current[activeSubTab];
+    if (nav && button) {
+      const buttonRect = button.getBoundingClientRect();
+      const navRect = nav.getBoundingClientRect();
+      const buttonCenter = buttonRect.left + buttonRect.width / 2;
+      const navCenter = navRect.left + navRect.width / 2;
+      nav.scrollBy({
+        left: buttonCenter - navCenter,
+        behavior: 'smooth',
+      });
+    }
+  }, [activeSubTab]);
 
   // Supplier Modals
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
@@ -108,72 +133,84 @@ export function ListsSettingsTab() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* ── Sub-tabs Header & Action Button ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
-        <nav className="flex space-x-6">
-          {[
-            { id: 'suppliers' as const, label: 'Concrete suppliers' },
-            { id: 'pourTypes' as const, label: 'Pour types' },
-            { id: 'tags' as const, label: 'Tags' },
-            { id: 'inventory' as const, label: 'Inventory' },
-          ].map((tab) => {
-            const isActive = activeSubTab === tab.id;
-            return (
+      {/* ── Sub-tabs Navigation Bar ── */}
+      <div className="border-b border-slate-200/90 pb-0">
+        <div className="flex items-center justify-between gap-4">
+          <nav
+            ref={navRef}
+            className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-none scroll-smooth -mb-px py-1"
+          >
+            {[
+              { id: 'suppliers' as const, label: 'Concrete suppliers' },
+              { id: 'pourTypes' as const, label: 'Pour types' },
+              { id: 'tags' as const, label: 'Tags' },
+              { id: 'inventory' as const, label: 'Inventory' },
+            ].map((tab) => {
+              const isActive = activeSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  ref={(el) => {
+                    tabRefs.current[tab.id] = el;
+                  }}
+                  type="button"
+                  onClick={() => handleSubTabChange(tab.id)}
+                  className={cn(
+                    'pb-3 pt-1 text-xs sm:text-sm font-semibold transition-colors relative cursor-pointer shrink-0 whitespace-nowrap',
+                    isActive
+                      ? 'text-brand'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  {tab.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full transition-all" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Desktop/Tablet Action Button */}
+          {activeSubTab === 'suppliers' && (
+            <div className="hidden sm:flex items-center pb-2.5 shrink-0">
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => {
-                  setActiveSubTab(tab.id);
-                  setSearchQuery('');
-                }}
-                className={cn(
-                  'pb-3 text-sm font-semibold transition-colors relative cursor-pointer -mb-3',
-                  isActive
-                    ? 'text-brand'
-                    : 'text-slate-500 hover:text-slate-900'
-                )}
+                onClick={() => setIsAddSupplierOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95"
               >
-                {tab.label}
-                {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
-                )}
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add supplier</span>
               </button>
-            );
-          })}
-        </nav>
+            </div>
+          )}
 
-        {activeSubTab === 'suppliers' && (
-          <button
-            type="button"
-            onClick={() => setIsAddSupplierOpen(true)}
-            className="px-4 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            Add supplier
-          </button>
-        )}
+          {activeSubTab === 'pourTypes' && (
+            <div className="hidden sm:flex items-center pb-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAddPourOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add pour type</span>
+              </button>
+            </div>
+          )}
 
-        {activeSubTab === 'pourTypes' && (
-          <button
-            type="button"
-            onClick={() => setIsAddPourOpen(true)}
-            className="px-4 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            Add pour type
-          </button>
-        )}
-
-        {activeSubTab === 'tags' && (
-          <button
-            type="button"
-            onClick={() => setIsAddTagOpen(true)}
-            className="px-4 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            Add tag
-          </button>
-        )}
+          {activeSubTab === 'tags' && (
+            <div className="hidden sm:flex items-center pb-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAddTagOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add tag</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ────────────────────────────────────────────────────────── */}
@@ -181,16 +218,28 @@ export function ListsSettingsTab() {
       {/* ────────────────────────────────────────────────────────── */}
       {activeSubTab === 'suppliers' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search suppliers"
-                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
-              />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-2.5 flex-1 max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search suppliers"
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                />
+              </div>
+
+              {/* Mobile Action Button: sleek, compact, elegant, right beside the search bar */}
+              <button
+                type="button"
+                onClick={() => setIsAddSupplierOpen(true)}
+                className="sm:hidden inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add supplier</span>
+              </button>
             </div>
 
             <AppSelect
@@ -203,7 +252,7 @@ export function ListsSettingsTab() {
                 { value: 'Status: Active', label: 'Status: Active' },
                 { value: 'Status: Inactive', label: 'Status: Inactive' },
               ]}
-              className="w-36 h-10 rounded-xl text-xs sm:text-sm"
+              className="w-full sm:w-36 h-10 rounded-xl text-xs sm:text-sm"
             />
           </div>
 
@@ -212,8 +261,64 @@ export function ListsSettingsTab() {
           </p>
 
           <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+            {/* Mobile / Tablet Card View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredSuppliers.map((supplier) => (
+                <div
+                  key={supplier.id}
+                  onClick={() => setEditingSupplier(supplier)}
+                  className="p-4 hover:bg-slate-50/70 transition-colors cursor-pointer space-y-2.5 active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-sm text-slate-900">
+                      {supplier.name}
+                    </span>
+                    <span
+                      className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0',
+                        supplier.status === 'Active'
+                          ? 'bg-brand text-white shadow-2xs'
+                          : 'bg-slate-200 text-slate-700'
+                      )}
+                    >
+                      {supplier.status}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-600 space-y-0.5">
+                    <div><span className="text-slate-400">Phone:</span> {supplier.phone}</div>
+                    <div className="truncate"><span className="text-slate-400">Email:</span> {supplier.email}</div>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingSupplier(supplier);
+                      }}
+                      className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.info(`Options for ${supplier.name}`);
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[620px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
                     <th className="py-3 px-4 sm:px-6">Supplier</th>
@@ -307,35 +412,44 @@ export function ListsSettingsTab() {
       {/* ────────────────────────────────────────────────────────── */}
       {activeSubTab === 'pourTypes' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search pour types"
-                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
-              />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-2.5 flex-1 max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search pour types"
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                />
+              </div>
+
+              {/* Mobile Action Button */}
+              <button
+                type="button"
+                onClick={() => setIsAddPourOpen(true)}
+                className="sm:hidden inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add pour type</span>
+              </button>
             </div>
 
-            <AppSelect
-              value={`Status: ${statusFilter}`}
-              onChange={(val) =>
-                setStatusFilter(val.replace('Status: ', '') as 'All' | 'Active' | 'Inactive')
-              }
-              options={[
-                { value: 'Status: All', label: 'Status: All' },
-                { value: 'Status: Active', label: 'Status: Active' },
-                { value: 'Status: Inactive', label: 'Status: Inactive' },
-              ]}
-              className="w-36 h-10 rounded-xl text-xs sm:text-sm"
-            />
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+              <AppSelect
+                value={`Status: ${statusFilter}`}
+                onChange={(val) =>
+                  setStatusFilter(val.replace('Status: ', '') as 'All' | 'Active' | 'Inactive')
+                }
+                options={[
+                  { value: 'Status: All', label: 'Status: All' },
+                  { value: 'Status: Active', label: 'Status: Active' },
+                  { value: 'Status: Inactive', label: 'Status: Inactive' },
+                ]}
+                className="w-36 h-10 rounded-xl text-xs sm:text-sm"
+              />
 
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
-                Sort:
-              </span>
               <AppSelect
                 value={
                   sortOrder === 'favorites' ? 'Favorites first' : 'Alphabetical'
@@ -349,7 +463,7 @@ export function ListsSettingsTab() {
                   { value: 'Favorites first', label: 'Favorites first' },
                   { value: 'Alphabetical', label: 'Alphabetical' },
                 ]}
-                className="w-40 h-10 rounded-xl text-xs sm:text-sm"
+                className="w-36 sm:w-40 h-10 rounded-xl text-xs sm:text-sm"
               />
             </div>
           </div>
@@ -359,8 +473,85 @@ export function ListsSettingsTab() {
           </p>
 
           <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+            {/* Mobile / Tablet Card View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {sortedPourTypes.map((pt) => (
+                <div
+                  key={pt.id}
+                  onClick={() => setEditingPour(pt)}
+                  className="p-4 hover:bg-slate-50/70 transition-colors cursor-pointer space-y-2 active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePourTypeFavorite(pt.id);
+                          toast.success(
+                            pt.favorite
+                              ? `Removed ${pt.name} from favorites`
+                              : `Added ${pt.name} to favorites`
+                          );
+                        }}
+                        className="p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                        title={pt.favorite ? 'Unfavorite' : 'Favorite'}
+                      >
+                        <Star
+                          className={cn(
+                            'h-4 w-4 transition-transform duration-150',
+                            pt.favorite
+                              ? 'fill-brand text-brand scale-110'
+                              : 'text-slate-300 hover:text-slate-500'
+                          )}
+                        />
+                      </button>
+                      <span className="font-bold text-sm text-slate-900 truncate">
+                        {pt.name}
+                      </span>
+                    </div>
+
+                    <span
+                      className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0',
+                        pt.status === 'Active'
+                          ? 'bg-brand text-white shadow-2xs'
+                          : 'bg-slate-200 text-slate-700'
+                      )}
+                    >
+                      {pt.status}
+                    </span>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPour(pt);
+                      }}
+                      className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.info(`Options for ${pt.name}`);
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
                     <th className="py-3 px-4 sm:px-6 w-20 text-center">Favorite</th>
@@ -463,16 +654,28 @@ export function ListsSettingsTab() {
       {/* ────────────────────────────────────────────────────────── */}
       {activeSubTab === 'tags' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tags"
-                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
-              />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-2.5 flex-1 max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tags"
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                />
+              </div>
+
+              {/* Mobile Action Button */}
+              <button
+                type="button"
+                onClick={() => setIsAddTagOpen(true)}
+                className="sm:hidden inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add tag</span>
+              </button>
             </div>
 
             <AppSelect
@@ -485,7 +688,7 @@ export function ListsSettingsTab() {
                 { value: 'Status: Active', label: 'Status: Active' },
                 { value: 'Status: Inactive', label: 'Status: Inactive' },
               ]}
-              className="w-36 h-10 rounded-xl text-xs sm:text-sm"
+              className="w-full sm:w-36 h-10 rounded-xl text-xs sm:text-sm"
             />
           </div>
 
@@ -494,8 +697,68 @@ export function ListsSettingsTab() {
           </p>
 
           <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+            {/* Mobile / Tablet Card View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredTags.map((tag) => (
+                <div
+                  key={tag.id}
+                  onClick={() => setEditingTag(tag)}
+                  className="p-4 hover:bg-slate-50/70 transition-colors cursor-pointer space-y-2 active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span
+                      className={cn(
+                        'inline-block px-3 py-1 rounded-full text-xs font-semibold border shadow-2xs',
+                        getTagColorClass(tag.color)
+                      )}
+                    >
+                      {tag.name}
+                    </span>
+
+                    <span
+                      className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0',
+                        tag.status === 'Active'
+                          ? 'bg-brand text-white shadow-2xs'
+                          : 'bg-slate-200 text-slate-700'
+                      )}
+                    >
+                      {tag.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <span>Used on: <strong className="text-slate-800">{tag.usedOn}</strong></span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTag(tag);
+                        }}
+                        className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.info(`Options for ${tag.name}`);
+                        }}
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
                     <th className="py-3 px-4 sm:px-6">Tag</th>
@@ -633,7 +896,7 @@ export function ListsSettingsTab() {
       {/* ── MODALS: Supplier, Pour Type, Tag ── */}
       {isAddSupplierOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Add Concrete Supplier</h3>
               <button
@@ -711,7 +974,7 @@ export function ListsSettingsTab() {
 
       {editingSupplier && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Edit Supplier</h3>
               <button
@@ -778,7 +1041,7 @@ export function ListsSettingsTab() {
       {/* Add Pour Type */}
       {isAddPourOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Add Pour Type</h3>
               <button
@@ -832,7 +1095,7 @@ export function ListsSettingsTab() {
       {/* Edit Pour Type */}
       {editingPour && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Edit Pour Type</h3>
               <button
@@ -879,7 +1142,7 @@ export function ListsSettingsTab() {
       {/* Add Tag */}
       {isAddTagOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Add Record Tag</h3>
               <button
@@ -965,7 +1228,7 @@ export function ListsSettingsTab() {
       {/* Edit Tag */}
       {editingTag && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Edit Record Tag</h3>
               <button

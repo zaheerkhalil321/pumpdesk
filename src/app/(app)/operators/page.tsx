@@ -11,6 +11,8 @@ import {
   ChevronRight,
   X,
   Copy,
+  LayoutGrid,
+  Table as TableIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,15 +21,23 @@ import { AppSelect } from '@/components/ui/app-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { useOperators } from '@/lib/operators-store';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
+import { OperatorTileCard } from '@/components/operators/operator-tile-card';
 
 type StatusFilterOption = 'all' | 'Active' | 'Inactive';
 type AvailabilityFilterOption = 'all' | 'available' | 'assigned' | 'time_off';
+type ViewLayout = 'table' | 'tiles';
 
 export default function OperatorsPage() {
   const router = useRouter();
   const operators = useOperators();
+
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
+  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>('Active');
@@ -178,33 +188,70 @@ export default function OperatorsPage() {
           )}
         </div>
 
-        {/* Status Dropdown Filter */}
-        <div className="w-full sm:w-40 shrink-0">
-          <AppSelect
-            size="sm"
-            value={statusFilter}
-            onChange={(val) => setStatusFilter(val as StatusFilterOption)}
-            options={[
-              { value: 'Active', label: 'Status: Active' },
-              { value: 'all', label: 'Status: All' },
-              { value: 'Inactive', label: 'Status: Inactive' },
-            ]}
-          />
-        </div>
+        {/* Controls: Status, Availability & View Mode Switcher */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0 flex-wrap">
+          {/* Status Dropdown Filter */}
+          <div className="w-full sm:w-36 shrink-0">
+            <AppSelect
+              size="sm"
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val as StatusFilterOption)}
+              options={[
+                { value: 'Active', label: 'Status: Active' },
+                { value: 'all', label: 'Status: All' },
+                { value: 'Inactive', label: 'Status: Inactive' },
+              ]}
+            />
+          </div>
 
-        {/* Availability Dropdown Filter */}
-        <div className="w-full sm:w-44 shrink-0">
-          <AppSelect
-            size="sm"
-            value={availabilityFilter}
-            onChange={(val) => setAvailabilityFilter(val as AvailabilityFilterOption)}
-            options={[
-              { value: 'all', label: 'Availability: All' },
-              { value: 'available', label: 'Available' },
-              { value: 'assigned', label: 'Assigned' },
-              { value: 'time_off', label: 'Time off' },
-            ]}
-          />
+          {/* Availability Dropdown Filter */}
+          <div className="w-full sm:w-40 shrink-0">
+            <AppSelect
+              size="sm"
+              value={availabilityFilter}
+              onChange={(val) => setAvailabilityFilter(val as AvailabilityFilterOption)}
+              options={[
+                { value: 'all', label: 'Availability: All' },
+                { value: 'available', label: 'Available' },
+                { value: 'assigned', label: 'Assigned' },
+                { value: 'time_off', label: 'Time off' },
+              ]}
+            />
+          </div>
+
+          {/* View Mode Switcher: Tiles vs Table */}
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 shadow-2xs shrink-0">
+            <button
+              type="button"
+              onClick={() => setUserLayout('tiles')}
+              className={cn(
+                'px-2.5 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer',
+                currentLayout === 'tiles'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+              title="Tiles view"
+              aria-label="Tiles view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Tiles</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserLayout('table')}
+              className={cn(
+                'px-2.5 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer',
+                currentLayout === 'table'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+              title="Table view"
+              aria-label="Table view"
+            >
+              <TableIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Table</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -218,7 +265,7 @@ export default function OperatorsPage() {
         </span>
       </div>
 
-      {/* ── 4. Master Operators Table (Figma Image 1) ── */}
+      {/* ── 4. Master Operators Directory (Tiles Grid vs Table) ── */}
       {filteredOperators.length === 0 ? (
         <div className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs py-14 px-4 text-center text-slate-400">
           <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
@@ -244,6 +291,16 @@ export default function OperatorsPage() {
               Reset filters
             </Button>
           )}
+        </div>
+      ) : currentLayout === 'tiles' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4">
+          {filteredOperators.map((op) => (
+            <OperatorTileCard
+              key={op.id}
+              operator={op}
+              onClick={() => router.push(`/operators/${op.id}`)}
+            />
+          ))}
         </div>
       ) : (
         <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">

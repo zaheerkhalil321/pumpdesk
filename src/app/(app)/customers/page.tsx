@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Search,
   Plus,
@@ -10,11 +9,13 @@ import {
   MessageSquare,
   ChevronRight,
   X,
-  CheckCircle2,
   Copy,
   ExternalLink,
   LayoutGrid,
   Table as TableIcon,
+  FileText,
+  User,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,8 @@ export interface CustomerItem {
   createdTime: string;
   createdAtRaw: string;
   status: 'Active' | 'Inactive';
+  tags?: string[];
+  dispatchNote?: string;
 }
 
 const INITIAL_CUSTOMERS: CustomerItem[] = [
@@ -60,6 +63,8 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
     createdTime: '9:22 AM',
     createdAtRaw: '2026-01-14T09:22:00',
     status: 'Active',
+    tags: ['PO Required', 'Preferred Customer'],
+    dispatchNote: 'Confirm PO before scheduling.',
   },
   {
     id: 'CUST-102',
@@ -102,6 +107,8 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
     createdTime: '8:00 AM',
     createdAtRaw: '2026-09-18T08:00:00',
     status: 'Active',
+    tags: ['Preferred Customer'],
+    dispatchNote: 'Call Dave 30 mins before arrival on site.',
   },
   {
     id: 'CUST-105',
@@ -116,6 +123,8 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
     createdTime: '10:00 AM',
     createdAtRaw: '2026-09-14T10:00:00',
     status: 'Active',
+    tags: ['Commercial Tier 1'],
+    dispatchNote: 'PPE required: Hard hat and high-vis safety vest mandatory on site.',
   },
   {
     id: 'CUST-106',
@@ -130,6 +139,8 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
     createdTime: '9:30 AM',
     createdAtRaw: '2026-09-16T09:30:00',
     status: 'Active',
+    tags: ['PO Required', 'Preferred Customer'],
+    dispatchNote: 'PO must match job site name before order completion.',
   },
   {
     id: 'CUST-107',
@@ -144,6 +155,7 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
     createdTime: '7:00 AM',
     createdAtRaw: '2026-09-17T07:00:00',
     status: 'Active',
+    tags: ['Preferred Customer'],
   },
   {
     id: 'CUST-108',
@@ -158,6 +170,8 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
     createdTime: '7:30 AM',
     createdAtRaw: '2026-09-12T07:30:00',
     status: 'Active',
+    tags: ['PO Required', 'Preferred Customer'],
+    dispatchNote: 'Confirm PO before scheduling.',
   },
 ];
 
@@ -166,7 +180,6 @@ type SortOption = 'name_asc' | 'name_desc' | 'newest' | 'oldest';
 type ViewLayout = 'table' | 'tiles';
 
 export default function CustomersPage() {
-  const router = useRouter();
   const [customers, setCustomers] = useState<CustomerItem[]>(INITIAL_CUSTOMERS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
@@ -317,6 +330,15 @@ export default function CustomersPage() {
       navigator.clipboard.writeText(phone);
       toast.success('Phone copied to clipboard', {
         description: `${phone} (${company})`,
+      });
+    }
+  };
+
+  const handleCopyEmail = (email: string, company: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(email);
+      toast.success('Email copied to clipboard', {
+        description: `${email} (${company})`,
       });
     }
   };
@@ -523,6 +545,7 @@ export default function CustomersPage() {
               onCall={handleCall}
               onText={handleText}
               onCopyPhone={handleCopyPhone}
+              onCopyEmail={handleCopyEmail}
             />
           ))}
         </div>
@@ -545,7 +568,7 @@ export default function CustomersPage() {
                   <tr
                     key={cust.id}
                     className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                    onClick={() => router.push(`/customers/${cust.id}`)}
+                    onClick={() => setSelectedCustomerForQuickView(cust)}
                   >
                     {/* Customer Info with Monogram Badge */}
                     <td className="py-3.5 px-4 sm:px-6">
@@ -554,13 +577,9 @@ export default function CustomersPage() {
                           {getInitials(cust.name)}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <Link
-                            href={`/customers/${cust.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-semibold text-slate-900 group-hover:text-brand underline underline-offset-2 transition-colors truncate"
-                          >
+                          <span className="font-semibold text-slate-900 group-hover:text-brand transition-colors truncate">
                             {cust.name}
-                          </Link>
+                          </span>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
                             <span>{cust.contactName}</span>
                             <span className="text-slate-300">&bull;</span>
@@ -586,16 +605,29 @@ export default function CustomersPage() {
                       </button>
                     </td>
 
-                    {/* Email */}
+                    {/* Email with copy-on-click */}
                     <td className="py-3.5 px-4 font-normal text-slate-600 truncate max-w-[320px]">
-                      <a
-                        href={`mailto:${cust.email}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="hover:text-slate-900 hover:underline transition-colors"
-                        title={`Send email to ${cust.email}`}
-                      >
-                        {cust.email}
-                      </a>
+                      <div className="inline-flex items-center gap-1.5 group/email">
+                        <a
+                          href={`mailto:${cust.email}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-slate-900 hover:underline transition-colors truncate"
+                          title={`Send email to ${cust.email}`}
+                        >
+                          {cust.email}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyEmail(cust.email, cust.name);
+                          }}
+                          className="inline-flex items-center text-slate-400 hover:text-brand cursor-pointer opacity-0 group-hover/email:opacity-100 transition-opacity p-0.5"
+                          title="Click to copy email"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
                     </td>
 
                     {/* Created Date & Time */}
@@ -795,57 +827,138 @@ export default function CustomersPage() {
           open={!!selectedCustomerForQuickView}
           onOpenChange={(open) => !open && setSelectedCustomerForQuickView(null)}
         >
-          <DialogContent className="sm:max-w-md p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+          <DialogContent className="sm:max-w-lg p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
             <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-brand text-white font-bold text-sm flex items-center justify-center shadow-xs">
+              <div className="flex items-center gap-3.5">
+                <div className="h-11 w-11 rounded-xl bg-brand text-white font-bold text-base flex items-center justify-center shadow-xs shrink-0">
                   {getInitials(selectedCustomerForQuickView.name)}
                 </div>
-                <div>
-                  <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
+                <div className="min-w-0">
+                  <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
                     {selectedCustomerForQuickView.name}
                   </DialogTitle>
-                  <div className="text-xs text-slate-400 mt-0.5">
-                    Account ID: {selectedCustomerForQuickView.id}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    <span className="text-xs text-slate-400 font-medium">
+                      Account ID: {selectedCustomerForQuickView.id}
+                    </span>
+                    {(selectedCustomerForQuickView.tags && selectedCustomerForQuickView.tags.length > 0
+                      ? selectedCustomerForQuickView.tags
+                      : ['Preferred Customer']
+                    ).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="space-y-3.5 pt-2 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Status</span>
-                  <span className="inline-flex items-center gap-1 font-semibold text-brand">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    {selectedCustomerForQuickView.status}
-                  </span>
+            <div className="space-y-4 pt-1">
+              {/* Contact Details */}
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5 space-y-2">
+                {/* Primary Contact */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
+                      <User className="h-4.5 w-4.5 text-slate-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 block">
+                        Primary Contact
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-sm text-slate-900">
+                          {selectedCustomerForQuickView.contactName}
+                        </span>
+                        {selectedCustomerForQuickView.contactRole && (
+                          <span className="text-xs text-slate-500 font-normal">
+                            ({selectedCustomerForQuickView.contactRole})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Account Tier</span>
-                  <span className="font-semibold text-slate-900">{selectedCustomerForQuickView.tier}</span>
+
+                {/* Phone */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/phone">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
+                      <Phone className="h-4.5 w-4.5 text-slate-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 block">
+                        Phone Number
+                      </span>
+                      <span className="font-mono text-sm font-semibold text-slate-900 tracking-tight">
+                        {selectedCustomerForQuickView.phone}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCopyPhone(selectedCustomerForQuickView.phone, selectedCustomerForQuickView.name)}
+                    className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
+                    title="Click to copy phone"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Copy</span>
+                  </Button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Primary Contact</span>
-                  <span className="font-semibold text-slate-900">
-                    {selectedCustomerForQuickView.contactName} ({selectedCustomerForQuickView.contactRole})
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Phone</span>
-                  <span className="font-mono font-medium text-slate-900">{selectedCustomerForQuickView.phone}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Email</span>
-                  <span className="font-medium text-slate-900">{selectedCustomerForQuickView.email}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Active Sites</span>
-                  <span className="font-semibold text-slate-900">
-                    {selectedCustomerForQuickView.activeSites} locations
-                  </span>
+
+                {/* Email */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/email">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
+                      <Mail className="h-4.5 w-4.5 text-slate-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 block">
+                        Email Address
+                      </span>
+                      <a
+                        href={`mailto:${selectedCustomerForQuickView.email}`}
+                        className="text-sm font-semibold text-slate-900 hover:text-brand hover:underline truncate block"
+                        title={`Send email to ${selectedCustomerForQuickView.email}`}
+                      >
+                        {selectedCustomerForQuickView.email}
+                      </a>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCopyEmail(selectedCustomerForQuickView.email, selectedCustomerForQuickView.name)}
+                    className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
+                    title="Click to copy email"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Copy</span>
+                  </Button>
                 </div>
               </div>
+
+              {/* Dispatch Note (Shown only when there's a note for the customer) */}
+              {selectedCustomerForQuickView.dispatchNote && (
+                <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-950 font-medium">
+                  <FileText className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 min-w-0">
+                    <span className="font-bold text-xs text-amber-800 block">
+                      Dispatch Note
+                    </span>
+                    <p className="text-amber-900 leading-snug">
+                      {selectedCustomerForQuickView.dispatchNote}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Direct Actions */}
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
@@ -874,7 +987,7 @@ export default function CustomersPage() {
                   href={`/customers/${selectedCustomerForQuickView.id}`}
                   className="h-8.5 px-3.5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
                 >
-                  <span>View Full Customer Info</span>
+                  <span>View details</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </div>

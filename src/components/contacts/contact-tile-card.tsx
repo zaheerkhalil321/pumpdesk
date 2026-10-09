@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Phone,
@@ -17,10 +18,25 @@ import { ContactItem } from '@/lib/contacts-store';
 
 interface ContactTileCardProps {
   contact: ContactItem;
+  onClick?: () => void;
 }
 
-export function ContactTileCard({ contact }: ContactTileCardProps) {
+export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
+  const router = useRouter();
   const isInactive = contact.status === 'Inactive';
+
+  // Prefetch contact details for instant navigation on click
+  useEffect(() => {
+    router.prefetch(`/contacts/${contact.id}`);
+  }, [router, contact.id]);
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      router.push(`/contacts/${contact.id}`);
+    }
+  };
 
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -53,8 +69,9 @@ export function ContactTileCard({ contact }: ContactTileCardProps) {
 
   return (
     <div
+      onClick={handleCardClick}
       className={cn(
-        'group relative bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-brand/40 overflow-hidden',
+        'group relative bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-brand/40 cursor-pointer overflow-hidden active:scale-[0.99]',
         isInactive
           ? 'border-slate-200/60 bg-slate-50/40 opacity-90'
           : 'border-slate-200/90'
@@ -63,10 +80,7 @@ export function ContactTileCard({ contact }: ContactTileCardProps) {
       <div className="p-4 sm:p-4.5 space-y-3">
         {/* Top Header: Avatar + Contact Name + Status Badge */}
         <div className="flex items-start justify-between gap-3">
-          <Link
-            href={`/contacts/${contact.id}`}
-            className="flex items-center gap-3 min-w-0 flex-1 group/link"
-          >
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div
               className={cn(
                 'h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors shadow-2xs',
@@ -78,14 +92,14 @@ export function ContactTileCard({ contact }: ContactTileCardProps) {
               {getInitials(contact.name)}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-sm text-slate-900 group-hover/link:text-brand transition-colors truncate">
+              <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand transition-colors truncate">
                 {contact.name}
               </h3>
               <p className="text-xs text-slate-500 truncate mt-0.5">
                 {contact.title}
               </p>
             </div>
-          </Link>
+          </div>
 
           {/* Status Badge */}
           <div className="shrink-0">
@@ -108,7 +122,8 @@ export function ContactTileCard({ contact }: ContactTileCardProps) {
           <div className="flex items-center justify-between gap-2 min-w-0">
             <Link
               href={`/customers/${contact.customerId}`}
-              className="flex items-center gap-1.5 text-slate-700 font-medium hover:text-brand transition-colors truncate min-w-0"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-slate-700 font-medium hover:text-brand hover:underline transition-colors truncate min-w-0"
             >
               <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
               <span className="truncate">{contact.company}</span>
@@ -152,7 +167,7 @@ export function ContactTileCard({ contact }: ContactTileCardProps) {
 
       {/* Footer Action Bar */}
       <div className="px-4 py-2.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           <Button
             type="button"
             variant="outline"
@@ -176,13 +191,12 @@ export function ContactTileCard({ contact }: ContactTileCardProps) {
           </Button>
         </div>
 
-        <Link
-          href={`/contacts/${contact.id}`}
-          className="h-7.5 w-7.5 rounded-lg flex items-center justify-center text-slate-400 hover:text-brand hover:bg-brand-light transition-colors"
+        <div
+          className="h-7.5 w-7.5 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand group-hover:bg-brand-light transition-colors"
           title="View contact details"
         >
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+        </div>
       </div>
     </div>
   );

@@ -8,12 +8,8 @@ import {
   Puzzle,
   ChevronRight,
   Search,
-  Lock,
   Layers,
-  Users,
-  CalendarCheck,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { SettingsMainTab } from './settings-theme-bar';
 import { toast } from 'sonner';
 
@@ -32,22 +28,6 @@ export function SettingsHub({ onSelectTab }: SettingsHubProps) {
       icon: Building2,
       enabled: true,
       badge: null,
-    },
-    {
-      id: 'team_access',
-      title: 'Team & access',
-      description: 'Users & permissions',
-      icon: Users,
-      enabled: false,
-      badge: 'Phase 2 (Out of Scope)',
-    },
-    {
-      id: 'orders_tickets',
-      title: 'Orders & work tickets',
-      description: 'Job defaults & ticket requirements',
-      icon: CalendarCheck,
-      enabled: false,
-      badge: 'Phase 2 (Out of Scope)',
     },
     {
       id: 'pricing' as SettingsMainTab,
@@ -119,66 +99,33 @@ export function SettingsHub({ onSelectTab }: SettingsHubProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {filteredItems.map((item) => {
           const Icon = item.icon;
-          const isInteractive = item.enabled;
 
           return (
             <div
               key={item.title}
-              onClick={() => {
-                if (isInteractive) {
-                  onSelectTab(item.id as SettingsMainTab);
-                } else {
-                  toast.info(`${item.title} is designated for Phase 2`, {
-                    description:
-                      'Per platform governance, Team & Access and Work Ticket configuration are out of MVP scope.',
-                  });
-                }
-              }}
-              className={cn(
-                'group relative rounded-2xl border p-5 transition-all duration-150 flex items-center justify-between gap-4',
-                isInteractive
-                  ? 'bg-white border-slate-200/90 hover:border-brand/40 hover:shadow-xs hover:bg-slate-50/50 cursor-pointer active:scale-[0.99]'
-                  : 'bg-slate-50/60 border-slate-200/60 opacity-60 cursor-not-allowed'
-              )}
+              onClick={() => onSelectTab(item.id as SettingsMainTab)}
+              className="group relative rounded-2xl border p-5 transition-all duration-150 flex items-center justify-between gap-4 bg-white border-slate-200/90 hover:border-brand/40 hover:shadow-xs hover:bg-slate-50/50 cursor-pointer active:scale-[0.99]"
             >
               <div className="flex items-start gap-4 min-w-0">
                 {/* Large Icon Box */}
-                <div
-                  className={cn(
-                    'h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-colors border',
-                    isInteractive
-                      ? 'bg-brand-light/60 border-brand/20 text-brand group-hover:bg-brand-light'
-                      : 'bg-slate-100 border-slate-200 text-slate-400'
-                  )}
-                >
+                <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-colors border bg-brand-light/60 border-brand/20 text-brand group-hover:bg-brand-light">
                   <Icon className="h-6 w-6" />
                 </div>
 
                 {/* Details */}
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-brand transition-colors">
-                      {item.title}
-                    </h3>
-                    {item.badge && (
-                      <span className="text-[10px] font-semibold bg-slate-200/80 text-slate-600 px-1.5 py-0.2 rounded shrink-0">
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-brand transition-colors">
+                    {item.title}
+                  </h3>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                     {item.description}
                   </p>
                 </div>
               </div>
 
-              {/* Right Arrow / Lock */}
+              {/* Right Arrow */}
               <div className="shrink-0 text-slate-400 group-hover:text-brand transition-colors">
-                {isInteractive ? (
-                  <ChevronRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
-                ) : (
-                  <Lock className="h-4 w-4 text-slate-400" />
-                )}
+                <ChevronRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </div>
           );

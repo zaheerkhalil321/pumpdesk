@@ -119,7 +119,7 @@ export function TimelineGrid({
                     <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 shrink-0" />
 
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs text-slate-900 truncate tracking-tight">
+                      <p className="font-bold text-sm text-slate-900 truncate tracking-tight">
                         {pump.code}
                       </p>
                       <p

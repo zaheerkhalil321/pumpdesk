@@ -18,6 +18,10 @@ import {
   Copy,
   LayoutGrid,
   Table as TableIcon,
+  FileText,
+  Pin,
+  MoreHorizontal,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +31,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { AppSelect } from '@/components/ui/app-select';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
@@ -57,6 +67,14 @@ interface RecentOrder {
   status: 'Confirmed' | 'Completed' | 'Pending';
 }
 
+interface CustomerNote {
+  id: string;
+  content: string;
+  author: string;
+  date: string;
+  isPinned?: boolean;
+}
+
 interface CustomerFullData {
   id: string;
   name: string;
@@ -71,6 +89,7 @@ interface CustomerFullData {
   jobSites: JobSite[];
   recentOrders: RecentOrder[];
   defaultInvoiceRecipient: string;
+  notes?: CustomerNote[];
 }
 
 const CUSTOMERS_DB: Record<string, CustomerFullData> = {
@@ -122,6 +141,15 @@ const CUSTOMERS_DB: Record<string, CustomerFullData> = {
       { id: 'ORD-1482', date: 'Aug 28, 2026', status: 'Completed' },
     ],
     defaultInvoiceRecipient: 'Jamie Lee · billing@accurate.example',
+    notes: [
+      {
+        id: 'n1',
+        content: 'Call the primary contact to confirm site access before dispatch.',
+        author: 'Jessie Black',
+        date: 'Sep 10, 2026',
+        isPinned: true,
+      },
+    ],
   },
   'CUST-104': {
     id: 'CUST-104',
@@ -245,6 +273,46 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
   const [editCustPhone, setEditCustPhone] = useState(customer.phone);
   const [editCustEmail, setEditCustEmail] = useState(customer.email);
   const [editCustAddress, setEditCustAddress] = useState(customer.address);
+
+  // Customer Notes State
+  const [notes, setNotes] = useState<CustomerNote[]>(
+    customer.notes || [
+      {
+        id: 'n1',
+        content: 'Call the primary contact to confirm site access before dispatch.',
+        author: 'Jessie Black',
+        date: 'Sep 10, 2026',
+        isPinned: true,
+      },
+    ]
+  );
+  const [newNoteText, setNewNoteText] = useState('');
+
+  const handleAddNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNoteText.trim()) return;
+    const newNote: CustomerNote = {
+      id: `note-${Date.now()}`,
+      content: newNoteText.trim(),
+      author: 'Jessie Black',
+      date: 'Oct 9, 2026',
+      isPinned: false,
+    };
+    setNotes((prev) => [newNote, ...prev]);
+    setNewNoteText('');
+    toast.success('Customer note added');
+  };
+
+  const handleTogglePin = (noteId: string) => {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === noteId ? { ...n, isPinned: !n.isPinned } : n))
+    );
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    toast.success('Customer note deleted');
+  };
 
   // Actions
   const handleCall = (phone: string, targetName: string) => {
@@ -619,6 +687,97 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                 </button>
               </div>
             </div>
+
+            {/* Card 3: Customer notes */}
+            <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-[#0D5294]" />
+                <h3 className="font-bold text-base text-[#0D5294]">Customer notes</h3>
+              </div>
+
+              {/* Add Note Form */}
+              <form onSubmit={handleAddNote} className="flex items-center gap-2">
+                <Input
+                  value={newNoteText}
+                  onChange={(e) => setNewNoteText(e.target.value)}
+                  placeholder="Add a note..."
+                  className="h-9 rounded-xl border-slate-200/90 text-xs sm:text-sm bg-white focus-visible:ring-[#0D5294]"
+                />
+                <Button
+                  type="submit"
+                  disabled={!newNoteText.trim()}
+                  className="h-9 px-4 rounded-xl bg-[#0D5294] hover:bg-[#0a4277] text-white text-xs sm:text-sm font-semibold shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  Add note
+                </Button>
+              </form>
+
+              {/* Notes List */}
+              <div className="space-y-2.5 pt-1">
+                {notes.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-1">
+                    No notes recorded for this customer yet.
+                  </p>
+                ) : (
+                  [...notes]
+                    .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
+                    .map((note) => (
+                      <div
+                        key={note.id}
+                        className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 flex items-start justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePin(note.id)}
+                            className="mt-0.5 text-[#0D5294] hover:text-slate-700 cursor-pointer transition-colors"
+                            title={note.isPinned ? 'Unpin note' : 'Pin note'}
+                          >
+                            <Pin
+                              className={cn(
+                                'h-4 w-4',
+                                note.isPinned
+                                  ? 'text-[#0D5294] fill-[#0D5294]/20 rotate-45'
+                                  : 'text-slate-300'
+                              )}
+                            />
+                          </button>
+                          <div className="space-y-1 min-w-0">
+                            <p className="text-slate-900 font-medium text-xs sm:text-sm leading-snug">
+                              {note.content}
+                            </p>
+                            <div className="text-[11px] text-slate-400">
+                              {note.author} &bull; {note.date}
+                            </div>
+                          </div>
+                        </div>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="h-6 w-6 rounded-md hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 flex items-center justify-center shrink-0 cursor-pointer transition-colors">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-36 rounded-xl p-1 shadow-lg border-slate-200">
+                            <DropdownMenuItem
+                              onClick={() => handleTogglePin(note.id)}
+                              className="text-xs cursor-pointer flex items-center gap-2 p-2 rounded-lg"
+                            >
+                              <Pin className="h-3.5 w-3.5 text-slate-500" />
+                              <span>{note.isPinned ? 'Unpin note' : 'Pin note'}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="text-xs cursor-pointer flex items-center gap-2 p-2 rounded-lg text-rose-600 focus:text-rose-600"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                              <span>Delete note</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
           </div>
 
           {/* RIGHT COLUMN */}
@@ -643,26 +802,6 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                   <p className="text-[11px] text-slate-500">
                     Automatically assigned when creating new pour orders for {customer.name}.
                   </p>
-                </div>
-
-                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between">
-                  <div>
-                    <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                      Authorized Pour Sites
-                    </div>
-                    <div className="font-semibold text-slate-900 text-xs mt-0.5">
-                      {customer.jobSites.length} verified {customer.jobSites.length === 1 ? 'site' : 'sites'} on file
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsAddSiteModalOpen(true)}
-                    className="h-7 px-2.5 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-white shadow-2xs gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Add site</span>
-                  </Button>
                 </div>
               </div>
             </div>

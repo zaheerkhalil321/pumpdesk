@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Check, Paintbrush, ArrowLeft } from 'lucide-react';
 import { useBrandTheme } from '@/components/providers/brand-theme-provider';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,24 @@ export function SettingsThemeBar({
   breadcrumbSub,
 }: SettingsThemeBarProps) {
   const { brandTheme, setBrandTheme, themes } = useBrandTheme();
+
+  const navContainerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const container = navContainerRef.current;
+    const button = tabRefs.current[currentTab];
+    if (container && button) {
+      const buttonRect = button.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const buttonCenter = buttonRect.left + buttonRect.width / 2;
+      const containerCenter = containerRect.left + containerRect.width / 2;
+      container.scrollBy({
+        left: buttonCenter - containerCenter,
+        behavior: 'smooth',
+      });
+    }
+  }, [currentTab]);
 
   const handleThemeChange = (id: typeof brandTheme) => {
     setBrandTheme(id);
@@ -181,7 +199,10 @@ export function SettingsThemeBar({
       </div>
 
       {/* ── Main Settings Navigation Tabs Bar ── */}
-      <div className="px-4 sm:px-6 lg:px-8 border-t border-slate-200/70 overflow-x-auto scrollbar-none">
+      <div
+        ref={navContainerRef}
+        className="px-4 sm:px-6 lg:px-8 border-t border-slate-200/70 overflow-x-auto scrollbar-none scroll-smooth"
+      >
         <nav className="flex space-x-1 sm:space-x-2 py-1 min-w-max">
           {[
             { id: 'overview' as const, label: 'Overview' },
@@ -195,6 +216,9 @@ export function SettingsThemeBar({
             return (
               <button
                 key={tab.id}
+                ref={(el) => {
+                  tabRefs.current[tab.id] = el;
+                }}
                 type="button"
                 onClick={() => onTabChange(tab.id)}
                 className={cn(

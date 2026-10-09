@@ -28,6 +28,7 @@ export interface ScheduleBooking {
   operator?: string | null;
   dispatchStatus?: DispatchStatus;
   dispatchedAt?: string;
+  pourType?: string;
 }
 
 export interface ScheduleFilters {

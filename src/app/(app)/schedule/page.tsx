@@ -32,7 +32,7 @@ const INITIAL_PUMPS: PumpLane[] = [
     id: "01-34m",
     code: "01 · 34M",
     name: "34M Putzmeister Boom",
-    boomLength: "34 Meter",
+    boomLength: "100ft reach",
     operator: "Rob Black",
     status: "active",
   },

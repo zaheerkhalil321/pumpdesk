@@ -41,15 +41,20 @@ export function MobileRigCardView({
               <div className="flex items-center gap-2.5 min-w-0">
                 <Truck className="h-5 w-5 text-slate-500 shrink-0" />
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900 truncate">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">
                       {pump.code}
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-200/70 px-1.5 py-0.5 rounded">
+                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-200/80 px-2 py-0.5 rounded-md">
                       {pump.boomLength}
                     </span>
+                    {pumpBookings.length > 1 && (
+                      <span className="text-[10px] font-semibold text-brand bg-brand-light border border-brand/20 px-1.5 py-0.5 rounded-full">
+                        {pumpBookings.length} jobs
+                      </span>
+                    )}
                   </div>
-                  <p className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+                  <p className="text-xs text-slate-500 truncate leading-tight mt-0.5">
                     {pump.name}
                   </p>
                 </div>
@@ -68,7 +73,14 @@ export function MobileRigCardView({
             </div>
 
             {/* ── RIG BOOKINGS / POUR ORDERS ── */}
-            <div className="p-3 space-y-2.5">
+            <div
+              className={cn(
+                'p-3.5',
+                hasBookings
+                  ? 'flex items-stretch gap-3 overflow-x-auto scrollbar-thin snap-x snap-mandatory'
+                  : 'space-y-2.5',
+              )}
+            >
               {hasBookings ? (
                 pumpBookings.map((booking) => {
                   const isDispatched = booking.dispatchStatus === 'dispatched';
@@ -90,7 +102,8 @@ export function MobileRigCardView({
                       key={booking.id}
                       onClick={() => onBookingClick(booking)}
                       className={cn(
-                        'p-3 rounded-xl border transition-all cursor-pointer group hover:shadow-xs active:scale-99',
+                        'p-3.5 rounded-xl border transition-all cursor-pointer group hover:shadow-xs active:scale-99',
+                        'w-[84%] sm:w-[320px] shrink-0 snap-start',
                         isDispatched
                           ? 'border-emerald-200/80 bg-emerald-50/20 hover:border-emerald-300'
                           : isDraft
@@ -111,12 +124,12 @@ export function MobileRigCardView({
                           </div>
 
                           {/* Time & Duration */}
-                          <div className="flex items-center gap-1 text-[11px] text-slate-600 mt-1">
+                          <div className="flex items-center gap-1 text-[11px] text-slate-600 mt-1 flex-wrap">
                             <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span className="font-semibold text-slate-800">
+                            <span className="font-semibold text-slate-800 whitespace-nowrap">
                               {startFormatted} – {endFormatted}
                             </span>
-                            <span className="text-slate-400">
+                            <span className="text-slate-400 whitespace-nowrap">
                               ({booking.durationHours} hrs)
                             </span>
                           </div>

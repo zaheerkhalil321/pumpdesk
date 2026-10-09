@@ -21,6 +21,7 @@ interface CustomerTileCardProps {
   onCall: (name: string, phone: string) => void;
   onText: (name: string, phone: string) => void;
   onCopyPhone: (phone: string, company: string) => void;
+  onCopyEmail?: (email: string, company: string) => void;
 }
 
 export function CustomerTileCard({
@@ -29,6 +30,7 @@ export function CustomerTileCard({
   onCall,
   onText,
   onCopyPhone,
+  onCopyEmail,
 }: CustomerTileCardProps) {
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -137,16 +139,34 @@ export function CustomerTileCard({
             </div>
           </div>
 
-          {/* Email */}
-          <div className="flex items-center gap-2 text-slate-500 truncate text-[11.5px]">
-            <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-            <a
-              href={`mailto:${customer.email}`}
-              onClick={(e) => e.stopPropagation()}
-              className="hover:underline hover:text-brand truncate"
+          {/* Email with copy-on-click */}
+          <div className="flex items-center justify-between text-slate-500 text-[11.5px] group/email">
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <a
+                href={`mailto:${customer.email}`}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:underline hover:text-brand truncate"
+                title={`Send email to ${customer.email}`}
+              >
+                {customer.email}
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onCopyEmail) {
+                  onCopyEmail(customer.email, customer.name);
+                } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                  navigator.clipboard.writeText(customer.email);
+                }
+              }}
+              className="text-slate-400 hover:text-brand cursor-pointer opacity-0 group-hover/email:opacity-100 transition-opacity shrink-0 ml-1 p-0.5"
+              title="Click to copy email"
             >
-              {customer.email}
-            </a>
+              <Copy className="h-3 w-3" />
+            </button>
           </div>
         </div>
       </div>
