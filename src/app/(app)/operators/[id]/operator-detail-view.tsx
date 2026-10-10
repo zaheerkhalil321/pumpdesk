@@ -233,57 +233,121 @@ export function OperatorDetailView({ operatorId }: OperatorDetailViewProps) {
             {/* Default Pump */}
             <div className="py-3 flex items-center justify-between gap-4">
               <span className="text-slate-500 font-medium">Default pump</span>
-              <span className="font-semibold text-slate-900 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/80 text-xs">
-                {operator.defaultPump}
-              </span>
+              {operator.defaultPump && operator.defaultPump !== 'None' && operator.defaultPump !== 'No default pump' ? (
+                <span className="font-semibold text-slate-900 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/80 text-xs">
+                  {operator.defaultPump}
+                </span>
+              ) : (
+                <span className="text-slate-500 text-xs px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/60 font-medium">
+                  None (Unassigned)
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Card 2: Emergency Contact */}
+        {/* Card 2: Emergency Contacts */}
         <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900">
-              Emergency contact
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                Emergency contacts
+              </h2>
+              {operator.emergencyContacts && operator.emergencyContacts.length > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                  {operator.emergencyContacts.length}
+                </span>
+              )}
+            </div>
             <UserCheck className="h-4 w-4 text-slate-400" />
           </div>
 
-          <div className="divide-y divide-slate-100 text-xs sm:text-sm">
-            {/* Name */}
-            <div className="py-3 flex items-center justify-between gap-4">
-              <span className="text-slate-500 font-medium">Name</span>
-              <span className="text-slate-900 font-medium text-right">
-                {operator.emergencyContact?.name || 'Not provided'}
-              </span>
-            </div>
+          {operator.emergencyContacts && operator.emergencyContacts.length > 0 ? (
+            <div className="divide-y divide-slate-100 space-y-3">
+              {operator.emergencyContacts.map((contact, index) => (
+                <div key={index} className={index > 0 ? 'pt-3 space-y-2' : 'space-y-2'}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900">
+                      {contact.name || 'Not provided'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {index === 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          Primary
+                        </span>
+                      )}
+                      {contact.relationship && contact.relationship !== 'Not provided' && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+                          {contact.relationship}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-            {/* Relationship */}
-            <div className="py-3 flex items-center justify-between gap-4">
-              <span className="text-slate-500 font-medium">Relationship</span>
-              <span className="text-slate-900 font-medium text-right">
-                {operator.emergencyContact?.relationship || 'Not provided'}
-              </span>
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="text-slate-500 font-medium">Emergency Phone</span>
+                    {contact.phone && contact.phone !== 'Not provided' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(contact.phone, `${contact.name}'s phone`)}
+                        className="font-mono text-slate-900 hover:text-brand font-medium inline-flex items-center gap-1.5 cursor-pointer group/em text-right"
+                        title="Click to copy emergency phone"
+                      >
+                        <span>{contact.phone}</span>
+                        <Copy className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover/em:opacity-100 transition-opacity" />
+                      </button>
+                    ) : (
+                      <span className="text-slate-400 font-medium text-right">Not provided</span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* Phone */}
-            <div className="py-3 flex items-center justify-between gap-4">
-              <span className="text-slate-500 font-medium">Phone</span>
-              {operator.emergencyContact?.phone && operator.emergencyContact.phone !== 'Not provided' ? (
-                <button
-                  type="button"
-                  onClick={() => handleCopy(operator.emergencyContact.phone, 'Emergency phone')}
-                  className="font-mono text-slate-900 hover:text-brand font-medium inline-flex items-center gap-1.5 cursor-pointer group/em text-right"
-                  title="Click to copy emergency phone"
-                >
-                  <span>{operator.emergencyContact.phone}</span>
-                  <Copy className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover/em:opacity-100 transition-opacity" />
-                </button>
-              ) : (
-                <span className="text-slate-400 font-medium text-right">Not provided</span>
-              )}
+          ) : operator.emergencyContact && operator.emergencyContact.name !== 'Not provided' ? (
+            <div className="divide-y divide-slate-100 text-xs sm:text-sm">
+              <div className="py-3 flex items-center justify-between gap-4">
+                <span className="text-slate-500 font-medium">Name</span>
+                <span className="text-slate-900 font-medium text-right">
+                  {operator.emergencyContact.name}
+                </span>
+              </div>
+              <div className="py-3 flex items-center justify-between gap-4">
+                <span className="text-slate-500 font-medium">Relationship</span>
+                <span className="text-slate-900 font-medium text-right">
+                  {operator.emergencyContact.relationship || 'Not provided'}
+                </span>
+              </div>
+              <div className="py-3 flex items-center justify-between gap-4">
+                <span className="text-slate-500 font-medium">Phone</span>
+                {operator.emergencyContact.phone && operator.emergencyContact.phone !== 'Not provided' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(operator.emergencyContact.phone, 'Emergency phone')}
+                    className="font-mono text-slate-900 hover:text-brand font-medium inline-flex items-center gap-1.5 cursor-pointer group/em text-right"
+                    title="Click to copy emergency phone"
+                  >
+                    <span>{operator.emergencyContact.phone}</span>
+                    <Copy className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover/em:opacity-100 transition-opacity" />
+                  </button>
+                ) : (
+                  <span className="text-slate-400 font-medium text-right">Not provided</span>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="py-6 text-center text-xs text-slate-500 space-y-2">
+              <p>No emergency contacts on file.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditModalOpen(true)}
+                className="h-8 text-xs font-semibold cursor-pointer"
+              >
+                Add emergency contact
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

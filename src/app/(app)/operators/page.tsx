@@ -77,7 +77,7 @@ export default function OperatorsPage() {
         const cleanPhone = op.phone.replace(/\D/g, '');
         const matchName = op.name.toLowerCase().includes(q);
         const matchRole = op.role.toLowerCase().includes(q);
-        const matchPump = op.defaultPump.toLowerCase().includes(q);
+        const matchPump = (op.defaultPump || '').toLowerCase().includes(q);
         const matchPhone =
           op.phone.toLowerCase().includes(q) ||
           (searchDigits.length > 2 && cleanPhone.includes(searchDigits));
@@ -141,7 +141,7 @@ export default function OperatorsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
       {/* ── 1. Page Header (Figma Image 1) ── */}
       <PageHeader
         title="Operators"
@@ -380,9 +380,15 @@ export default function OperatorsPage() {
 
                       {/* 4. Default Pump Badge */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200/80">
-                          {op.defaultPump}
-                        </span>
+                        {op.defaultPump && op.defaultPump !== 'None' && op.defaultPump !== 'No default pump' ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200/80">
+                            {op.defaultPump}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 bg-slate-50 border border-slate-200/50">
+                            None
+                          </span>
+                        )}
                       </td>
 
                       {/* 5. Today Availability Status */}

@@ -22,6 +22,16 @@ export interface NextInspectionInfo {
   dueSoon?: boolean;
 }
 
+export interface PumpDocument {
+  id: string;
+  name: string;
+  type: string;
+  issueDate?: string;
+  expiryDate?: string;
+  fileSize?: string;
+  uploadedAt: string;
+}
+
 export interface PumpItem {
   id: string;
   unitNumber: string;
@@ -39,6 +49,7 @@ export interface PumpItem {
   inMaintenance: boolean;
   maintenanceNote?: string;
   year?: string;
+  documents?: PumpDocument[];
 }
 
 export interface MaintenanceRecord {
@@ -80,6 +91,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
     minHours: '4.0 hrs',
     inMaintenance: false,
     year: '2023',
+    documents: [],
   },
   {
     id: '02-28m',
@@ -108,6 +120,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
     minHours: '4.0 hrs',
     inMaintenance: false,
     year: '2021',
+    documents: [],
   },
   {
     id: '03-47m',
@@ -137,6 +150,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
     inMaintenance: true,
     maintenanceNote: 'Scheduled service • Hydraulic pump & boom inspection',
     year: '2024',
+    documents: [],
   },
   {
     id: '04-line-pump',
@@ -165,6 +179,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
     minHours: '4.0 hrs',
     inMaintenance: false,
     year: '2022',
+    documents: [],
   },
 ];
 
@@ -207,6 +222,7 @@ export function addPump(newPump: Omit<PumpItem, 'id'>): PumpItem {
   const created: PumpItem = {
     ...newPump,
     id,
+    documents: newPump.documents || [],
   };
   pumpsState = [created, ...pumpsState];
   notify();
@@ -230,6 +246,48 @@ export function updatePump(id: string, updates: Partial<PumpItem>): PumpItem | n
   ];
   notify();
   return updated;
+}
+
+export function deletePump(id: string): boolean {
+  const index = pumpsState.findIndex((p) => p.id === id);
+  if (index === -1) return false;
+
+  pumpsState = pumpsState.filter((p) => p.id !== id);
+  notify();
+  return true;
+}
+
+export function addPumpDocument(
+  pumpId: string,
+  doc: Omit<PumpDocument, 'id' | 'uploadedAt'>
+): PumpDocument | null {
+  const pump = pumpsState.find((p) => p.id === pumpId);
+  if (!pump) return null;
+
+  const newDoc: PumpDocument = {
+    ...doc,
+    id: `doc-${Date.now()}`,
+    uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+  };
+
+  const existingDocs = pump.documents || [];
+  updatePump(pumpId, {
+    documents: [newDoc, ...existingDocs],
+  });
+
+  return newDoc;
+}
+
+export function deletePumpDocument(pumpId: string, docId: string): boolean {
+  const pump = pumpsState.find((p) => p.id === pumpId);
+  if (!pump) return false;
+
+  const updatedDocs = (pump.documents || []).filter((d) => d.id !== docId);
+  updatePump(pumpId, {
+    documents: updatedDocs,
+  });
+
+  return true;
 }
 
 export function usePumps(): PumpItem[] {

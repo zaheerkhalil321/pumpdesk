@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSettings } from '@/components/providers/settings-provider';
 import { useIsTablet } from '@/hooks/use-mobile';
+import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
 
 interface YardLocation {
   id: string;
@@ -223,23 +224,11 @@ export function AppSidebar() {
           )}
           title="PumpDesk — Schedule Board"
         >
-          {/* Logo Mark: Dynamic brand squircle */}
-          <div className="h-8.5 w-8.5 rounded-[8px] bg-brand flex items-center justify-center shadow-xs shrink-0 border border-white/15 transition-colors">
-            <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none">
-              P
-            </span>
-          </div>
-
-          {!isCollapsed && (
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-bold text-[17px] tracking-tight text-slate-900 truncate">
-                PumpDesk
-              </span>
-              <span className="text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
-                PRO
-              </span>
-            </div>
-          )}
+          <PumpDeskLogo
+            size="md"
+            showWordmark={!isCollapsed}
+            showBadge={!isCollapsed}
+          />
         </Link>
 
         {/* 2. WORKSPACE / BRANCH SELECTOR */}

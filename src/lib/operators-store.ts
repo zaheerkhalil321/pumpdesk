@@ -15,13 +15,14 @@ export interface OperatorItem {
   phone: string;
   email: string;
   branch: string;
-  defaultPump: string;
+  defaultPump?: string;
   todayStatus: {
     type: 'assigned' | 'available' | 'time_off';
     label: string;
   };
   status: 'Active' | 'Inactive';
   emergencyContact: OperatorEmergencyContact;
+  emergencyContacts?: OperatorEmergencyContact[];
   credentialAlert?: {
     title: string;
     date: string;
@@ -48,6 +49,18 @@ export const INITIAL_OPERATORS: OperatorItem[] = [
       relationship: 'Spouse',
       phone: '(207) 555-0199',
     },
+    emergencyContacts: [
+      {
+        name: 'Sarah Black',
+        relationship: 'Spouse',
+        phone: '(207) 555-0199',
+      },
+      {
+        name: 'Kevin Black',
+        relationship: 'Brother',
+        phone: '(207) 555-0192',
+      },
+    ],
     credentialAlert: {
       title: 'CDL expires in 20 days',
       date: 'Oct 15, 2026',
@@ -72,6 +85,7 @@ export const INITIAL_OPERATORS: OperatorItem[] = [
       relationship: 'Not provided',
       phone: 'Not provided',
     },
+    emergencyContacts: [],
     credentialAlert: null,
   },
   {
@@ -92,6 +106,18 @@ export const INITIAL_OPERATORS: OperatorItem[] = [
       relationship: 'Sister',
       phone: '(207) 555-0182',
     },
+    emergencyContacts: [
+      {
+        name: 'Elena Perez',
+        relationship: 'Sister',
+        phone: '(207) 555-0182',
+      },
+      {
+        name: 'Carlos Perez',
+        relationship: 'Father',
+        phone: '(207) 555-0185',
+      },
+    ],
     credentialAlert: null,
   },
   {
@@ -112,6 +138,18 @@ export const INITIAL_OPERATORS: OperatorItem[] = [
       relationship: 'Brother',
       phone: '(207) 555-0178',
     },
+    emergencyContacts: [
+      {
+        name: 'Marcus Miles',
+        relationship: 'Brother',
+        phone: '(207) 555-0178',
+      },
+      {
+        name: 'Clara Miles',
+        relationship: 'Mother',
+        phone: '(207) 555-0179',
+      },
+    ],
     credentialAlert: {
       title: 'Medical Examiner Cert expires in 45 days',
       date: 'Nov 10, 2026',
@@ -125,7 +163,7 @@ export const INITIAL_OPERATORS: OperatorItem[] = [
     phone: '(207) 555-0172',
     email: 'casey@midcoast.example',
     branch: 'Warren',
-    defaultPump: 'No default pump',
+    defaultPump: 'None',
     todayStatus: {
       type: 'available',
       label: 'Available',
@@ -136,6 +174,7 @@ export const INITIAL_OPERATORS: OperatorItem[] = [
       relationship: 'Not provided',
       phone: 'Not provided',
     },
+    emergencyContacts: [],
     credentialAlert: null,
   },
 ];
@@ -158,9 +197,22 @@ export function getOperatorById(id: string): OperatorItem | undefined {
 
 export function addOperator(newOp: Omit<OperatorItem, 'id'>): OperatorItem {
   const id = newOp.name.toLowerCase().replace(/[^a-z0-9]/g, '-') || `op-${Date.now()}`;
+  const contactsList = newOp.emergencyContacts && newOp.emergencyContacts.length > 0
+    ? newOp.emergencyContacts
+    : (newOp.emergencyContact ? [newOp.emergencyContact] : []);
+
+  const primaryContact = contactsList[0] || {
+    name: 'Not provided',
+    relationship: 'Not provided',
+    phone: 'Not provided',
+  };
+
   const created: OperatorItem = {
     ...newOp,
     id,
+    defaultPump: newOp.defaultPump || 'None',
+    emergencyContact: primaryContact,
+    emergencyContacts: contactsList,
   };
   operatorsState = [created, ...operatorsState];
   notify();
@@ -172,13 +224,25 @@ export function updateOperator(id: string, updates: Partial<OperatorItem>): Oper
   if (index === -1) return null;
 
   const current = operatorsState[index];
+  
+  let updatedContacts = current.emergencyContacts || (current.emergencyContact ? [current.emergencyContact] : []);
+  if (updates.emergencyContacts !== undefined) {
+    updatedContacts = updates.emergencyContacts;
+  } else if (updates.emergencyContact) {
+    updatedContacts = [updates.emergencyContact];
+  }
+
+  const primaryContact = updatedContacts[0] || {
+    name: 'Not provided',
+    relationship: 'Not provided',
+    phone: 'Not provided',
+  };
+
   const updated: OperatorItem = {
     ...current,
     ...updates,
-    emergencyContact: {
-      ...current.emergencyContact,
-      ...(updates.emergencyContact || {}),
-    },
+    emergencyContacts: updatedContacts,
+    emergencyContact: primaryContact,
   };
 
   operatorsState = [

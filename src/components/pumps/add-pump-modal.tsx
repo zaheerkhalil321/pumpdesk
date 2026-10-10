@@ -10,9 +10,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
+import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { addPump } from '@/lib/pumps-store';
 import { useOperators } from '@/lib/operators-store';
+import { AddOperatorModal } from '@/components/operators/add-operator-modal';
 
 interface AddPumpModalProps {
   open: boolean;
@@ -27,7 +29,8 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
   const [model, setModel] = useState('');
   const [type, setType] = useState<'boom_pump' | 'line_pump'>('boom_pump');
   const [boomLength, setBoomLength] = useState('');
-  const [operatorId, setOperatorId] = useState(operators[0]?.id || 'rob-black');
+  const [operatorId, setOperatorId] = useState('none');
+  const [isAddOperatorOpen, setIsAddOperatorOpen] = useState(false);
   const [hourlyRate, setHourlyRate] = useState('$195 / hr');
   const [year, setYear] = useState('2024');
   const [error, setError] = useState<string | null>(null);
@@ -39,11 +42,20 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
       return;
     }
 
-    const matchedOp = operators.find((op) => op.id === operatorId) || {
-      id: 'rob-black',
-      name: 'Rob Black',
-      role: 'Lead operator',
-    };
+    const matchedOp = operatorId !== 'none' ? operators.find((op) => op.id === operatorId) : null;
+    const defaultOperator = matchedOp
+      ? {
+          id: matchedOp.id,
+          name: matchedOp.name,
+          role: matchedOp.role,
+          badge: null,
+        }
+      : {
+          id: 'unassigned',
+          name: 'Unassigned',
+          role: 'None',
+          badge: null,
+        };
 
     const typeLabel =
       type === 'boom_pump'
@@ -57,12 +69,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
       type,
       typeLabel,
       boomLength: boomLength.trim() || (type === 'boom_pump' ? '38M (124 ft)' : 'Ground Line (500ft)'),
-      defaultOperator: {
-        id: matchedOp.id,
-        name: matchedOp.name,
-        role: matchedOp.role,
-        badge: null,
-      },
+      defaultOperator,
       todayStatus: {
         type: 'available',
         label: 'Available · Assign operator',
@@ -76,6 +83,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
       minHours: '4.0 hrs',
       inMaintenance: false,
       year: year.trim() || '2024',
+      documents: [],
     });
 
     toast.success('New pump added to fleet', {
@@ -86,14 +94,18 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
     setUnitNumber('');
     setModel('');
     setBoomLength('');
+    setOperatorId('none');
     setError(null);
     onOpenChange(false);
   };
 
-  const operatorOptions = operators.map((op) => ({
-    value: op.id,
-    label: `${op.name} (${op.role})`,
-  }));
+  const operatorOptions = [
+    { value: 'none', label: 'None (Unassigned)' },
+    ...operators.map((op) => ({
+      value: op.id,
+      label: `${op.name} (${op.role})`,
+    })),
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -181,7 +193,17 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
 
           {/* Default Operator */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Default Assigned Operator</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700">Default Assigned Operator</label>
+              <button
+                type="button"
+                onClick={() => setIsAddOperatorOpen(true)}
+                className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 cursor-pointer"
+              >
+                <UserPlus className="h-3 w-3" />
+                <span>+ New Operator</span>
+              </button>
+            </div>
             <AppSelect
               size="sm"
               value={operatorId}
@@ -234,6 +256,16 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
           </div>
         </form>
       </DialogContent>
+
+      {/* Nested Add Operator Modal */}
+      <AddOperatorModal
+        open={isAddOperatorOpen}
+        onOpenChange={setIsAddOperatorOpen}
+        defaultAssignedPump={unitNumber}
+        onCreated={(createdOp) => {
+          setOperatorId(createdOp.id);
+        }}
+      />
     </Dialog>
   );
 }

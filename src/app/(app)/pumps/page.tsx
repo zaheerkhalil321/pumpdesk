@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -54,8 +53,13 @@ export default function PumpsPage() {
 
   // Modals & Dialogs
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedPumpForDetail, setSelectedPumpForDetail] = useState<PumpItem | null>(null);
+  const [selectedPumpId, setSelectedPumpId] = useState<string | null>(null);
   const [isInspectionMode, setIsInspectionMode] = useState(false);
+
+  const activePump = useMemo(() => {
+    if (!selectedPumpId) return null;
+    return pumps.find((p) => p.id === selectedPumpId) || null;
+  }, [pumps, selectedPumpId]);
 
   // Checkbox selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -143,11 +147,11 @@ export default function PumpsPage() {
 
   const handleOpenDetail = (pump: PumpItem, inspection = false) => {
     setIsInspectionMode(inspection);
-    setSelectedPumpForDetail(pump);
+    setSelectedPumpId(pump.id);
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
       {/* ── 1. Page Header (Export removed, V1 Clean) ── */}
       <PageHeader
         title="Pumps"
@@ -479,14 +483,11 @@ export default function PumpsPage() {
                       </td>
 
                       {/* 4. Default operator */}
-                      <td className="py-3.5 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex flex-col items-start">
-                          <Link
-                            href={`/operators/${pump.defaultOperator.id}`}
-                            className="font-semibold text-slate-900 hover:text-brand underline underline-offset-2 transition-colors text-xs sm:text-sm"
-                          >
+                          <span className="font-semibold text-slate-900 group-hover:text-brand transition-colors text-xs sm:text-sm">
                             {pump.defaultOperator.name}
-                          </Link>
+                          </span>
                           {pump.defaultOperator.badge && (
                             <span className="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-medium mt-0.5">
                               {pump.defaultOperator.badge}
@@ -658,12 +659,12 @@ export default function PumpsPage() {
 
       {/* ── 9. Pump Dossier Detail Dialog ── */}
       <PumpDetailDialog
-        pump={selectedPumpForDetail}
-        open={!!selectedPumpForDetail}
+        pump={activePump}
+        open={!!activePump}
         inspectionMode={isInspectionMode}
         onOpenChange={(open) => {
           if (!open) {
-            setSelectedPumpForDetail(null);
+            setSelectedPumpId(null);
             setIsInspectionMode(false);
           }
         }}

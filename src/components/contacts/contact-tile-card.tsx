@@ -151,16 +151,27 @@ export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
             </span>
           </div>
 
-          {/* Email */}
-          <div className="flex items-center gap-2 text-slate-500 truncate text-[11.5px]">
-            <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-            <a
-              href={`mailto:${contact.email}`}
-              className="hover:underline hover:text-brand truncate"
-              onClick={(e) => e.stopPropagation()}
+          {/* Email with copy button */}
+          <div className="flex items-center justify-between gap-2 text-slate-500 text-[11.5px] group/email">
+            <div className="flex items-center gap-2 truncate min-w-0">
+              <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <a
+                href={`mailto:${contact.email}`}
+                className="hover:underline hover:text-brand truncate"
+                onClick={(e) => e.stopPropagation()}
+                title={`Send email to ${contact.email}`}
+              >
+                {contact.email}
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => handleCopy(e, contact.email, 'Email')}
+              className="p-1 text-slate-400 hover:text-brand hover:bg-slate-100 rounded transition-colors shrink-0 cursor-pointer"
+              title="Copy email address"
             >
-              {contact.email}
-            </a>
+              <Copy className="h-3 w-3" />
+            </button>
           </div>
         </div>
       </div>

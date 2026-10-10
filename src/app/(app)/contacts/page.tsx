@@ -170,6 +170,17 @@ export default function ContactsPage() {
     }
   };
 
+  const handleCopyEmail = (e: React.MouseEvent, email: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(email);
+      toast.success('Email copied to clipboard', {
+        description: `${email} (${name})`,
+      });
+    }
+  };
+
   const getInitials = (name: string) => {
     const parts = name.split(' ');
     if (parts.length >= 2) {
@@ -457,24 +468,34 @@ export default function ContactsPage() {
 
                       {/* 4. Phone & Email */}
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-col text-xs space-y-0.5">
+                        <div className="flex flex-col text-xs space-y-1">
                           <button
                             type="button"
                             onClick={(e) => handleCopyPhone(e, contact.phone, contact.name)}
-                            className="inline-flex items-center gap-1 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone text-left"
+                            className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone text-left"
                             title="Click to copy phone"
                           >
                             <span>{contact.phone}</span>
                             <Copy className="h-3 w-3 opacity-0 group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
                           </button>
-                          <a
-                            href={`mailto:${contact.email}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-slate-500 hover:text-slate-900 hover:underline transition-colors truncate max-w-[200px]"
-                            title={`Send email to ${contact.email}`}
-                          >
-                            {contact.email}
-                          </a>
+                          <div className="inline-flex items-center gap-1.5 group/email">
+                            <a
+                              href={`mailto:${contact.email}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-slate-500 hover:text-slate-900 hover:underline transition-colors truncate max-w-[200px]"
+                              title={`Send email to ${contact.email}`}
+                            >
+                              {contact.email}
+                            </a>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyEmail(e, contact.email, contact.name)}
+                              className="opacity-0 group-hover/email:opacity-100 p-0.5 hover:bg-slate-200/60 rounded text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+                              title="Copy email address"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </td>
 

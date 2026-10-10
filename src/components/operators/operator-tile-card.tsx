@@ -124,7 +124,11 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 text-slate-700 font-medium truncate min-w-0">
               <Truck className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">{operator.defaultPump}</span>
+              <span className="truncate">
+                {operator.defaultPump && operator.defaultPump !== 'None' && operator.defaultPump !== 'No default pump'
+                  ? operator.defaultPump
+                  : 'No default pump'}
+              </span>
             </div>
             <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">
               {operator.branch}

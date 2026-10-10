@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
 
 interface YardLocation {
   id: string;
@@ -156,21 +157,9 @@ export function MobileNavbar() {
 
           <Link
             href="/schedule"
-            className="flex items-center gap-2 transition-opacity hover:opacity-90"
+            className="flex items-center transition-opacity hover:opacity-90"
           >
-            <div className="h-8 w-8 rounded-[8px] bg-brand flex items-center justify-center shadow-xs shrink-0 border border-white/15 transition-colors">
-              <span className="font-extrabold text-white text-[16px] tracking-tighter leading-none">
-                P
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[16px] tracking-tight text-slate-900">
-                PumpDesk
-              </span>
-              <span className="text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
-                PRO
-              </span>
-            </div>
+            <PumpDeskLogo size="sm" />
           </Link>
         </div>
 
@@ -214,21 +203,9 @@ export function MobileNavbar() {
               <Link
                 href="/schedule"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2"
+                className="flex items-center"
               >
-                <div className="h-8.5 w-8.5 rounded-[8px] bg-brand flex items-center justify-center shadow-xs shrink-0 border border-white/15 transition-colors">
-                  <span className="font-extrabold text-white text-[17px] tracking-tighter leading-none">
-                    P
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-[17px] tracking-tight text-slate-900">
-                    PumpDesk
-                  </span>
-                  <span className="text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
-                    PRO
-                  </span>
-                </div>
+                <PumpDeskLogo size="md" />
               </Link>
 
               <button
