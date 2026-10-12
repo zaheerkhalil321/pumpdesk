@@ -36,11 +36,17 @@ import {
   deletePump,
   addPumpDocument,
   deletePumpDocument,
+  getPumpDisplayName,
+  formatHourlyRate,
+  parseHourlyRate,
+  formatMinHours,
+  parseMinHours,
 } from '@/lib/pumps-store';
 import { useOperators, OperatorItem } from '@/lib/operators-store';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
 import { EditOperatorModal } from '@/components/operators/edit-operator-modal';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface PumpDetailDialogProps {
   pump: PumpItem | null;
@@ -86,13 +92,46 @@ export function PumpDetailDialog({
   const [editModel, setEditModel] = useState('');
   const [editYear, setEditYear] = useState('');
   const [editType, setEditType] = useState<PumpItem['type']>('boom_pump');
-  const [editBoomLength, setEditBoomLength] = useState('');
+  const [editBoomSize, setEditBoomSize] = useState('');
+  const [editHorizontalReach, setEditHorizontalReach] = useState('');
   const [editHourlyRate, setEditHourlyRate] = useState('');
   const [editMinHours, setEditMinHours] = useState('');
   const [editStatus, setEditStatus] = useState<PumpItem['status']>('available');
   const [editOperatorId, setEditOperatorId] = useState('none');
   const [editMaintenanceNote, setEditMaintenanceNote] = useState('');
   const [editInspectionDate, setEditInspectionDate] = useState('');
+
+  // Manual numeric bounds validation flags for Edit mode
+  const isEditBoomInvalid =
+    editType === 'boom_pump' &&
+    (editBoomSize.trim() === '' ||
+      isNaN(Number(editBoomSize)) ||
+      Number(editBoomSize) < 1 ||
+      Number(editBoomSize) > 100);
+
+  const isEditReachInvalid =
+    editHorizontalReach.trim() !== '' &&
+    (isNaN(Number(editHorizontalReach)) ||
+      Number(editHorizontalReach) < 0 ||
+      Number(editHorizontalReach) > 500);
+
+  const isEditRateInvalid =
+    editHourlyRate.trim() !== '' &&
+    (isNaN(Number(editHourlyRate)) ||
+      Number(editHourlyRate) < 0 ||
+      Number(editHourlyRate) > 5000);
+
+  const isEditMinHoursInvalid =
+    editMinHours.trim() !== '' &&
+    (isNaN(Number(editMinHours)) ||
+      Number(editMinHours) < 1 ||
+      Number(editMinHours) > 24);
+
+  const isEditYearInvalid =
+    editYear.trim() !== '' &&
+    (isNaN(Number(editYear)) ||
+      Number(editYear) < 1980 ||
+      Number(editYear) > 2030);
 
   // New Document Form state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,9 +150,18 @@ export function PumpDetailDialog({
     setEditModel(currentPump.model);
     setEditYear(currentPump.year || '2024');
     setEditType(currentPump.type);
-    setEditBoomLength(currentPump.boomLength);
-    setEditHourlyRate(currentPump.hourlyRate);
-    setEditMinHours(currentPump.minHours);
+    setEditBoomSize(
+      currentPump.boomSize
+        ? String(currentPump.boomSize)
+        : currentPump.boomLength?.match(/(\d+)\s*M/i)?.[1] || '38'
+    );
+    setEditHorizontalReach(
+      currentPump.horizontalReach
+        ? String(currentPump.horizontalReach)
+        : currentPump.boomLength?.match(/\((\d+)\s*ft\)/i)?.[1] || '124'
+    );
+    setEditHourlyRate(String(parseHourlyRate(currentPump.hourlyRate) || 195));
+    setEditMinHours(String(parseMinHours(currentPump.minHours)));
     setEditStatus(currentPump.status);
     setEditOperatorId(currentPump.defaultOperator?.id || 'none');
     setEditMaintenanceNote(currentPump.maintenanceNote || '');
@@ -124,8 +172,33 @@ export function PumpDetailDialog({
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPump) return;
-    if (!editUnitNumber.trim()) {
+    const cleanUnit = editUnitNumber.trim();
+    if (!cleanUnit) {
       toast.error('Unit number is required');
+      return;
+    }
+    if (cleanUnit.length > 15) {
+      toast.error('Unit number must be 15 characters or fewer');
+      return;
+    }
+    if (isEditBoomInvalid) {
+      toast.error('Boom size must be between 1 and 100 meters');
+      return;
+    }
+    if (isEditReachInvalid) {
+      toast.error('Horizontal reach must be between 0 and 500 feet');
+      return;
+    }
+    if (isEditRateInvalid) {
+      toast.error('Hourly rate must be between $0 and $5,000 / hr');
+      return;
+    }
+    if (isEditMinHoursInvalid) {
+      toast.error('Minimum callout must be between 1 and 24 hours');
+      return;
+    }
+    if (isEditYearInvalid) {
+      toast.error('Model year must be between 1980 and 2030');
       return;
     }
 
@@ -149,10 +222,22 @@ export function PumpDetailDialog({
         }
       : currentPump.defaultOperator;
 
+    const parsedBoomSize = editBoomSize.trim() ? Number(editBoomSize) : undefined;
+    const parsedReach = editHorizontalReach.trim() ? Number(editHorizontalReach) : undefined;
+    const parsedRate = editHourlyRate.trim() ? Number(editHourlyRate) : 195;
+    const parsedMinHours = editMinHours.trim() ? Number(editMinHours) : 4.0;
+
     const typeLabel =
       editType === 'boom_pump'
-        ? `Boom pump · ${editBoomLength.split(' ')[0] || 'Standard'}`
+        ? (parsedBoomSize ? `Boom pump · ${parsedBoomSize}M` : 'Boom pump')
         : 'Line pump';
+
+    const boomLength =
+      editType === 'boom_pump'
+        ? (parsedBoomSize
+            ? `${parsedBoomSize}M${parsedReach ? ` (${parsedReach} ft)` : ''}`
+            : '38M (124 ft)')
+        : (parsedReach ? `Ground Line (${parsedReach}ft)` : 'Ground Line (500ft)');
 
     const inMaintenance = editStatus === 'maintenance';
     const todayStatus =
@@ -163,15 +248,17 @@ export function PumpDetailDialog({
         : { type: 'available' as const, label: 'Available · Yard Ready' };
 
     updatePump(currentPump.id, {
-      unitNumber: editUnitNumber.trim(),
+      unitNumber: cleanUnit,
       make: editMake.trim() || currentPump.make,
       model: editModel.trim() || currentPump.model,
       year: editYear.trim() || currentPump.year,
       type: editType,
       typeLabel,
-      boomLength: editBoomLength.trim() || currentPump.boomLength,
-      hourlyRate: editHourlyRate.trim() || currentPump.hourlyRate,
-      minHours: editMinHours.trim() || currentPump.minHours,
+      boomSize: parsedBoomSize,
+      horizontalReach: parsedReach,
+      boomLength,
+      hourlyRate: parsedRate,
+      minHours: `${parsedMinHours.toFixed(1)} hrs`,
       status: editStatus,
       inMaintenance,
       maintenanceNote: inMaintenance ? editMaintenanceNote.trim() : undefined,
@@ -183,8 +270,10 @@ export function PumpDetailDialog({
       },
     });
 
+    const displayCode = parsedBoomSize ? `${cleanUnit} · ${parsedBoomSize}M` : cleanUnit;
+
     toast.success('Equipment details updated', {
-      description: `Unit ${editUnitNumber} specifications have been saved.`,
+      description: `Unit ${displayCode} specifications have been saved.`,
     });
     setIsEditing(false);
   };
@@ -353,7 +442,7 @@ export function PumpDetailDialog({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <DialogTitle className="text-lg sm:text-xl font-bold text-slate-900 truncate">
-                    {currentPump.unitNumber}
+                    {getPumpDisplayName(currentPump)}
                   </DialogTitle>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700">
                     {currentPump.make} {currentPump.model}
@@ -444,11 +533,22 @@ export function PumpDetailDialog({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Unit Number *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-700 block">Unit Number *</label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono transition-colors',
+                          editUnitNumber.length >= 15 ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        {editUnitNumber.length}/15 chars
+                      </span>
+                    </div>
                     <Input
                       value={editUnitNumber}
+                      maxLength={15}
                       onChange={(e) => setEditUnitNumber(e.target.value)}
-                      placeholder="e.g. 01 · 34M"
+                      placeholder="e.g. 01 or P-04"
                       className="h-9 text-xs"
                     />
                   </div>
@@ -469,7 +569,9 @@ export function PumpDetailDialog({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Make</label>
+                    <div className="flex items-center h-5">
+                      <label className="text-xs font-semibold text-slate-700 block">Make</label>
+                    </div>
                     <Input
                       value={editMake}
                       onChange={(e) => setEditMake(e.target.value)}
@@ -478,7 +580,9 @@ export function PumpDetailDialog({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Model</label>
+                    <div className="flex items-center h-5">
+                      <label className="text-xs font-semibold text-slate-700 block">Model</label>
+                    </div>
                     <Input
                       value={editModel}
                       onChange={(e) => setEditModel(e.target.value)}
@@ -487,43 +591,166 @@ export function PumpDetailDialog({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Model Year</label>
+                    <div className="flex items-center justify-between gap-1 h-5">
+                      <label className="text-xs font-semibold text-slate-700 block truncate">Model Year</label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                          isEditYearInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        1980–2030
+                      </span>
+                    </div>
                     <Input
+                      type="number"
+                      min={1980}
+                      max={2030}
                       value={editYear}
                       onChange={(e) => setEditYear(e.target.value)}
                       placeholder="e.g. 2024"
-                      className="h-9 text-xs"
+                      className={cn(
+                        'h-9 text-xs',
+                        isEditYearInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                      )}
                     />
+                    {isEditYearInvalid && (
+                      <p className="text-[10px] text-rose-500 font-medium">1980–2030</p>
+                    )}
                   </div>
                 </div>
 
+                {/* Separate Boom Size, Horizontal Reach, and Numeric Hourly Rate */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Boom Reach / Size</label>
+                    <div className="flex items-center justify-between gap-1 h-5">
+                      <label className="text-xs font-semibold text-slate-700 truncate">Boom Size (M)</label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                          isEditBoomInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        1–100 M
+                      </span>
+                    </div>
                     <Input
-                      value={editBoomLength}
-                      onChange={(e) => setEditBoomLength(e.target.value)}
-                      placeholder="e.g. 34M (112 ft)"
-                      className="h-9 text-xs"
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={editBoomSize}
+                      onChange={(e) => setEditBoomSize(e.target.value)}
+                      placeholder={editType === 'boom_pump' ? 'e.g. 34' : 'N/A'}
+                      disabled={editType === 'line_pump'}
+                      className={cn(
+                        'h-9 text-xs',
+                        isEditBoomInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                      )}
                     />
+                    {isEditBoomInvalid && (
+                      <p className="text-[11px] text-rose-500 font-medium">1 to 100 meters</p>
+                    )}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Hourly Rate</label>
+                    <div className="flex items-center justify-between gap-1 h-5">
+                      <label className="text-xs font-semibold text-slate-700 truncate">Horiz. Reach (ft)</label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                          isEditReachInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        0–500 ft
+                      </span>
+                    </div>
                     <Input
+                      type="number"
+                      min={0}
+                      max={500}
+                      value={editHorizontalReach}
+                      onChange={(e) => setEditHorizontalReach(e.target.value)}
+                      placeholder="e.g. 112"
+                      className={cn(
+                        'h-9 text-xs',
+                        isEditReachInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                      )}
+                    />
+                    {isEditReachInvalid && (
+                      <p className="text-[11px] text-rose-500 font-medium">Must be 0 to 500 ft</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1 h-5">
+                      <label className="text-xs font-semibold text-slate-700 truncate">Hourly Rate ($)</label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                          isEditRateInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        $0–$5k
+                      </span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={5000}
+                      step={5}
                       value={editHourlyRate}
                       onChange={(e) => setEditHourlyRate(e.target.value)}
-                      placeholder="e.g. $195 / hr"
-                      className="h-9 text-xs"
+                      placeholder="195"
+                      className={cn(
+                        'h-9 text-xs',
+                        isEditRateInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                      )}
                     />
+                    {isEditRateInvalid && (
+                      <p className="text-[10px] text-rose-500 font-medium">Max $5,000</p>
+                    )}
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 block">Min Callout Hours</label>
+                    <div className="flex items-center justify-between gap-1 h-5">
+                      <label className="text-xs font-semibold text-slate-700 block truncate">Min Callout (hrs)</label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                          isEditMinHoursInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        1–24h
+                      </span>
+                    </div>
                     <Input
+                      type="number"
+                      min={1}
+                      max={24}
+                      step={0.5}
                       value={editMinHours}
                       onChange={(e) => setEditMinHours(e.target.value)}
-                      placeholder="e.g. 4.0 hrs"
-                      className="h-9 text-xs"
+                      placeholder="4.0"
+                      className={cn(
+                        'h-9 text-xs',
+                        isEditMinHoursInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                      )}
                     />
+                    {isEditMinHoursInvalid && (
+                      <p className="text-[10px] text-rose-500 font-medium">1–24 hrs</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200/80 text-xs h-9">
+                      <span className="text-slate-500 font-medium">Identifier Preview:</span>
+                      <span className="font-bold text-slate-900 font-mono">
+                        {editUnitNumber.trim()
+                          ? (editType === 'boom_pump' && editBoomSize.trim()
+                              ? `${editUnitNumber.trim()} · ${editBoomSize.trim()}M`
+                              : `${editUnitNumber.trim()} · Line`)
+                          : '—'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -676,22 +903,26 @@ export function PumpDetailDialog({
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <span className="text-slate-400 block text-[11px]">Boom Reach / Type</span>
-                      <span className="font-semibold text-slate-800">{currentPump.boomLength}</span>
+                      <span className="text-slate-400 block text-[11px]">Boom Size (Meters)</span>
+                      <span className="font-semibold text-slate-800">
+                        {currentPump.boomSize ? `${currentPump.boomSize}M` : 'N/A'}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[11px]">Equipment Type</span>
-                      <span className="font-semibold text-slate-800 capitalize">
-                        {currentPump.type.replace('_', ' ')}
+                      <span className="text-slate-400 block text-[11px]">Horizontal Reach (Feet)</span>
+                      <span className="font-semibold text-slate-800">
+                        {currentPump.horizontalReach ? `${currentPump.horizontalReach} ft` : currentPump.boomLength}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Hourly Billing Rate</span>
-                      <span className="font-semibold text-slate-800">{currentPump.hourlyRate}</span>
+                      <span className="font-semibold text-slate-800 font-mono">
+                        {formatHourlyRate(currentPump.hourlyRate)}
+                      </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Minimum Callout</span>
-                      <span className="font-semibold text-slate-800">{currentPump.minHours}</span>
+                      <span className="font-semibold text-slate-800">{formatMinHours(currentPump.minHours)}</span>
                     </div>
                   </div>
                 </div>

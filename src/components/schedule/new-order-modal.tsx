@@ -52,12 +52,17 @@ interface NewOrderModalProps {
 }
 
 const SAMPLE_CUSTOMERS = [
-  'Concrete Services',
-  'Turner Construction',
-  'Harbor Builders',
-  'Granite State Builders',
-  'Pine Tree Concrete',
+  'Accurate Concrete',
+  'Advanced Concrete Solutions',
+  "Berube's Excavation & Lawn",
   'Coastal Foundations',
+  'Concrete Services',
+  'Granite State Builders',
+  'Harbor Builders',
+  'Maine Commercial Paving',
+  'Pine Tree Concrete',
+  'Rockland Civil Contractors',
+  'Turner Construction',
 ];
 
 const SAMPLE_SUPPLIERS = [
@@ -152,6 +157,7 @@ function NewOrderModalForm({
   const [formErrors, setFormErrors] = useState<{
     customer?: string;
     address?: string;
+    volume?: string;
   }>({});
 
   const pourTimeOptions = useMemo(
@@ -229,6 +235,7 @@ function NewOrderModalForm({
     const errors: {
       customer?: string;
       address?: string;
+      volume?: string;
     } = {};
 
     if (!customer.trim()) {
@@ -238,12 +245,18 @@ function NewOrderModalForm({
       errors.address = 'Job site address or city/town is required.';
     }
 
+    const checkVolume = Number(volumeYards);
+    if (isNaN(checkVolume) || checkVolume < 1 || checkVolume > 10000) {
+      errors.volume = 'Volume must be between 1 and 10,000 yd³.';
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       toast.error('Required Information Missing', {
         description:
           errors.customer ||
           errors.address ||
+          errors.volume ||
           'Please enter required job site details.',
       });
       return;
@@ -509,20 +522,58 @@ function NewOrderModalForm({
               <label className="text-xs font-semibold text-slate-700">
                 Estimated volume
               </label>
-              <span className="text-[10.5px] text-slate-400">Cubic yards (yd³)</span>
+              {Number(volumeYards) > 0 ? (
+                <span
+                  className={cn(
+                    'text-[10.5px] font-mono transition-colors',
+                    formErrors.volume || Number(volumeYards) > 10000
+                      ? 'text-rose-600 font-bold'
+                      : 'text-brand font-semibold'
+                  )}
+                >
+                  ~{(Number(volumeYards) / 35).toFixed(1)}h est. pour
+                </span>
+              ) : (
+                <span
+                  className={cn(
+                    'text-[10.5px] font-mono transition-colors',
+                    formErrors.volume ? 'text-rose-600 font-bold' : 'text-slate-400'
+                  )}
+                >
+                  1–10,000 yd³
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-slate-200 bg-white focus-within:border-brand transition-colors shadow-2xs">
+            <div
+              className={cn(
+                'flex items-center gap-2 h-10 px-3 rounded-lg border transition-colors shadow-2xs',
+                formErrors.volume
+                  ? 'border-red-500 bg-red-50/20'
+                  : 'border-slate-200 bg-white focus-within:border-brand',
+              )}
+            >
               <input
                 type="number"
                 min={1}
-                step={1}
+                max={10000}
+                step={5}
                 value={volumeYards}
-                onChange={(e) => setVolumeYards(e.target.value)}
+                onChange={(e) => {
+                  setVolumeYards(e.target.value);
+                  if (formErrors.volume) {
+                    setFormErrors((prev) => ({ ...prev, volume: undefined }));
+                  }
+                }}
                 placeholder="e.g. 80"
-                className="text-xs font-medium text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-400"
+                className="text-xs font-medium text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <span className="text-xs font-semibold text-slate-400 shrink-0">yd³</span>
             </div>
+            {formErrors.volume && (
+              <p className="text-[11px] text-red-500 font-medium mt-1">
+                {formErrors.volume}
+              </p>
+            )}
           </div>
         </div>
 

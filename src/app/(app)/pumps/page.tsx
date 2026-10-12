@@ -28,6 +28,7 @@ import {
   PumpItem,
   EquipmentType,
   EquipmentStatus,
+  getPumpDisplayName,
 } from '@/lib/pumps-store';
 import { AddPumpModal } from '@/components/pumps/add-pump-modal';
 import { PumpDetailDialog } from '@/components/pumps/pump-detail-dialog';
@@ -95,7 +96,8 @@ export default function PumpsPage() {
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchUnit = p.unitNumber.toLowerCase().includes(q);
+        const displayName = getPumpDisplayName(p).toLowerCase();
+        const matchUnit = p.unitNumber.toLowerCase().includes(q) || displayName.includes(q);
         const matchMake = p.make.toLowerCase().includes(q);
         const matchModel = p.model.toLowerCase().includes(q);
         const matchOperator = p.defaultOperator.name.toLowerCase().includes(q);
@@ -469,7 +471,7 @@ export default function PumpsPage() {
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col min-w-0">
                           <span className="font-semibold text-slate-900 group-hover:text-brand underline underline-offset-2 transition-colors truncate text-xs sm:text-sm">
-                            {pump.unitNumber}
+                            {getPumpDisplayName(pump)}
                           </span>
                           <span className="text-[11px] text-slate-500 mt-0.5 truncate">
                             {pump.make}

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { addPump } from '@/lib/pumps-store';
 import { useOperators } from '@/lib/operators-store';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
+import { cn } from '@/lib/utils';
 
 interface AddPumpModalProps {
   open: boolean;
@@ -28,17 +29,76 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
   const [make, setMake] = useState('Putzmeister');
   const [model, setModel] = useState('');
   const [type, setType] = useState<'boom_pump' | 'line_pump'>('boom_pump');
-  const [boomLength, setBoomLength] = useState('');
+  const [boomSize, setBoomSize] = useState<string>('38'); // in meters
+  const [horizontalReach, setHorizontalReach] = useState<string>('124'); // in feet
   const [operatorId, setOperatorId] = useState('none');
   const [isAddOperatorOpen, setIsAddOperatorOpen] = useState(false);
-  const [hourlyRate, setHourlyRate] = useState('$195 / hr');
+  const [hourlyRate, setHourlyRate] = useState<string>('195'); // number only
+  const [minHours, setMinHours] = useState<string>('4.0'); // number of hours
   const [year, setYear] = useState('2024');
   const [error, setError] = useState<string | null>(null);
 
+  // Manual numeric bounds validation flags
+  const isBoomInvalid =
+    type === 'boom_pump' &&
+    (boomSize.trim() === '' ||
+      isNaN(Number(boomSize)) ||
+      Number(boomSize) < 1 ||
+      Number(boomSize) > 100);
+
+  const isReachInvalid =
+    horizontalReach.trim() !== '' &&
+    (isNaN(Number(horizontalReach)) ||
+      Number(horizontalReach) < 0 ||
+      Number(horizontalReach) > 500);
+
+  const isRateInvalid =
+    hourlyRate.trim() !== '' &&
+    (isNaN(Number(hourlyRate)) ||
+      Number(hourlyRate) < 0 ||
+      Number(hourlyRate) > 5000);
+
+  const isMinHoursInvalid =
+    minHours.trim() !== '' &&
+    (isNaN(Number(minHours)) ||
+      Number(minHours) < 1 ||
+      Number(minHours) > 24);
+
+  const isYearInvalid =
+    year.trim() !== '' &&
+    (isNaN(Number(year)) ||
+      Number(year) < 1980 ||
+      Number(year) > 2030);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!unitNumber.trim()) {
-      setError('Unit number is required (e.g., "05 · 38M")');
+    const cleanUnit = unitNumber.trim();
+    if (!cleanUnit) {
+      setError('Unit number is required (e.g. "05", "P-04")');
+      return;
+    }
+    if (cleanUnit.length > 15) {
+      setError('Unit number must be 15 characters or fewer');
+      return;
+    }
+    if (isBoomInvalid) {
+      setError('Boom size must be between 1 and 100 meters');
+      return;
+    }
+    if (isReachInvalid) {
+      setError('Horizontal reach must be between 0 and 500 feet');
+      return;
+    }
+    if (isRateInvalid) {
+      setError('Hourly rate must be between $0 and $5,000 / hr');
+      return;
+    }
+    if (isMinHoursInvalid) {
+      setError('Minimum callout must be between 1 and 24 hours');
+      return;
+    }
+    if (isYearInvalid) {
+      setError('Model year must be between 1980 and 2030');
       return;
     }
 
@@ -57,18 +117,31 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
           badge: null,
         };
 
+    const parsedBoomSize = boomSize.trim() ? Number(boomSize) : undefined;
+    const parsedReach = horizontalReach.trim() ? Number(horizontalReach) : undefined;
+    const parsedRate = hourlyRate.trim() ? Number(hourlyRate) : 195;
+
     const typeLabel =
       type === 'boom_pump'
-        ? `Boom pump · ${boomLength.trim() || '38M'}`
+        ? (parsedBoomSize ? `Boom pump · ${parsedBoomSize}M` : 'Boom pump')
         : 'Line pump';
 
+    const boomLength =
+      type === 'boom_pump'
+        ? (parsedBoomSize
+            ? `${parsedBoomSize}M${parsedReach ? ` (${parsedReach} ft)` : ''}`
+            : '38M (124 ft)')
+        : (parsedReach ? `Ground Line (${parsedReach}ft)` : 'Ground Line (500ft)');
+
     addPump({
-      unitNumber: unitNumber.trim(),
+      unitNumber: cleanUnit,
       make: make.trim() || 'Putzmeister',
       model: model.trim() || 'Custom Rig',
       type,
       typeLabel,
-      boomLength: boomLength.trim() || (type === 'boom_pump' ? '38M (124 ft)' : 'Ground Line (500ft)'),
+      boomSize: parsedBoomSize,
+      horizontalReach: parsedReach,
+      boomLength,
       defaultOperator,
       todayStatus: {
         type: 'available',
@@ -79,21 +152,26 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
         dueSoon: false,
       },
       status: 'available',
-      hourlyRate: hourlyRate.trim() || '$195 / hr',
-      minHours: '4.0 hrs',
+      hourlyRate: parsedRate,
+      minHours: `${(minHours.trim() ? Number(minHours) : 4.0).toFixed(1)} hrs`,
       inMaintenance: false,
       year: year.trim() || '2024',
       documents: [],
     });
 
+    const displayCode = parsedBoomSize ? `${cleanUnit} · ${parsedBoomSize}M` : cleanUnit;
+
     toast.success('New pump added to fleet', {
-      description: `${unitNumber.trim()} (${make} ${model.trim() || ''}) is ready for dispatch.`,
+      description: `${displayCode} (${make} ${model.trim() || ''}) is ready for dispatch.`,
     });
 
     // Reset and close
     setUnitNumber('');
     setModel('');
-    setBoomLength('');
+    setBoomSize('38');
+    setHorizontalReach('124');
+    setHourlyRate('195');
+    setMinHours('4.0');
     setOperatorId('none');
     setError(null);
     onOpenChange(false);
@@ -122,16 +200,27 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {/* Unit Number */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              Unit Number / Identifier <span className="text-rose-500">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700">
+                Unit Number / Identifier <span className="text-rose-500">*</span>
+              </label>
+              <span
+                className={cn(
+                  'text-[10px] font-mono transition-colors',
+                  unitNumber.length >= 15 ? 'text-rose-600 font-bold' : 'text-slate-400'
+                )}
+              >
+                {unitNumber.length}/15 chars
+              </span>
+            </div>
             <Input
               value={unitNumber}
+              maxLength={15}
               onChange={(e) => {
                 setUnitNumber(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="e.g. 05 · 38M"
+              placeholder="e.g. 05 or P-04"
               className="h-9 text-xs"
               autoFocus
             />
@@ -166,28 +255,88 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
             </div>
           </div>
 
-          {/* Type & Boom Reach */}
+          {/* Equipment Type */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700">Equipment Type</label>
+            <AppSelect
+              size="sm"
+              value={type}
+              onChange={(val) => setType(val as 'boom_pump' | 'line_pump')}
+              options={[
+                { value: 'boom_pump', label: 'Boom Pump' },
+                { value: 'line_pump', label: 'Line Pump' },
+              ]}
+            />
+          </div>
+
+          {/* Separate Boom Size (Meters) & Horizontal Reach (Feet) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Equipment Type</label>
-              <AppSelect
-                size="sm"
-                value={type}
-                onChange={(val) => setType(val as 'boom_pump' | 'line_pump')}
-                options={[
-                  { value: 'boom_pump', label: 'Boom Pump' },
-                  { value: 'line_pump', label: 'Line Pump' },
-                ]}
+              <div className="flex items-center justify-between gap-1 h-5">
+                <label className="text-xs font-semibold text-slate-700 truncate">
+                  Boom Size (M)
+                </label>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                    isBoomInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                  )}
+                >
+                  1–100 M
+                </span>
+              </div>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={boomSize}
+                onChange={(e) => {
+                  setBoomSize(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder={type === 'boom_pump' ? 'e.g. 38' : 'N/A'}
+                disabled={type === 'line_pump'}
+                className={cn(
+                  'h-9 text-xs',
+                  isBoomInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                )}
               />
+              {isBoomInvalid && (
+                <p className="text-[11px] text-rose-500 font-medium">1 to 100 meters</p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Boom Reach / Size</label>
+              <div className="flex items-center justify-between gap-1 h-5">
+                <label className="text-xs font-semibold text-slate-700 truncate">
+                  Horiz. Reach (ft)
+                </label>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                    isReachInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                  )}
+                >
+                  0–500 ft
+                </span>
+              </div>
               <Input
-                value={boomLength}
-                onChange={(e) => setBoomLength(e.target.value)}
-                placeholder="e.g. 38M (124 ft)"
-                className="h-9 text-xs"
+                type="number"
+                min={0}
+                max={500}
+                value={horizontalReach}
+                onChange={(e) => {
+                  setHorizontalReach(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder={type === 'boom_pump' ? 'e.g. 124' : 'e.g. 500'}
+                className={cn(
+                  'h-9 text-xs',
+                  isReachInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                )}
               />
+              {isReachInvalid && (
+                <p className="text-[11px] text-rose-500 font-medium">Must be 0 to 500 ft</p>
+              )}
             </div>
           </div>
 
@@ -212,26 +361,115 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
             />
           </div>
 
-          {/* Hourly Rate & Model Year */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Hourly Rate, Min Callout Hours & Model Year */}
+          <div className="grid grid-cols-3 gap-2.5">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Hourly Rate</label>
+              <div className="flex items-center justify-between gap-1 h-5">
+                <label className="text-xs font-semibold text-slate-700 truncate">Hourly Rate ($)</label>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                    isRateInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                  )}
+                >
+                  $0–$5k
+                </span>
+              </div>
               <Input
+                type="number"
+                min={0}
+                max={5000}
+                step={5}
                 value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value)}
-                placeholder="e.g. $195 / hr"
-                className="h-9 text-xs"
+                onChange={(e) => {
+                  setHourlyRate(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="195"
+                className={cn(
+                  'h-9 text-xs',
+                  isRateInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                )}
               />
+              {isRateInvalid && (
+                <p className="text-[10px] text-rose-500 font-medium">Max $5,000</p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Model Year</label>
+              <div className="flex items-center justify-between gap-1 h-5">
+                <label className="text-xs font-semibold text-slate-700 truncate">Min Callout (hrs)</label>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                    isMinHoursInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                  )}
+                >
+                  1–24h
+                </span>
+              </div>
               <Input
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                placeholder="2024"
-                className="h-9 text-xs"
+                type="number"
+                min={1}
+                max={24}
+                step={0.5}
+                value={minHours}
+                onChange={(e) => {
+                  setMinHours(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="4.0"
+                className={cn(
+                  'h-9 text-xs',
+                  isMinHoursInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                )}
               />
+              {isMinHoursInvalid && (
+                <p className="text-[10px] text-rose-500 font-medium">1–24 hrs</p>
+              )}
             </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-1 h-5">
+                <label className="text-xs font-semibold text-slate-700 truncate">Model Year</label>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                    isYearInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                  )}
+                >
+                  1980–2030
+                </span>
+              </div>
+              <Input
+                type="number"
+                min={1980}
+                max={2030}
+                value={year}
+                onChange={(e) => {
+                  setYear(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="2024"
+                className={cn(
+                  'h-9 text-xs',
+                  isYearInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                )}
+              />
+              {isYearInvalid && (
+                <p className="text-[10px] text-rose-500 font-medium">1980–2030</p>
+              )}
+            </div>
+          </div>
+
+          {/* Dynamic Preview */}
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200/80 text-xs">
+            <span className="text-slate-500 font-medium">Schedule Display Code:</span>
+            <span className="font-bold text-slate-900 font-mono">
+              {unitNumber.trim()
+                ? (type === 'boom_pump' && boomSize.trim()
+                    ? `${unitNumber.trim()} · ${boomSize.trim()}M`
+                    : `${unitNumber.trim()} · Line`)
+                : '—'}
+            </span>
           </div>
 
           {/* Buttons */}

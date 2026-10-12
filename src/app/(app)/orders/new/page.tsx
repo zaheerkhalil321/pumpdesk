@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/incompatible-library */
 
 import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
@@ -84,7 +85,16 @@ const newOrderSchema = z.object({
   cleanupDuration: z.string(),
 
   supplier: z.string().optional(),
-  estimatedVolume: z.string().min(1, "Estimated volume (yd³) is required"),
+  estimatedVolume: z
+    .string()
+    .min(1, "Estimated volume (yd³) is required")
+    .refine(
+      (val) => {
+        const n = Number(val);
+        return !isNaN(n) && n >= 1 && n <= 10000;
+      },
+      { message: "Volume must be between 1 and 10,000 yd³" }
+    ),
   pourType: z.string().min(1, "Please select a pour type"),
   linesOnSite: z.boolean(),
   customerDetails: z.string().optional(),
@@ -96,7 +106,15 @@ const newOrderSchema = z.object({
   operatorInstructions: z.string().optional(),
 
   equipmentItem: z.string().optional(),
-  equipmentQuantity: z.string(),
+  equipmentQuantity: z
+    .string()
+    .refine(
+      (val) => {
+        const n = Number(val);
+        return !isNaN(n) && n >= 1 && n <= 20;
+      },
+      { message: "Quantity must be between 1 and 20" }
+    ),
   internalNote: z.string().optional(),
 
   purchaseOrder: z.string().optional(),
@@ -634,20 +652,42 @@ function NewOrderForm() {
 
                 {/* Estimated volume */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Estimated volume <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    {...register("estimatedVolume")}
-                    placeholder="e.g. 120 yd³"
-                    className={cn(
-                      "w-full h-9 px-3 rounded-lg border bg-white text-xs outline-none transition-colors",
-                      errors.estimatedVolume
-                        ? "border-red-500 focus:border-red-500 text-red-900 bg-red-50/20"
-                        : "border-slate-200 text-slate-900 focus:border-brand placeholder:text-slate-400"
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 block">
+                      Estimated volume <span className="text-red-500">*</span>
+                    </label>
+                    {Number(watch("estimatedVolume")) > 0 && (
+                      <span
+                        className={cn(
+                          "text-[10.5px] font-mono transition-colors",
+                          errors.estimatedVolume || Number(watch("estimatedVolume")) > 10000
+                            ? "text-rose-600 font-bold"
+                            : "text-brand font-semibold"
+                        )}
+                      >
+                        ~{(Number(watch("estimatedVolume")) / 35).toFixed(1)}h est. pour
+                      </span>
                     )}
-                  />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      step={5}
+                      {...register("estimatedVolume")}
+                      placeholder="120"
+                      className={cn(
+                        "w-full h-9 pl-3 pr-10 rounded-lg border bg-white text-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                        errors.estimatedVolume
+                          ? "border-red-500 focus:border-red-500 text-red-900 bg-red-50/20"
+                          : "border-slate-200 text-slate-900 focus:border-brand placeholder:text-slate-400"
+                      )}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none select-none">
+                      yd³
+                    </span>
+                  </div>
                   {errors.estimatedVolume && (
                     <p className="text-[11px] text-red-500 font-medium mt-1">
                       {errors.estimatedVolume.message}
@@ -746,8 +786,12 @@ function NewOrderForm() {
                     Quantity
                   </label>
                   <input
-                    type="text"
+                    type="number"
+                    min={1}
+                    max={100}
+                    step={1}
                     {...register("equipmentQuantity")}
+                    placeholder="1"
                     className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 outline-none focus:border-brand"
                   />
                 </div>

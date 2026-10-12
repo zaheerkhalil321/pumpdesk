@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { PumpItem } from '@/lib/pumps-store';
+import { PumpItem, getPumpDisplayName, formatHourlyRate } from '@/lib/pumps-store';
 
 interface PumpTileCardProps {
   pump: PumpItem;
@@ -54,7 +54,7 @@ export function PumpTileCard({
 
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand transition-colors truncate">
-                {pump.unitNumber}
+                {getPumpDisplayName(pump)}
               </h3>
               <p className="text-xs text-slate-500 truncate mt-0.5">
                 {pump.make} {pump.model} {pump.year ? `(${pump.year})` : ''}
@@ -91,7 +91,7 @@ export function PumpTileCard({
               {pump.boomLength || pump.typeLabel}
             </span>
             <span className="text-[11.5px] text-slate-600 font-mono font-semibold">
-              {pump.hourlyRate}
+              {formatHourlyRate(pump.hourlyRate)}
             </span>
           </div>
 

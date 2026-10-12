@@ -34,22 +34,93 @@ export interface PumpDocument {
 
 export interface PumpItem {
   id: string;
-  unitNumber: string;
+  unitNumber: string; // Alphanumeric unit identifier (e.g. '01', '02', 'P-04'), max 15 chars
   make: string;
   model: string;
   type: 'boom_pump' | 'line_pump';
   typeLabel: string;
-  boomLength: string;
+  boomSize?: number; // Boom size in meters (e.g. 34, 28, 47)
+  horizontalReach?: number; // Horizontal reach in feet (e.g. 111, 91, 154, 500)
+  boomLength: string; // Formatted reach summary (e.g. "34M (111 ft)")
   defaultOperator: DefaultOperatorInfo;
   todayStatus: TodayAvailability;
   nextInspection: NextInspectionInfo;
   status: 'available' | 'booked' | 'maintenance';
-  hourlyRate: string;
-  minHours: string;
+  hourlyRate: number | string; // Number only (e.g. 195)
+  minHours: string | number; // Number of hours (e.g. 4.0)
   inMaintenance: boolean;
   maintenanceNote?: string;
   year?: string;
   documents?: PumpDocument[];
+}
+
+/**
+ * Returns dynamic pump display label (e.g. "01 · 34M", "02 · 28M", or "04 · Line")
+ * derived directly from Unit Number and Boom Size number as requested.
+ */
+export function getPumpDisplayName(pump: {
+  unitNumber: string;
+  boomSize?: number;
+  type?: string;
+  boomLength?: string;
+}): string {
+  if (!pump) return '';
+  const rawUnit = pump.unitNumber || '';
+  const cleanUnit = rawUnit.includes('·')
+    ? rawUnit.split('·')[0].trim()
+    : rawUnit.trim();
+
+  if (pump.boomSize && Number(pump.boomSize) > 0) {
+    return `${cleanUnit} · ${pump.boomSize}M`;
+  }
+  const match = pump.boomLength?.match(/(\d+)\s*M/i);
+  if (match) {
+    return `${cleanUnit} · ${match[1]}M`;
+  }
+  if (pump.type === 'line_pump' || pump.boomLength?.toLowerCase().includes('line')) {
+    return `${cleanUnit} · Line`;
+  }
+  return cleanUnit;
+}
+
+/**
+ * Formats numeric or string hourly rate to standard display string (e.g. "$195 / hr")
+ */
+export function formatHourlyRate(rate: number | string | undefined | null): string {
+  if (rate === undefined || rate === null || rate === '') return '$0 / hr';
+  if (typeof rate === 'number') return `$${rate} / hr`;
+  const clean = String(rate).replace(/[^0-9.]/g, '');
+  return clean ? `$${clean} / hr` : '$0 / hr';
+}
+
+/**
+ * Parses numeric hourly rate from number or string
+ */
+export function parseHourlyRate(rate: number | string | undefined | null): number {
+  if (typeof rate === 'number') return rate;
+  if (!rate) return 0;
+  const num = parseFloat(String(rate).replace(/[^0-9.]/g, ''));
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Formats minimum callout hours (e.g. "4.0 hrs")
+ */
+export function formatMinHours(hours: number | string | undefined | null): string {
+  if (hours === undefined || hours === null || hours === '') return '4.0 hrs';
+  if (typeof hours === 'number') return `${hours.toFixed(1)} hrs`;
+  const num = parseFloat(String(hours).replace(/[^0-9.]/g, ''));
+  return isNaN(num) ? '4.0 hrs' : `${num.toFixed(1)} hrs`;
+}
+
+/**
+ * Parses numeric minimum callout hours from number or string
+ */
+export function parseMinHours(hours: number | string | undefined | null): number {
+  if (typeof hours === 'number') return hours;
+  if (!hours) return 4.0;
+  const num = parseFloat(String(hours).replace(/[^0-9.]/g, ''));
+  return isNaN(num) ? 4.0 : num;
 }
 
 export interface MaintenanceRecord {
@@ -66,7 +137,9 @@ export interface MaintenanceRecord {
 export const INITIAL_PUMPS: PumpItem[] = [
   {
     id: '01-34m',
-    unitNumber: '01 · 34M',
+    unitNumber: '01',
+    boomSize: 34,
+    horizontalReach: 111,
     make: 'Putzmeister',
     model: '34Z',
     type: 'boom_pump',
@@ -87,7 +160,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
       dueSoon: false,
     },
     status: 'booked',
-    hourlyRate: '$195 / hr',
+    hourlyRate: 195,
     minHours: '4.0 hrs',
     inMaintenance: false,
     year: '2023',
@@ -95,7 +168,9 @@ export const INITIAL_PUMPS: PumpItem[] = [
   },
   {
     id: '02-28m',
-    unitNumber: '02 · 28M',
+    unitNumber: '02',
+    boomSize: 28,
+    horizontalReach: 91,
     make: 'Putzmeister',
     model: '28Z',
     type: 'boom_pump',
@@ -116,7 +191,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
       dueSoon: true,
     },
     status: 'available',
-    hourlyRate: '$175 / hr',
+    hourlyRate: 175,
     minHours: '4.0 hrs',
     inMaintenance: false,
     year: '2021',
@@ -124,7 +199,9 @@ export const INITIAL_PUMPS: PumpItem[] = [
   },
   {
     id: '03-47m',
-    unitNumber: '03 · 47M',
+    unitNumber: '03',
+    boomSize: 47,
+    horizontalReach: 154,
     make: 'Schwing',
     model: 'S 47 SX',
     type: 'boom_pump',
@@ -145,7 +222,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
       dueSoon: false,
     },
     status: 'maintenance',
-    hourlyRate: '$245 / hr',
+    hourlyRate: 245,
     minHours: '4.0 hrs',
     inMaintenance: true,
     maintenanceNote: 'Scheduled service • Hydraulic pump & boom inspection',
@@ -154,7 +231,9 @@ export const INITIAL_PUMPS: PumpItem[] = [
   },
   {
     id: '04-line-pump',
-    unitNumber: '04 · Line pump',
+    unitNumber: '04',
+    boomSize: undefined,
+    horizontalReach: 500,
     make: 'Trailer rig',
     model: 'Reed B50',
     type: 'line_pump',
@@ -175,7 +254,7 @@ export const INITIAL_PUMPS: PumpItem[] = [
       dueSoon: false,
     },
     status: 'booked',
-    hourlyRate: '$145 / hr',
+    hourlyRate: 145,
     minHours: '4.0 hrs',
     inMaintenance: false,
     year: '2022',

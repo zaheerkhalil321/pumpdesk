@@ -14,6 +14,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatUSPhone } from '@/lib/utils';
 import { addOperator, OperatorItem, OperatorEmergencyContact } from '@/lib/operators-store';
+import { usePumps, getPumpDisplayName } from '@/lib/pumps-store';
 
 interface AddOperatorModalProps {
   open: boolean;
@@ -21,15 +22,6 @@ interface AddOperatorModalProps {
   onCreated?: (created: OperatorItem) => void;
   defaultAssignedPump?: string;
 }
-
-const PUMP_OPTIONS = [
-  { value: 'None', label: 'None (Unassigned / Optional)' },
-  { value: '01 · 34M', label: '01 · 34M Putzmeister' },
-  { value: '02 · 28M', label: '02 · 28M Putzmeister' },
-  { value: '03 · 47M', label: '03 · 47M Schwing' },
-  { value: '04 · Line pump', label: '04 · Trailer Line Pump' },
-  { value: 'No default pump', label: 'No default pump (Relief)' },
-];
 
 const ROLE_OPTIONS = [
   { value: 'Operator', label: 'Operator' },
@@ -50,6 +42,19 @@ export function AddOperatorModal({
   onCreated,
   defaultAssignedPump = 'None',
 }: AddOperatorModalProps) {
+  const pumps = usePumps();
+  const pumpOptions = [
+    { value: 'None', label: 'None (Unassigned / Optional)' },
+    ...pumps.map((p) => {
+      const code = getPumpDisplayName(p);
+      return {
+        value: code,
+        label: `${code} ${p.make} ${p.model}`.trim(),
+      };
+    }),
+    { value: 'No default pump', label: 'No default pump (Relief)' },
+  ];
+
   const [name, setName] = useState('');
   const [role, setRole] = useState('Operator');
   const [phone, setPhone] = useState('');
@@ -195,7 +200,7 @@ export function AddOperatorModal({
                 size="lg"
                 value={defaultPump}
                 onChange={setDefaultPump}
-                options={PUMP_OPTIONS}
+                options={pumpOptions}
               />
             </div>
           </div>
