@@ -5,8 +5,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { ModalCloseButton } from "@/components/ui/modal-close-button"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -64,16 +63,9 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             render={
-              <Button
-                variant="ghost"
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg p-1.5 transition-colors focus-visible:outline-none"
-                size="icon-sm"
-              />
+              <ModalCloseButton className="absolute top-4 right-4 z-20" />
             }
-          >
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+          />
         )}
       </DialogPrimitive.Popup>
     </DialogPortal>
@@ -157,4 +149,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  ModalCloseButton,
 }

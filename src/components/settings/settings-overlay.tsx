@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { ModalCloseButton } from '@/components/ui/modal-close-button';
 import { useSettings } from '@/components/providers/settings-provider';
 import { useBrandTheme } from '@/components/providers/brand-theme-provider';
 import { cn } from '@/lib/utils';
@@ -54,16 +55,11 @@ export function SettingsOverlay() {
               </p>
             </div>
 
-            {/* Simple Close Button */}
-            <button
-              type="button"
+            <ModalCloseButton
               onClick={closeSettings}
-              className="h-9 w-9 rounded-md border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center justify-center active:scale-95 shadow-2xs"
               title="Close settings (Esc)"
               aria-label="Close Settings"
-            >
-              <X className="h-4.5 w-4.5" />
-            </button>
+            />
           </div>
 
           {/* ── Super Clean Theme Selection Grid ── */}

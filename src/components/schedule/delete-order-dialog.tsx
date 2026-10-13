@@ -6,9 +6,10 @@ import {
   DialogContent,
   DialogTitle,
   DialogClose,
+  ModalCloseButton,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Trash2, AlertTriangle, MapPin, Truck, Clock, X } from 'lucide-react';
+import { Trash2, AlertTriangle, MapPin, Truck, Clock } from 'lucide-react';
 import { ScheduleBooking } from './schedule-types';
 
 interface DeleteOrderDialogProps {
@@ -61,9 +62,7 @@ export function DeleteOrderDialog({
             </div>
           </div>
 
-          <DialogClose className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer outline-none shrink-0">
-            <X className="h-4 w-4" />
-          </DialogClose>
+          <DialogClose render={<ModalCloseButton size="sm" />} />
         </div>
 
         {/* Order Details Context Card */}

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Menu,
-  X,
   Calendar,
   FileText,
   Users,
@@ -22,6 +21,7 @@ import {
   Sheet,
   SheetContent,
 } from '@/components/ui/sheet';
+import { ModalCloseButton } from '@/components/ui/modal-close-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -208,14 +208,10 @@ export function MobileNavbar() {
                 <PumpDeskLogo size="md" />
               </Link>
 
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setIsOpen(false)}
                 aria-label="Close navigation menu"
-                className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              />
             </div>
 
             {/* Yard Selector */}

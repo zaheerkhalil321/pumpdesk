@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  ModalCloseButton,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +15,6 @@ import {
   Phone,
   MessageSquare,
   FileText,
-  X,
   ArrowUpRight,
   User,
   UserCheck,
@@ -208,9 +208,7 @@ export function OrderDossierModal({
             </DialogTitle>
           </DialogHeader>
 
-          <DialogClose className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer outline-none">
-            <X className="h-4 w-4" />
-          </DialogClose>
+          <DialogClose render={<ModalCloseButton size="sm" />} />
         </div>
 
         {/* ── Live Operational Status Banner ── */}

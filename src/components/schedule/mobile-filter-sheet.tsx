@@ -5,6 +5,7 @@ import {
   Sheet,
   SheetContent,
 } from '@/components/ui/sheet';
+import { ModalCloseButton } from '@/components/ui/modal-close-button';
 import { Button } from '@/components/ui/button';
 import { AppSelect } from '@/components/ui/app-select';
 import { Search, X, SlidersHorizontal, Check, RotateCcw } from 'lucide-react';
@@ -71,13 +72,10 @@ export function MobileFilterSheet({
                 <span>Reset</span>
               </button>
             )}
-            <button
-              type="button"
+            <ModalCloseButton
               onClick={() => onOpenChange(false)}
-              className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
+              size="sm"
+            />
           </div>
         </div>
 

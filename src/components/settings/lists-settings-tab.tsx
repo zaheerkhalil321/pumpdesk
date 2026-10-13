@@ -7,10 +7,10 @@ import {
   Info,
   Star,
   MoreHorizontal,
-  X,
   Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ModalCloseButton } from '@/components/ui/modal-close-button';
 import { AppSelect } from '@/components/ui/app-select';
 import {
   useSettingsStore,
@@ -899,13 +899,10 @@ export function ListsSettingsTab() {
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Add Concrete Supplier</h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setIsAddSupplierOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>
@@ -977,13 +974,10 @@ export function ListsSettingsTab() {
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Edit Supplier</h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setEditingSupplier(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>
@@ -1044,13 +1038,10 @@ export function ListsSettingsTab() {
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Add Pour Type</h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setIsAddPourOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Pour Type Name</label>
@@ -1098,13 +1089,10 @@ export function ListsSettingsTab() {
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Edit Pour Type</h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setEditingPour(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Pour Type Name</label>
@@ -1145,13 +1133,10 @@ export function ListsSettingsTab() {
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Add Record Tag</h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setIsAddTagOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>
@@ -1231,13 +1216,10 @@ export function ListsSettingsTab() {
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900">Edit Record Tag</h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setEditingTag(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>

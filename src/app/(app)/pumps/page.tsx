@@ -661,6 +661,7 @@ export default function PumpsPage() {
 
       {/* ── 9. Pump Dossier Detail Dialog ── */}
       <PumpDetailDialog
+        key={activePump?.id || 'none'}
         pump={activePump}
         open={!!activePump}
         inspectionMode={isInspectionMode}

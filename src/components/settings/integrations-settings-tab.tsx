@@ -6,10 +6,10 @@ import {
   Truck,
   Radio,
   Lock,
-  X,
   CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ModalCloseButton } from '@/components/ui/modal-close-button';
 
 export function IntegrationsSettingsTab() {
   const [selectedIntegration, setSelectedIntegration] = useState<{
@@ -136,13 +136,10 @@ export function IntegrationsSettingsTab() {
                   {selectedIntegration.category} Integration
                 </p>
               </div>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setSelectedIntegration(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">

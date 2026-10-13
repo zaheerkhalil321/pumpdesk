@@ -9,9 +9,9 @@ import {
   ArrowRight,
   Receipt,
   CreditCard,
-  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ModalCloseButton } from '@/components/ui/modal-close-button';
 import {
   useSettingsStore,
   PricingService,
@@ -541,13 +541,10 @@ export function PricingSettingsTab() {
               <h3 className="font-bold text-sm sm:text-base text-slate-900">
                 Manage Service Rate
               </h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setEditingService(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>
@@ -626,13 +623,10 @@ export function PricingSettingsTab() {
               <h3 className="font-bold text-sm sm:text-base text-slate-900">
                 Add Pump Service
               </h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setIsAddServiceOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>
@@ -700,13 +694,10 @@ export function PricingSettingsTab() {
               <h3 className="font-bold text-sm sm:text-base text-slate-900">
                 Manage Additional Charge
               </h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setEditingCharge(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>
@@ -785,13 +776,10 @@ export function PricingSettingsTab() {
               <h3 className="font-bold text-sm sm:text-base text-slate-900">
                 Add Additional Charge
               </h3>
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => setIsAddChargeOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                size="sm"
+              />
             </div>
             <div className="space-y-3">
               <div>

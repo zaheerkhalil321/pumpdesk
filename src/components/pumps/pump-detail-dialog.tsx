@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  ModalCloseButton,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,6 +82,28 @@ export function PumpDetailDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddingDoc, setIsAddingDoc] = useState(false);
+
+  // Reset edit mode and child dialog states whenever dialog closes or active pump changes
+  const [prevPumpId, setPrevPumpId] = useState(pump?.id);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  if (pump?.id !== prevPumpId || open !== prevOpen) {
+    setPrevPumpId(pump?.id);
+    setPrevOpen(open);
+    if (!open || pump?.id !== prevPumpId) {
+      setIsEditing(false);
+      setIsAddingDoc(false);
+      setIsDeleteDialogOpen(false);
+      setActiveTab('specs');
+    }
+  }
+
+  const handleClose = () => {
+    setIsEditing(false);
+    setIsAddingDoc(false);
+    setIsDeleteDialogOpen(false);
+    onOpenChange(false);
+  };
 
   // Operator Modals
   const [isAddOperatorOpen, setIsAddOperatorOpen] = useState(false);
@@ -426,41 +449,44 @@ export function PumpDetailDialog({
         open={open}
         onOpenChange={(val) => {
           if (!val) {
-            setIsEditing(false);
-            setIsAddingDoc(false);
+            handleClose();
+          } else {
+            onOpenChange(true);
           }
-          onOpenChange(val);
         }}
       >
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl border-slate-200">
+        <DialogContent
+          showCloseButton={false}
+          className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl border-slate-200"
+        >
           {/* Header */}
-          <div className="p-5 sm:p-6 pr-14 sm:pr-16 bg-slate-50/70 border-b border-slate-100 flex items-start justify-between gap-3.5">
-            <div className="flex items-start gap-3.5 min-w-0 flex-1">
-              <div className="h-11 w-11 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-brand shrink-0 mt-0.5">
+          <div className="p-4 sm:p-6 bg-slate-50/70 border-b border-slate-100 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-brand shrink-0 mt-0.5">
                 <Truck className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <DialogTitle className="text-lg sm:text-xl font-bold text-slate-900 truncate">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <DialogTitle className="text-base sm:text-xl font-bold text-slate-900 truncate">
                     {getPumpDisplayName(currentPump)}
                   </DialogTitle>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700">
+                  <span className="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700">
                     {currentPump.make} {currentPump.model}
                   </span>
 
                   {/* Status Badge */}
                   {currentPump.todayStatus?.type === 'booked' ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200/70 shadow-2xs">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200/70 shadow-2xs">
                       <span className="h-1.5 w-1.5 rounded-full bg-teal-600" />
                       <span>{currentPump.todayStatus?.label || 'Booked'}</span>
                     </span>
                   ) : currentPump.todayStatus?.type === 'available' ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/70 shadow-2xs">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/70 shadow-2xs">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       <span>{currentPump.todayStatus?.label || 'Available'}</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs">
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                       <span>{currentPump.todayStatus?.label || 'Maintenance'}</span>
                     </span>
@@ -472,28 +498,44 @@ export function PumpDetailDialog({
               </div>
             </div>
 
-            {/* Quick Edit button right at top header */}
-            {!isEditing && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={startEditing}
-                className="h-8 px-2.5 text-xs font-semibold gap-1 text-slate-700 border-slate-200 hover:border-brand/40 hover:text-brand bg-white shrink-0 cursor-pointer shadow-2xs"
-              >
-                <Pencil className="h-3 w-3" />
-                <span>Edit Rig</span>
-              </Button>
-            )}
+            {/* Header Action Buttons: Prominent Circle Close Cross on top, Edit Rig button directly under it */}
+            <div className="flex flex-col items-end gap-2 shrink-0 self-start">
+              <ModalCloseButton
+                onClick={handleClose}
+                aria-label="Close dialog"
+              />
+              {!isEditing ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={startEditing}
+                  className="h-7.5 px-2.5 text-xs font-semibold gap-1 text-slate-700 border-slate-200 hover:border-brand/40 hover:text-brand bg-white shrink-0 cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 transition-all"
+                >
+                  <Pencil className="h-3 w-3" />
+                  <span>Edit Rig</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(false)}
+                  className="h-7 px-2 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 shrink-0 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+                >
+                  <span>Cancel</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Navigation Tabs (Specifications vs Documents) */}
           {!isEditing && (
-            <div className="flex items-center border-b border-slate-100 px-6 bg-white gap-4 pt-2">
+            <div className="flex items-center border-b border-slate-100 px-4 sm:px-6 bg-white gap-3 sm:gap-4 pt-2 overflow-x-auto scrollbar-none">
               <button
                 type="button"
                 onClick={() => setActiveTab('specs')}
-                className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   activeTab === 'specs'
                     ? 'border-brand text-brand'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -506,7 +548,7 @@ export function PumpDetailDialog({
               <button
                 type="button"
                 onClick={() => setActiveTab('documents')}
-                className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   activeTab === 'documents'
                     ? 'border-brand text-brand'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -522,7 +564,7 @@ export function PumpDetailDialog({
           )}
 
           {/* Body Content */}
-          <div className="p-6 space-y-5 text-xs sm:text-sm">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 text-xs sm:text-sm">
             {isEditing ? (
               /* ── EDIT PUMP FORM ── */
               <form onSubmit={handleSaveEdit} className="space-y-4">
@@ -756,12 +798,12 @@ export function PumpDetailDialog({
 
                 {/* Operator Selector + Add/Edit Operator buttons */}
                 <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-2.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                       <User className="h-3.5 w-3.5 text-brand" />
                       <span>Default Operator Assignment</span>
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {editOperatorId !== 'none' && (
                         <button
                           type="button"
@@ -884,7 +926,7 @@ export function PumpDetailDialog({
                 )}
 
                 {/* Section 1: Specifications */}
-                <div className="rounded-xl border border-slate-200/80 p-4 bg-white shadow-2xs space-y-3">
+                <div className="rounded-xl border border-slate-200/80 p-3.5 sm:p-4 bg-white shadow-2xs space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-slate-900 flex items-center gap-2 text-xs">
                       <Truck className="h-3.5 w-3.5 text-brand" />
@@ -928,15 +970,15 @@ export function PumpDetailDialog({
                 </div>
 
                 {/* Section 2: Assigned Operator (Fully Functionally Complete) */}
-                <div className="rounded-xl border border-slate-200/80 p-4 bg-white shadow-2xs space-y-3.5">
-                  <div className="flex items-center justify-between">
+                <div className="rounded-xl border border-slate-200/80 p-3.5 sm:p-4 bg-white shadow-2xs space-y-3 sm:space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <h4 className="font-bold text-slate-900 flex items-center gap-2 text-xs">
                       <User className="h-3.5 w-3.5 text-brand" />
                       <span>Default Operator Assignment</span>
                     </h4>
 
                     {/* Operator Action Buttons */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {!isUnassigned && (
                         <Button
                           type="button"
@@ -963,14 +1005,14 @@ export function PumpDetailDialog({
                   </div>
 
                   {!isUnassigned ? (
-                    <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-slate-50/70 border border-slate-100">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/70 border border-slate-100">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="h-9 w-9 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold text-xs border border-brand/20 shrink-0">
                           {currentPump.defaultOperator?.name?.charAt(0) || 'O'}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-900 text-sm">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-900 text-sm truncate">
                               {currentPump.defaultOperator?.name}
                             </span>
                             {currentOpInRoster && (
@@ -983,7 +1025,7 @@ export function PumpDetailDialog({
                               </Link>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-xs text-slate-500 mt-0.5 truncate">
                             {currentPump.defaultOperator?.role || 'Operator'} &bull;{' '}
                             {currentOpInRoster?.phone || '(207) 555-0168'}
                           </p>
@@ -991,7 +1033,7 @@ export function PumpDetailDialog({
                       </div>
 
                       {/* Quick Reassign Dropdown */}
-                      <div className="w-36 shrink-0">
+                      <div className="w-full sm:w-36 shrink-0">
                         <AppSelect
                           size="sm"
                           value={currentPump.defaultOperator?.id || 'none'}
@@ -1001,12 +1043,12 @@ export function PumpDetailDialog({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50/50 border border-amber-200/60 text-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg bg-amber-50/50 border border-amber-200/60 text-xs">
                       <div className="flex items-center gap-2 text-amber-900">
                         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                         <span>No default operator assigned to this rig.</span>
                       </div>
-                      <div className="w-40 shrink-0">
+                      <div className="w-full sm:w-40 shrink-0">
                         <AppSelect
                           size="sm"
                           value="none"
@@ -1265,8 +1307,8 @@ export function PumpDetailDialog({
           </div>
 
           {/* Footer */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+          <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -1282,17 +1324,17 @@ export function PumpDetailDialog({
             <div className="flex items-center gap-2">
               <Link
                 href="/schedule"
-                className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 mr-2"
+                className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 mr-1 sm:mr-2"
               >
                 <Calendar className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Dispatch schedule</span>
+                <span className="hidden xs:inline sm:inline">Dispatch schedule</span>
               </Link>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => onOpenChange(false)}
-                className="h-8 text-xs font-semibold cursor-pointer"
+                className="h-8 px-3 text-xs font-semibold cursor-pointer"
               >
                 Close
               </Button>
