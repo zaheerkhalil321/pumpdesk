@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { Check, Paintbrush, ArrowLeft } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Check, Paintbrush, ArrowLeft, LogOut } from 'lucide-react';
 import { useBrandTheme } from '@/components/providers/brand-theme-provider';
+import { LogoutDialog } from '@/components/auth/logout-dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -17,19 +18,16 @@ export type SettingsMainTab =
 interface SettingsThemeBarProps {
   currentTab: SettingsMainTab;
   onTabChange: (tab: SettingsMainTab) => void;
-  onSave?: () => void;
-  onCancel?: () => void;
   breadcrumbSub?: string;
 }
 
 export function SettingsThemeBar({
   currentTab,
   onTabChange,
-  onSave,
-  onCancel,
   breadcrumbSub,
 }: SettingsThemeBarProps) {
   const { brandTheme, setBrandTheme, themes } = useBrandTheme();
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   const navContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -113,31 +111,15 @@ export function SettingsThemeBar({
         <div className="min-w-0">{getBreadcrumbs()}</div>
 
         <div className="flex items-center gap-2.5 ml-auto">
-          {currentTab !== 'overview' && (
-            <>
-              <button
-                type="button"
-                onClick={onCancel || (() => onTabChange('overview'))}
-                className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all cursor-pointer shadow-2xs active:scale-95"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={
-                  onSave ||
-                  (() => {
-                    toast.success('Changes saved successfully', {
-                      description: 'Your settings preferences have been updated.',
-                    });
-                  })
-                }
-                className="px-4 py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white transition-all cursor-pointer shadow-xs active:scale-95"
-              >
-                Save changes
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsLogoutDialogOpen(true)}
+            className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-xs font-semibold text-slate-600 transition-all cursor-pointer shadow-2xs active:scale-95"
+            title="Sign out of PumpDesk"
+          >
+            <LogOut className="h-3.5 w-3.5 text-slate-400 group-hover:text-rose-600 transition-colors" />
+            <span>Log out</span>
+          </button>
         </div>
       </div>
 
@@ -165,7 +147,7 @@ export function SettingsThemeBar({
                 className={cn(
                   'flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer border',
                   isSelected
-                    ? 'bg-white border-brand text-slate-900 shadow-2xs ring-1 ring-brand/40 font-semibold'
+                    ? 'bg-white border-2 border-brand text-slate-900 shadow-2xs font-semibold'
                     : 'bg-white/70 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white'
                 )}
                 title={`${t.name} • ${t.tagline}`}
@@ -175,7 +157,7 @@ export function SettingsThemeBar({
                   className={cn(
                     'h-4 w-4 rounded-full flex items-center justify-center shrink-0 shadow-2xs transition-transform',
                     t.swatchClass,
-                    isSelected && 'scale-110 ring-1 ring-white'
+                    isSelected && 'scale-110'
                   )}
                 >
                   {isSelected && (
@@ -237,6 +219,11 @@ export function SettingsThemeBar({
           })}
         </nav>
       </div>
+
+      <LogoutDialog
+        isOpen={isLogoutDialogOpen}
+        onOpenChange={setIsLogoutDialogOpen}
+      />
     </div>
   );
 }

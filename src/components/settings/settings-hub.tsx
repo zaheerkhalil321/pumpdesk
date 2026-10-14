@@ -11,7 +11,6 @@ import {
   Layers,
 } from 'lucide-react';
 import { SettingsMainTab } from './settings-theme-bar';
-import { toast } from 'sonner';
 
 interface SettingsHubProps {
   onSelectTab: (tab: SettingsMainTab) => void;
@@ -82,7 +81,7 @@ export function SettingsHub({ onSelectTab }: SettingsHubProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search settings"
-          className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs transition-all"
+          className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-2xs transition-all"
         />
         {searchQuery && (
           <button
@@ -132,47 +131,6 @@ export function SettingsHub({ onSelectTab }: SettingsHubProps) {
         })}
       </div>
 
-      {/* ── Bottom Utility Links (matching settings 1.png) ── */}
-      <div className="pt-8 border-t border-slate-200/80 flex flex-wrap items-center gap-6 text-xs text-slate-600">
-        <button
-          type="button"
-          onClick={() => {
-            toast.success('Subscription: PumpDesk Pro Unlimited', {
-              description:
-                'Enterprise fleet tier active for Midcoast Concrete Pumping. Billing renewal: Nov 2026.',
-            });
-          }}
-          className="hover:text-brand hover:underline cursor-pointer font-medium"
-        >
-          Subscription
-        </button>
-        <span className="text-slate-300">|</span>
-        <button
-          type="button"
-          onClick={() => {
-            toast.info('Data Export & Backup', {
-              description:
-                'Export CSV files of your customers, equipment, and orders anytime from the directory tables.',
-            });
-          }}
-          className="hover:text-brand hover:underline cursor-pointer font-medium"
-        >
-          Import & export
-        </button>
-        <span className="text-slate-300">|</span>
-        <button
-          type="button"
-          onClick={() => {
-            toast.info('Audit Change History', {
-              description:
-                'All dispatch adjustments and rate modifications are logged with UTC timestamps.',
-            });
-          }}
-          className="hover:text-brand hover:underline cursor-pointer font-medium"
-        >
-          Change history
-        </button>
-      </div>
     </div>
   );
 }

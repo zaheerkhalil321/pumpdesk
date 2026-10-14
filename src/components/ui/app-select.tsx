@@ -113,8 +113,8 @@ export function AppSelect({
             "w-full flex items-center justify-between border bg-card text-foreground transition-all cursor-pointer outline-none select-none text-left",
             sizeClasses,
             error
-              ? "border-destructive bg-destructive/5 text-destructive focus-visible:ring-2 focus-visible:ring-destructive/20"
-              : "border-border hover:bg-accent/40 hover:border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary",
+              ? "border-destructive bg-destructive/5 text-destructive focus-visible:border-destructive"
+              : "border-border hover:bg-accent/40 hover:border-border/80 focus-visible:border-brand",
             disabled && "opacity-50 cursor-not-allowed pointer-events-none bg-muted/30",
             className
           )}

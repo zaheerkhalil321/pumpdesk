@@ -729,7 +729,7 @@ export default function CustomersPage() {
                 className={cn(
                   "h-10 text-xs sm:text-sm font-medium rounded-lg shadow-2xs transition-colors",
                   newCustomerNameError
-                    ? "border-red-500 focus-visible:border-red-500 text-red-900 bg-red-50/20 ring-1 ring-red-500/20"
+                    ? "border-red-500 focus-visible:border-red-500 text-red-900 bg-red-50/20"
                     : "border-slate-200 text-slate-900 bg-white placeholder:text-slate-400 focus-visible:border-brand"
                 )}
               />

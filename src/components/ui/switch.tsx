@@ -71,7 +71,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           onClick={handleToggle}
           onKeyDown={handleKeyDown}
           className={cn(
-            "peer relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "peer relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:opacity-90",
             isChecked ? "bg-brand" : "bg-slate-300 hover:bg-slate-400/80",
             disabled && "cursor-not-allowed opacity-50",
             className
@@ -79,7 +79,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         >
           <span
             className={cn(
-              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
+              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out",
               isChecked ? "translate-x-5.5" : "translate-x-0.5"
             )}
           />

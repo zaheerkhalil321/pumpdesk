@@ -12,7 +12,6 @@ import { PricingSettingsTab } from '@/components/settings/pricing-settings-tab';
 import { NotificationsSettingsTab } from '@/components/settings/notifications-settings-tab';
 import { ListsSettingsTab } from '@/components/settings/lists-settings-tab';
 import { IntegrationsSettingsTab } from '@/components/settings/integrations-settings-tab';
-import { toast } from 'sonner';
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -32,25 +31,12 @@ function SettingsContent() {
     router.replace(url);
   };
 
-  const handleSave = () => {
-    toast.success('Changes saved successfully', {
-      description: 'Your configuration updates are now active across PumpDesk.',
-    });
-  };
-
-  const handleCancel = () => {
-    toast.info('Changes discarded');
-    handleTabChange('overview');
-  };
-
   return (
     <div className="min-h-full flex flex-col bg-slate-50/50">
-      {/* ── Top Bar with Breadcrumbs, Save/Cancel, and Theme Palette Strip ── */}
+      {/* ── Top Bar with Breadcrumbs, Log Out, and Theme Palette Strip ── */}
       <SettingsThemeBar
         currentTab={currentTab}
         onTabChange={handleTabChange}
-        onSave={handleSave}
-        onCancel={handleCancel}
       />
 
       {/* ── Tab Content Container ── */}

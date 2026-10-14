@@ -207,7 +207,7 @@ export function NewContactModal({
                 className={cn(
                   'h-9 text-xs rounded-lg transition-colors',
                   firstNameError
-                    ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:ring-red-400 focus-visible:border-red-500'
+                    ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:border-red-500'
                     : 'border-slate-200 focus-visible:border-brand'
                 )}
               />
@@ -232,7 +232,7 @@ export function NewContactModal({
                 className={cn(
                   'h-9 text-xs rounded-lg transition-colors',
                   lastNameError
-                    ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:ring-red-400 focus-visible:border-red-500'
+                    ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:border-red-500'
                     : 'border-slate-200 focus-visible:border-brand'
                 )}
               />
@@ -314,7 +314,7 @@ export function NewContactModal({
                 className={cn(
                   'h-9 text-xs font-mono rounded-lg transition-colors',
                   phoneError
-                    ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:ring-red-400 focus-visible:border-red-500'
+                    ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:border-red-500'
                     : 'border-slate-200 focus-visible:border-brand'
                 )}
               />
@@ -357,7 +357,7 @@ export function NewContactModal({
               className={cn(
                 'h-9 text-xs rounded-lg transition-colors',
                 emailError
-                  ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:ring-red-400 focus-visible:border-red-500'
+                  ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:border-red-500'
                   : 'border-slate-200 focus-visible:border-brand'
               )}
             />

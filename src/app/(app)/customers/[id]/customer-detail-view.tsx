@@ -701,7 +701,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                   value={newNoteText}
                   onChange={(e) => setNewNoteText(e.target.value)}
                   placeholder="Add a note..."
-                  className="h-9 rounded-xl border-slate-200/90 text-xs sm:text-sm bg-white focus-visible:ring-[#0D5294]"
+                  className="h-9 rounded-xl border-slate-200/90 text-xs sm:text-sm bg-white focus-visible:border-brand"
                 />
                 <Button
                   type="submit"

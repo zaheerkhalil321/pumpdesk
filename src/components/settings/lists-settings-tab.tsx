@@ -6,7 +6,6 @@ import {
   Search,
   Info,
   Star,
-  MoreHorizontal,
   Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -227,7 +226,7 @@ export function ListsSettingsTab() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search suppliers"
-                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -290,7 +289,7 @@ export function ListsSettingsTab() {
                     <div className="truncate"><span className="text-slate-400">Email:</span> {supplier.email}</div>
                   </div>
 
-                  <div className="pt-1 flex items-center justify-end gap-1.5">
+                  <div className="pt-1 flex items-center justify-end">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -300,16 +299,6 @@ export function ListsSettingsTab() {
                       className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
                     >
                       Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toast.info(`Options for ${supplier.name}`);
-                      }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -357,28 +346,16 @@ export function ListsSettingsTab() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 sm:px-6 text-right">
-                        <div className="inline-flex items-center gap-1.5 justify-end">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingSupplier(supplier);
-                            }}
-                            className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toast.info(`Options for ${supplier.name}`);
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSupplier(supplier);
+                          }}
+                          className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -421,7 +398,7 @@ export function ListsSettingsTab() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search pour types"
-                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -523,7 +500,7 @@ export function ListsSettingsTab() {
                     </span>
                   </div>
 
-                  <div className="pt-1 flex items-center justify-end gap-1.5">
+                  <div className="pt-1 flex items-center justify-end">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -533,16 +510,6 @@ export function ListsSettingsTab() {
                       className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
                     >
                       Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toast.info(`Options for ${pt.name}`);
-                      }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -613,28 +580,16 @@ export function ListsSettingsTab() {
                       </td>
 
                       <td className="py-3.5 px-4 sm:px-6 text-right">
-                        <div className="inline-flex items-center gap-1.5 justify-end">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingPour(pt);
-                            }}
-                            className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toast.info(`Options for ${pt.name}`);
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPour(pt);
+                          }}
+                          className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -663,7 +618,7 @@ export function ListsSettingsTab() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search tags"
-                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -729,28 +684,16 @@ export function ListsSettingsTab() {
 
                   <div className="flex items-center justify-between text-xs text-slate-600">
                     <span>Used on: <strong className="text-slate-800">{tag.usedOn}</strong></span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTag(tag);
-                        }}
-                        className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toast.info(`Options for ${tag.name}`);
-                        }}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTag(tag);
+                      }}
+                      className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                    >
+                      Edit
+                    </button>
                   </div>
                 </div>
               ))}
@@ -803,28 +746,16 @@ export function ListsSettingsTab() {
                       </td>
 
                       <td className="py-3.5 px-4 sm:px-6 text-right">
-                        <div className="inline-flex items-center gap-1.5 justify-end">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTag(tag);
-                            }}
-                            className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toast.info(`Options for ${tag.name}`);
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTag(tag);
+                          }}
+                          className="px-3 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1170,7 +1101,7 @@ export function ListsSettingsTab() {
                       className={cn(
                         'px-2.5 py-1 rounded-full text-xs font-semibold capitalize border cursor-pointer',
                         getTagColorClass(c),
-                        tagColor === c && 'ring-2 ring-brand ring-offset-1'
+                        tagColor === c && 'border-2 border-slate-900 font-bold shadow-xs'
                       )}
                     >
                       {c}
@@ -1251,7 +1182,7 @@ export function ListsSettingsTab() {
                       className={cn(
                         'px-2.5 py-1 rounded-full text-xs font-semibold capitalize border cursor-pointer',
                         getTagColorClass(c),
-                        editingTag.color === c && 'ring-2 ring-brand ring-offset-1'
+                        editingTag.color === c && 'border-2 border-slate-900 font-bold shadow-xs'
                       )}
                     >
                       {c}

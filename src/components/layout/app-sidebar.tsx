@@ -471,7 +471,7 @@ export function AppSidebar() {
                 onClick={handleToggleSettings}
                 className={cn(
                   'h-10 w-10 rounded-full bg-brand text-white font-bold text-xs flex items-center justify-center tracking-wider shadow-2xs hover:opacity-90 transition-all relative block cursor-pointer',
-                  isSettingsActive && 'ring-2 ring-brand ring-offset-2'
+                  isSettingsActive && 'border-2 border-slate-900'
                 )}
                 aria-label={isSettingsActive ? 'Close Settings' : 'Jessie Black profile'}
               >
@@ -491,7 +491,7 @@ export function AppSidebar() {
                 className={cn(
                   'h-8 w-8 rounded-lg flex items-center justify-center transition-all cursor-pointer',
                   isSettingsActive
-                    ? 'bg-brand-light text-brand ring-1 ring-brand/30 shadow-2xs'
+                    ? 'bg-brand-light text-brand border border-brand/40 shadow-2xs'
                     : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/60'
                 )}
                 aria-label={isSettingsActive ? 'Close Settings' : 'Settings'}

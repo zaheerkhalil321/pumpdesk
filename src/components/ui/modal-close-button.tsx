@@ -34,7 +34,7 @@ export const ModalCloseButton = React.forwardRef<
       type="button"
       aria-label="Close"
       className={cn(
-        'inline-flex items-center justify-center rounded-full bg-white text-slate-500 hover:text-slate-800 border border-slate-200/90 hover:border-slate-300 shadow-xs hover:shadow-md hover:bg-slate-50 active:scale-95 transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 shrink-0',
+        'inline-flex items-center justify-center rounded-full bg-white text-slate-500 hover:text-slate-800 border border-slate-200/90 hover:border-slate-300 shadow-xs hover:shadow-md hover:bg-slate-50 active:scale-95 transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:border-slate-400 shrink-0',
         sizeClasses[size],
         className
       )}

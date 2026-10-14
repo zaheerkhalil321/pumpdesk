@@ -8,6 +8,7 @@ import {
   Plus,
   Truck,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,12 +30,23 @@ export function CompanySettingsTab() {
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchCity, setNewBranchCity] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const handleFieldChange = <K extends keyof CompanyDetails>(
     field: K,
     value: CompanyDetails[K]
   ) => {
     updateCompanyDetails({ [field]: value });
+  };
+
+  const handleSaveProfile = () => {
+    setIsSavingProfile(true);
+    setTimeout(() => {
+      setIsSavingProfile(false);
+      toast.success('Company profile saved', {
+        description: 'Your business details and address have been successfully updated.',
+      });
+    }, 350);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,33 +71,53 @@ export function CompanySettingsTab() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* ── Sub-tabs Header (Profile, Branches, Preferences) ── */}
       <div className="border-b border-slate-200">
-        <nav className="flex space-x-6">
-          {[
-            { id: 'profile' as const, label: 'Profile' },
-            { id: 'branches' as const, label: 'Branches' },
-            { id: 'preferences' as const, label: 'Preferences' },
-          ].map((tab) => {
-            const isActive = activeSubTab === tab.id;
-            return (
+        <div className="flex items-center justify-between gap-4">
+          <nav className="flex space-x-6">
+            {[
+              { id: 'profile' as const, label: 'Profile' },
+              { id: 'branches' as const, label: 'Branches' },
+              { id: 'preferences' as const, label: 'Preferences' },
+            ].map((tab) => {
+              const isActive = activeSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(tab.id)}
+                  className={cn(
+                    'pb-3 text-sm font-semibold transition-colors relative cursor-pointer',
+                    isActive
+                      ? 'text-brand'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  {tab.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {activeSubTab === 'profile' && (
+            <div className="pb-2.5">
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => setActiveSubTab(tab.id)}
-                className={cn(
-                  'pb-3 text-sm font-semibold transition-colors relative cursor-pointer',
-                  isActive
-                    ? 'text-brand'
-                    : 'text-slate-500 hover:text-slate-900'
-                )}
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-60"
               >
-                {tab.label}
-                {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                {isSavingProfile ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
                 )}
+                <span>{isSavingProfile ? 'Saving...' : 'Save changes'}</span>
               </button>
-            );
-          })}
-        </nav>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ────────────────────────────────────────────────────────── */}
@@ -157,7 +189,7 @@ export function CompanySettingsTab() {
                   type="text"
                   value={company.companyName}
                   onChange={(e) => handleFieldChange('companyName', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -169,7 +201,7 @@ export function CompanySettingsTab() {
                   type="text"
                   value={company.legalBusinessName}
                   onChange={(e) => handleFieldChange('legalBusinessName', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -181,7 +213,7 @@ export function CompanySettingsTab() {
                   type="tel"
                   value={company.phone}
                   onChange={(e) => handleFieldChange('phone', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -193,7 +225,7 @@ export function CompanySettingsTab() {
                   type="email"
                   value={company.email}
                   onChange={(e) => handleFieldChange('email', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -205,7 +237,7 @@ export function CompanySettingsTab() {
                   type="text"
                   value={company.website}
                   onChange={(e) => handleFieldChange('website', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
             </div>
@@ -225,7 +257,7 @@ export function CompanySettingsTab() {
                   type="text"
                   value={company.streetAddress}
                   onChange={(e) => handleFieldChange('streetAddress', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                 />
               </div>
 
@@ -239,7 +271,7 @@ export function CompanySettingsTab() {
                     placeholder="Optional"
                     value={company.suiteUnit}
                     onChange={(e) => handleFieldChange('suiteUnit', e.target.value)}
-                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-2xs"
                   />
                 </div>
 
@@ -251,7 +283,7 @@ export function CompanySettingsTab() {
                     type="text"
                     value={company.city}
                     onChange={(e) => handleFieldChange('city', e.target.value)}
-                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                   />
                 </div>
 
@@ -280,7 +312,7 @@ export function CompanySettingsTab() {
                     type="text"
                     value={company.zipCode}
                     onChange={(e) => handleFieldChange('zipCode', e.target.value)}
-                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
                   />
                 </div>
               </div>
@@ -316,6 +348,23 @@ export function CompanySettingsTab() {
                 </label>
               </div>
             </div>
+          </div>
+
+          {/* Bottom Save Action */}
+          <div className="flex items-center justify-end pt-2">
+            <button
+              type="button"
+              onClick={handleSaveProfile}
+              disabled={isSavingProfile}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+            >
+              {isSavingProfile ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Check className="h-3.5 w-3.5" />
+              )}
+              <span>{isSavingProfile ? 'Saving...' : 'Save changes'}</span>
+            </button>
           </div>
         </div>
       )}
@@ -459,7 +508,7 @@ export function CompanySettingsTab() {
                     className={cn(
                       'p-4 rounded-xl border text-left cursor-pointer transition-all duration-150 relative flex flex-col justify-between group active:scale-[0.98]',
                       isSelected
-                        ? 'border-brand bg-brand-light/30 ring-2 ring-brand/30 shadow-xs'
+                        ? 'border-2 border-brand bg-brand-light/30 shadow-xs'
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
                     )}
                   >
@@ -470,7 +519,7 @@ export function CompanySettingsTab() {
                           className={cn(
                             'h-8 w-8 rounded-full flex items-center justify-center shadow-xs transition-transform',
                             t.swatchClass,
-                            isSelected && 'scale-105 ring-2 ring-white ring-offset-2 ring-offset-brand'
+                            isSelected && 'scale-105 border-2 border-white'
                           )}
                         >
                           {isSelected && (

@@ -298,7 +298,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
                 disabled={type === 'line_pump'}
                 className={cn(
                   'h-9 text-xs',
-                  isBoomInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                  isBoomInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
               {isBoomInvalid && (
@@ -331,7 +331,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
                 placeholder={type === 'boom_pump' ? 'e.g. 124' : 'e.g. 500'}
                 className={cn(
                   'h-9 text-xs',
-                  isReachInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                  isReachInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
               {isReachInvalid && (
@@ -388,7 +388,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
                 placeholder="195"
                 className={cn(
                   'h-9 text-xs',
-                  isRateInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                  isRateInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
               {isRateInvalid && (
@@ -420,7 +420,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
                 placeholder="4.0"
                 className={cn(
                   'h-9 text-xs',
-                  isMinHoursInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                  isMinHoursInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
               {isMinHoursInvalid && (
@@ -451,7 +451,7 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
                 placeholder="2024"
                 className={cn(
                   'h-9 text-xs',
-                  isYearInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                  isYearInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
               {isYearInvalid && (

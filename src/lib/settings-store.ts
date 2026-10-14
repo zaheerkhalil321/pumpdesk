@@ -90,6 +90,18 @@ export interface BranchSetting {
   isHQ: boolean;
 }
 
+export interface InvoiceSettings {
+  paymentTerms: string;
+  stateTaxRate: string;
+  invoiceNumberPrefix: string;
+  billingContactEmail: string;
+}
+
+export interface PaymentSettings {
+  remitChecksTo: string;
+  acceptedPaymentMethods: string;
+}
+
 export interface SettingsState {
   company: CompanyDetails;
   branches: BranchSetting[];
@@ -100,6 +112,8 @@ export interface SettingsState {
   suppliers: ConcreteSupplier[];
   pourTypes: PourTypeSetting[];
   tags: TagSetting[];
+  invoiceSettings: InvoiceSettings;
+  paymentSettings: PaymentSettings;
 }
 
 export const INITIAL_SETTINGS: SettingsState = {
@@ -117,6 +131,16 @@ export const INITIAL_SETTINGS: SettingsState = {
     zipCode: '04864',
     country: 'United States',
     useAddressOnInvoices: true,
+  },
+  invoiceSettings: {
+    paymentTerms: 'Net 30',
+    stateTaxRate: '5.5%',
+    invoiceNumberPrefix: 'INV-',
+    billingContactEmail: 'billing@midcoast.example',
+  },
+  paymentSettings: {
+    remitChecksTo: 'Midcoast Concrete Pumping LLC, PO Box 412, Warren, ME 04864',
+    acceptedPaymentMethods: 'ACH Direct Deposit, Check, Wire Transfer',
   },
   branches: [
     {
@@ -403,6 +427,14 @@ function loadInitialSettings(): SettingsState {
         ...INITIAL_SETTINGS,
         ...parsed,
         company: { ...INITIAL_SETTINGS.company, ...parsed.company },
+        invoiceSettings: {
+          ...INITIAL_SETTINGS.invoiceSettings,
+          ...parsed.invoiceSettings,
+        },
+        paymentSettings: {
+          ...INITIAL_SETTINGS.paymentSettings,
+          ...parsed.paymentSettings,
+        },
       };
     }
   } catch {
@@ -433,6 +465,28 @@ export function updateCompanyDetails(updates: Partial<CompanyDetails>) {
     ...currentSettings,
     company: {
       ...currentSettings.company,
+      ...updates,
+    },
+  };
+  notify();
+}
+
+export function updateInvoiceSettings(updates: Partial<InvoiceSettings>) {
+  currentSettings = {
+    ...currentSettings,
+    invoiceSettings: {
+      ...(currentSettings.invoiceSettings || INITIAL_SETTINGS.invoiceSettings),
+      ...updates,
+    },
+  };
+  notify();
+}
+
+export function updatePaymentSettings(updates: Partial<PaymentSettings>) {
+  currentSettings = {
+    ...currentSettings,
+    paymentSettings: {
+      ...(currentSettings.paymentSettings || INITIAL_SETTINGS.paymentSettings),
       ...updates,
     },
   };

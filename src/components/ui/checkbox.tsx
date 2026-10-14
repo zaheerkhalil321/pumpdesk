@@ -57,7 +57,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         onKeyDown={handleKeyDown}
         className={cn(
           "peer relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border transition-all duration-150 outline-none cursor-pointer select-none",
-          "focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:border-brand",
+          "focus-visible:border-brand focus-visible:outline-none",
           isSelected
             ? "bg-brand border-brand text-white shadow-2xs"
             : "bg-white border-slate-300 hover:border-brand/60 hover:bg-brand-light/20 shadow-2xs",

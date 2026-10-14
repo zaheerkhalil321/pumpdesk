@@ -118,7 +118,6 @@ export function PumpDeskLogo({
           >
             <span>Pump</span>
             <span className="text-slate-900">Desk</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-brand ml-0.5 -mt-2 inline-block" />
           </span>
 
           {showBadge && (

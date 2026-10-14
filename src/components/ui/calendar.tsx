@@ -108,7 +108,7 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
                 // Today styling
                 isCurrentDay &&
                   !isSelectedDay &&
-                  "text-brand font-bold ring-1 ring-brand/30 bg-brand-light/40",
+                  "text-brand font-bold border border-brand/50 bg-brand-light/40",
                 // Selected Day styling (Solid Brand Color)
                 isSelectedDay &&
                   "!bg-brand !text-white font-bold shadow-xs hover:!bg-brand-hover"

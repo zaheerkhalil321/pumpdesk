@@ -9,6 +9,8 @@ import {
   ArrowRight,
   Receipt,
   CreditCard,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ModalCloseButton } from '@/components/ui/modal-close-button';
@@ -20,13 +22,51 @@ import {
   updatePricingService,
   addAdditionalCharge,
   updateAdditionalCharge,
+  updateInvoiceSettings,
+  updatePaymentSettings,
 } from '@/lib/settings-store';
 import { toast } from 'sonner';
 
 export function PricingSettingsTab() {
-  const { services, charges } = useSettingsStore();
+  const { services, charges, invoiceSettings, paymentSettings } = useSettingsStore();
   const [activeSubTab, setActiveSubTab] = useState<'services' | 'invoice' | 'payment'>('services');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [invoiceForm, setInvoiceForm] = useState({
+    paymentTerms: invoiceSettings?.paymentTerms || 'Net 30',
+    stateTaxRate: invoiceSettings?.stateTaxRate || '5.5%',
+    invoiceNumberPrefix: invoiceSettings?.invoiceNumberPrefix || 'INV-',
+    billingContactEmail: invoiceSettings?.billingContactEmail || 'billing@midcoast.example',
+  });
+  const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+
+  const [paymentForm, setPaymentForm] = useState({
+    remitChecksTo: paymentSettings?.remitChecksTo || 'Midcoast Concrete Pumping LLC, PO Box 412, Warren, ME 04864',
+    acceptedPaymentMethods: paymentSettings?.acceptedPaymentMethods || 'ACH Direct Deposit, Check, Wire Transfer',
+  });
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+
+  const handleSaveInvoiceSettings = () => {
+    setIsSavingInvoice(true);
+    updateInvoiceSettings(invoiceForm);
+    setTimeout(() => {
+      setIsSavingInvoice(false);
+      toast.success('Invoice settings saved', {
+        description: 'Default billing terms, tax rates, and prefix updated successfully.',
+      });
+    }, 350);
+  };
+
+  const handleSavePaymentSettings = () => {
+    setIsSavingPayment(true);
+    updatePaymentSettings(paymentForm);
+    setTimeout(() => {
+      setIsSavingPayment(false);
+      toast.success('Payment settings saved', {
+        description: 'Remittance instructions and payment methods updated successfully.',
+      });
+    }, 350);
+  };
 
   const navRef = useRef<HTMLElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -176,6 +216,40 @@ export function PricingSettingsTab() {
               </button>
             </div>
           )}
+          {activeSubTab === 'invoice' && (
+            <div className="flex items-center pb-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleSaveInvoiceSettings}
+                disabled={isSavingInvoice}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+              >
+                {isSavingInvoice ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                <span>{isSavingInvoice ? 'Saving...' : 'Save changes'}</span>
+              </button>
+            </div>
+          )}
+          {activeSubTab === 'payment' && (
+            <div className="flex items-center pb-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleSavePaymentSettings}
+                disabled={isSavingPayment}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+              >
+                {isSavingPayment ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                <span>{isSavingPayment ? 'Saving...' : 'Save changes'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -193,7 +267,7 @@ export function PricingSettingsTab() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search services or charges"
-                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand shadow-2xs"
+                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200/90 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
 
@@ -456,8 +530,11 @@ export function PricingSettingsTab() {
               </label>
               <input
                 type="text"
-                defaultValue="Net 30"
-                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 shadow-2xs"
+                value={invoiceForm.paymentTerms}
+                onChange={(e) =>
+                  setInvoiceForm({ ...invoiceForm, paymentTerms: e.target.value })
+                }
+                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
             <div>
@@ -466,8 +543,11 @@ export function PricingSettingsTab() {
               </label>
               <input
                 type="text"
-                defaultValue="5.5%"
-                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 shadow-2xs"
+                value={invoiceForm.stateTaxRate}
+                onChange={(e) =>
+                  setInvoiceForm({ ...invoiceForm, stateTaxRate: e.target.value })
+                }
+                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
             <div>
@@ -476,8 +556,11 @@ export function PricingSettingsTab() {
               </label>
               <input
                 type="text"
-                defaultValue="INV-"
-                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 shadow-2xs"
+                value={invoiceForm.invoiceNumberPrefix}
+                onChange={(e) =>
+                  setInvoiceForm({ ...invoiceForm, invoiceNumberPrefix: e.target.value })
+                }
+                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
             <div>
@@ -486,10 +569,30 @@ export function PricingSettingsTab() {
               </label>
               <input
                 type="email"
-                defaultValue="billing@midcoast.example"
-                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 shadow-2xs"
+                value={invoiceForm.billingContactEmail}
+                onChange={(e) =>
+                  setInvoiceForm({ ...invoiceForm, billingContactEmail: e.target.value })
+                }
+                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
+          </div>
+
+          {/* Bottom Save Action */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={handleSaveInvoiceSettings}
+              disabled={isSavingInvoice}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+            >
+              {isSavingInvoice ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Check className="h-3.5 w-3.5" />
+              )}
+              <span>{isSavingInvoice ? 'Saving...' : 'Save changes'}</span>
+            </button>
           </div>
         </div>
       )}
@@ -515,8 +618,11 @@ export function PricingSettingsTab() {
               </label>
               <input
                 type="text"
-                defaultValue="Midcoast Concrete Pumping LLC, PO Box 412, Warren, ME 04864"
-                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 shadow-2xs"
+                value={paymentForm.remitChecksTo}
+                onChange={(e) =>
+                  setPaymentForm({ ...paymentForm, remitChecksTo: e.target.value })
+                }
+                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
             <div>
@@ -525,10 +631,30 @@ export function PricingSettingsTab() {
               </label>
               <input
                 type="text"
-                defaultValue="ACH Direct Deposit, Check, Wire Transfer"
-                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 shadow-2xs"
+                value={paymentForm.acceptedPaymentMethods}
+                onChange={(e) =>
+                  setPaymentForm({ ...paymentForm, acceptedPaymentMethods: e.target.value })
+                }
+                className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
               />
             </div>
+          </div>
+
+          {/* Bottom Save Action */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={handleSavePaymentSettings}
+              disabled={isSavingPayment}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+            >
+              {isSavingPayment ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Check className="h-3.5 w-3.5" />
+              )}
+              <span>{isSavingPayment ? 'Saving...' : 'Save changes'}</span>
+            </button>
           </div>
         </div>
       )}

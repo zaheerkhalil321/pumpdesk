@@ -75,7 +75,7 @@ export function SettingsOverlay() {
                   className={cn(
                     'group flex flex-col items-center justify-center p-5 rounded-xl border transition-all duration-150 cursor-pointer text-center focus:outline-none active:scale-[0.98]',
                     isSelected
-                      ? 'border-brand bg-brand-light/30 shadow-xs ring-1 ring-brand/40'
+                      ? 'border-2 border-brand bg-brand-light/30 shadow-xs'
                       : 'border-border bg-card hover:border-border hover:bg-muted/40 shadow-2xs'
                   )}
                 >
@@ -85,7 +85,7 @@ export function SettingsOverlay() {
                       className={cn(
                         'h-14 w-14 rounded-full transition-transform duration-150 flex items-center justify-center shadow-sm',
                         t.swatchClass,
-                        isSelected ? 'scale-105 ring-2 ring-background ring-offset-2 ring-offset-brand' : 'group-hover:scale-105'
+                        isSelected ? 'scale-105 border-2 border-white' : 'group-hover:scale-105'
                       )}
                     >
                       {/* Checkmark when selected */}

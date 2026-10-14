@@ -653,7 +653,7 @@ export function PumpDetailDialog({
                       placeholder="e.g. 2024"
                       className={cn(
                         'h-9 text-xs',
-                        isEditYearInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                        isEditYearInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
                     {isEditYearInvalid && (
@@ -686,7 +686,7 @@ export function PumpDetailDialog({
                       disabled={editType === 'line_pump'}
                       className={cn(
                         'h-9 text-xs',
-                        isEditBoomInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                        isEditBoomInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
                     {isEditBoomInvalid && (
@@ -714,7 +714,7 @@ export function PumpDetailDialog({
                       placeholder="e.g. 112"
                       className={cn(
                         'h-9 text-xs',
-                        isEditReachInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                        isEditReachInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
                     {isEditReachInvalid && (
@@ -743,7 +743,7 @@ export function PumpDetailDialog({
                       placeholder="195"
                       className={cn(
                         'h-9 text-xs',
-                        isEditRateInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                        isEditRateInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
                     {isEditRateInvalid && (
@@ -775,7 +775,7 @@ export function PumpDetailDialog({
                       placeholder="4.0"
                       className={cn(
                         'h-9 text-xs',
-                        isEditMinHoursInvalid && 'border-rose-400 focus-visible:ring-rose-400 bg-rose-50/20'
+                        isEditMinHoursInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
                     {isEditMinHoursInvalid && (
@@ -1064,7 +1064,7 @@ export function PumpDetailDialog({
                 <div
                   className={`rounded-xl border p-4 bg-white shadow-2xs space-y-3 transition-all ${
                     inspectionMode
-                      ? 'border-amber-300 ring-2 ring-amber-200/60'
+                      ? 'border-2 border-amber-400 bg-amber-50/20'
                       : 'border-slate-200/80'
                   }`}
                 >

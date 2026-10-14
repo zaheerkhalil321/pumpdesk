@@ -181,7 +181,7 @@ export function MobileNavbar() {
             onClick={handleOpenSettings}
             title="Open settings"
             aria-label="Open settings"
-            className="relative h-8.5 w-8.5 rounded-full bg-slate-900 border border-slate-800 text-white font-bold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-brand/30 transition-all active:scale-95"
+            className="relative h-8.5 w-8.5 rounded-full bg-slate-900 border border-slate-800 text-white font-bold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:border-brand transition-all active:scale-95"
           >
             <span>JB</span>
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
