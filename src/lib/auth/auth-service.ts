@@ -1,23 +1,23 @@
 /**
  * Auth service boundary.
  *
- * The UI only talks to these functions. Today they are a demo placeholder: any
- * input that passes form validation succeeds after a realistic delay, so the
- * screens feel like production. When Supabase is wired up, only this file
- * changes (signInWithPassword, resetPasswordForEmail, updateUser).
+ * The UI only talks to these functions. They call Supabase Auth through the browser
+ * client and turn every failure into a plain message (raw error text is never shown).
  */
+
+import { createClient } from '@/lib/supabase-browser';
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
 
-const LATENCY_MS = {
-  signIn: 1400,
-  resetRequest: 1200,
-  updatePassword: 1200,
-  loadWorkspace: 1100,
-} as const;
+const GENERIC_ERROR = 'Something went wrong. Please try again.';
 
-function simulateNetwork(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function signInMessage(code: string | undefined, status: number | undefined): string {
+  if (code === 'invalid_credentials') return 'Incorrect email or password.';
+  if (code === 'over_request_rate_limit' || status === 429) {
+    return 'Too many attempts. Please wait a few minutes and try again.';
+  }
+  if (code === 'user_banned') return 'This account has been suspended. Contact your admin.';
+  return GENERIC_ERROR;
 }
 
 export async function signIn(credentials: {
@@ -25,32 +25,63 @@ export async function signIn(credentials: {
   password: string;
   rememberMe: boolean;
 }): Promise<AuthResult> {
-  await simulateNetwork(LATENCY_MS.signIn);
-  void credentials;
+  // rememberMe is kept for the form, but Supabase can't honour it per session.
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: credentials.email,
+    password: credentials.password,
+  });
+  if (error) return { ok: false, error: signInMessage(error.code, error.status) };
   return { ok: true };
 }
 
 export async function requestPasswordReset(email: string): Promise<AuthResult> {
-  await simulateNetwork(LATENCY_MS.resetRequest);
+  const supabase = createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+  });
   // Always succeed so the UI never reveals whether an account exists.
-  void email;
   return { ok: true };
 }
 
 export async function updatePassword(newPassword: string): Promise<AuthResult> {
-  await simulateNetwork(LATENCY_MS.updatePassword);
-  void newPassword;
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    if (error.code === 'same_password') {
+      return { ok: false, error: 'Choose a password you have not used before.' };
+    }
+    if (error.code === 'weak_password') {
+      return { ok: false, error: 'That password is too weak. Try a longer one.' };
+    }
+    return { ok: false, error: GENERIC_ERROR };
+  }
   return { ok: true };
 }
 
-/** Loads the signed-in user's company and profile before entering the app. */
+/** Confirms the signed-in user has an active company membership before entering the app. */
 export async function loadWorkspace(): Promise<AuthResult> {
-  await simulateNetwork(LATENCY_MS.loadWorkspace);
-  return { ok: true };
+  const supabase = createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+
+  if (userId) {
+    const { data } = await supabase
+      .from('company_memberships')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .limit(1);
+    if (data && data.length > 0) return { ok: true };
+  }
+
+  await supabase.auth.signOut();
+  return { ok: false, error: 'Your account is not active in any company.' };
 }
 
 export async function signOut(): Promise<AuthResult> {
-  await simulateNetwork(300);
+  const supabase = createClient();
+  const { error } = await supabase.auth.signOut();
+  if (error) return { ok: false, error: GENERIC_ERROR };
   return { ok: true };
 }
-

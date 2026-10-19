@@ -42,7 +42,12 @@ export function LoginForm() {
     }
     setIsRedirecting(true);
     router.prefetch('/schedule');
-    await loadWorkspace();
+    const workspace = await loadWorkspace();
+    if (!workspace.ok) {
+      setIsRedirecting(false);
+      setFormError(workspace.error);
+      return;
+    }
     router.push('/schedule');
   };
 
