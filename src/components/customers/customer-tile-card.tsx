@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { CustomerItem } from '@/app/(app)/customers/page';
+import type { CustomerItem } from '@/features/crm/types';
 
 interface CustomerTileCardProps {
   customer: CustomerItem;
@@ -68,9 +68,11 @@ export function CustomerTileCard({
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10.5px] font-bold text-slate-400 bg-slate-100/90 px-1.5 py-0.5 rounded">
-                  #{customer.id}
-                </span>
+                {customer.number && (
+                  <span className="font-mono text-[10.5px] font-bold text-slate-400 bg-slate-100/90 px-1.5 py-0.5 rounded">
+                    #{customer.number}
+                  </span>
+                )}
                 {customer.tier && (
                   <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full truncate max-w-[120px]">
                     {customer.tier}

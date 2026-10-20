@@ -15,6 +15,9 @@ export type ActionError = { code: ActionErrorCode; message: string };
 /** Thrown by an action when an optimistic version check updates 0 rows. */
 export class StaleVersionError extends Error {}
 
+/** Thrown by an action when an update matched no row (missing, or hidden by RLS). */
+export class NotFoundError extends Error {}
+
 const MESSAGES: Record<ActionErrorCode, string> = {
   VALIDATION: 'Please check the highlighted fields.',
   UNAUTHENTICATED: 'Please sign in again.',
@@ -33,6 +36,7 @@ export function actionError(code: ActionErrorCode): ActionError {
 /** Maps a Postgres / PostgREST error to a typed result. Raw error text never leaves the server. */
 export function mapError(error: unknown): ActionError {
   if (error instanceof StaleVersionError) return actionError('STALE');
+  if (error instanceof NotFoundError) return actionError('INVALID');
 
   const code =
     typeof error === 'object' && error !== null && 'code' in error

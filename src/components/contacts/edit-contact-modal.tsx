@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -12,46 +13,32 @@ import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
-import { updateContact, ContactItem } from '@/lib/contacts-store';
+import { updateContact, updateContactLink } from '@/features/crm/server/actions';
+import { updateContactSchema } from '@/features/crm/schemas';
+import { reportAction } from '@/features/crm/action-feedback';
+import { CONTACT_ROLE_OPTIONS, type ContactItem } from '@/features/crm/types';
 
 interface EditContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contact: ContactItem;
-  onContactUpdated?: (contact: ContactItem) => void;
 }
-
-const CUSTOMER_OPTIONS = [
-  { value: 'CUST-101', label: 'Accurate Concrete' },
-  { value: 'CUST-104', label: 'Coastal Foundations' },
-  { value: 'CUST-105', label: 'Granite State Builders' },
-  { value: 'CUST-106', label: 'Harbor Builders' },
-  { value: 'CUST-107', label: 'Pine Tree Concrete' },
-  { value: 'CUST-108', label: 'Turner Construction' },
-];
-
-const ROLE_OPTIONS = [
-  'Primary contact',
-  'Site contact',
-  'Invoicing',
-  'Additional contact',
-];
 
 export function EditContactModal({
   open,
   onOpenChange,
   contact,
-  onContactUpdated,
 }: EditContactModalProps) {
+  const router = useRouter();
+  const [isSaving, startSaving] = useTransition();
   const [firstName, setFirstName] = useState(contact.firstName || '');
   const [lastName, setLastName] = useState(contact.lastName || '');
   const [title, setTitle] = useState(contact.title || '');
-  const [selectedCustomerId, setSelectedCustomerId] = useState(contact.customerId || 'CUST-101');
+  const [selectedCustomerId, setSelectedCustomerId] = useState(contact.customerId);
   const [selectedRoles, setSelectedRoles] = useState<string[]>(contact.roles || ['Primary contact']);
   const [phone, setPhone] = useState(contact.phone || '');
   const [phoneType, setPhoneType] = useState<'Mobile' | 'Office'>(contact.phoneType || 'Mobile');
   const [email, setEmail] = useState(contact.email || '');
-  const [tag, setTag] = useState(contact.tags?.[0] || '');
   const [status, setStatus] = useState<'Active' | 'Inactive'>(contact.status || 'Active');
 
   const [firstNameError, setFirstNameError] = useState(false);
@@ -99,44 +86,42 @@ export function EditContactModal({
 
     if (hasError) return;
 
-    const customerObj = CUSTOMER_OPTIONS.find((c) => c.value === selectedCustomerId);
-    const customerName = customerObj ? customerObj.label : contact.company;
-
-    let roleDisplay = 'Contact';
-    if (selectedRoles.includes('Primary contact') && selectedRoles.includes('Site contact')) {
-      roleDisplay = 'Primary + Site';
-    } else if (selectedRoles.includes('Primary contact')) {
-      roleDisplay = 'Primary';
-    } else if (selectedRoles.includes('Invoicing')) {
-      roleDisplay = 'Invoicing';
-    } else if (selectedRoles.includes('Site contact')) {
-      roleDisplay = 'Site';
-    } else if (selectedRoles.length > 0) {
-      roleDisplay = selectedRoles[0];
-    }
-
-    const updated = updateContact(contact.id, {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      name: `${firstName.trim()} ${lastName.trim()}`,
-      title: title.trim(),
-      company: customerName,
-      customerId: selectedCustomerId,
-      roles: selectedRoles,
-      roleDisplay,
-      phone: phone.trim(),
+    const payload = {
+      id: contact.id,
+      firstName,
+      lastName,
+      jobTitle: title,
+      phone,
       phoneType,
-      email: email.trim().toLowerCase(),
-      status,
-      tags: tag.trim() ? [tag.trim()] : contact.tags,
-    });
-
-    if (updated) {
-      toast.success(`Updated contact: ${updated.name}`);
-      if (onContactUpdated) onContactUpdated(updated);
+      email,
+      isActive: status === 'Active',
+    };
+    const check = updateContactSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
+      return;
     }
 
-    onOpenChange(false);
+    const refresh = () => router.refresh();
+    startSaving(async () => {
+      const result = await updateContact(payload);
+      if (!reportAction(result, { entity: 'contact', refresh })) return;
+
+      // Roles belong to the contact's link with this customer.
+      const link = contact.linkedAccounts.find((a) => a.customerId === selectedCustomerId);
+      if (link) {
+        const roleResult = await updateContactLink({
+          linkId: link.linkId,
+          roles: selectedRoles,
+          isPrimary: selectedRoles.includes('Primary contact'),
+        });
+        if (!reportAction(roleResult, { entity: 'contact', refresh })) return;
+      }
+
+      toast.success(`Updated contact: ${firstName.trim()} ${lastName.trim()}`);
+      onOpenChange(false);
+    });
   };
 
   return (
@@ -239,8 +224,12 @@ export function EditContactModal({
             </label>
             <AppSelect
               value={selectedCustomerId}
-              onChange={setSelectedCustomerId}
-              options={CUSTOMER_OPTIONS}
+              onChange={(customerId) => {
+                setSelectedCustomerId(customerId);
+                const link = contact.linkedAccounts.find((a) => a.customerId === customerId);
+                if (link) setSelectedRoles(link.roles);
+              }}
+              options={contact.linkedAccounts.map((a) => ({ value: a.customerId, label: a.customerName }))}
               className="h-9 text-xs rounded-lg border-slate-200 bg-white"
             />
           </div>
@@ -251,7 +240,7 @@ export function EditContactModal({
               Contact roles
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {ROLE_OPTIONS.map((r) => {
+              {CONTACT_ROLE_OPTIONS.map((r) => {
                 const isSelected = selectedRoles.includes(r);
                 return (
                   <button
@@ -341,18 +330,6 @@ export function EditContactModal({
             )}
           </div>
 
-          {/* Tag */}
-          <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Tag / Specialization
-            </label>
-            <Input
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-              className="h-9 text-xs rounded-lg border-slate-200 focus-visible:border-brand"
-            />
-          </div>
-
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <Button
@@ -368,9 +345,10 @@ export function EditContactModal({
               type="submit"
               variant="brand"
               size="sm"
+              disabled={isSaving}
               className="h-9 px-4 text-xs font-semibold cursor-pointer shadow-xs"
             >
-              Save changes
+              {isSaving ? 'Saving...' : 'Save changes'}
             </Button>
           </div>
         </form>

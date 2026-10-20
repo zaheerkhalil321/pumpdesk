@@ -1,3 +1,6 @@
+import { notFound } from 'next/navigation';
+
+import { getContact, listCustomerOptions } from '@/features/crm/server/queries';
 import { ContactDetailView } from './contact-detail-view';
 
 interface PageProps {
@@ -6,5 +9,7 @@ interface PageProps {
 
 export default async function ContactDetailPage({ params }: PageProps) {
   const { id } = await params;
-  return <ContactDetailView contactId={id} />;
+  const [contact, customerOptions] = await Promise.all([getContact(id), listCustomerOptions()]);
+  if (!contact) notFound();
+  return <ContactDetailView contact={contact} customerOptions={customerOptions} />;
 }

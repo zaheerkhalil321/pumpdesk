@@ -8,26 +8,25 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { updateContact, ContactItem, NotificationPreference } from '@/lib/contacts-store';
+import type { NotificationPreference } from '@/features/crm/types';
 
 interface EditNotificationPreferencesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contact: ContactItem;
-  onUpdated?: (contact: ContactItem) => void;
+  contactName: string;
+  preferences: NotificationPreference[];
+  onSave: (preferences: NotificationPreference[]) => void;
 }
 
 export function EditNotificationPreferencesModal({
   open,
   onOpenChange,
-  contact,
-  onUpdated,
+  contactName,
+  preferences: initialPreferences,
+  onSave,
 }: EditNotificationPreferencesModalProps) {
-  const [preferences, setPreferences] = useState<NotificationPreference[]>(
-    contact.notificationPreferences || []
-  );
+  const [preferences, setPreferences] = useState<NotificationPreference[]>(initialPreferences);
 
   const handleChannelChange = (id: string, channel: 'Email' | 'Text' | 'Off') => {
     setPreferences((prev) =>
@@ -36,15 +35,7 @@ export function EditNotificationPreferencesModal({
   };
 
   const handleSave = () => {
-    const updated = updateContact(contact.id, {
-      notificationPreferences: preferences,
-    });
-    if (updated) {
-      toast.success('Notification preferences updated', {
-        description: `Preferences saved for ${contact.name}`,
-      });
-      if (onUpdated) onUpdated(updated);
-    }
+    onSave(preferences);
     onOpenChange(false);
   };
 
@@ -56,7 +47,7 @@ export function EditNotificationPreferencesModal({
             Notification Preferences
           </DialogTitle>
           <p className="text-xs text-slate-500 mt-1">
-            Choose how dispatch updates and pour notifications are delivered to {contact.name}.
+            Choose how dispatch updates and pour notifications are delivered to {contactName}.
           </p>
         </DialogHeader>
 

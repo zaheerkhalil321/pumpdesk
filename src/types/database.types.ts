@@ -366,6 +366,227 @@ export type Database = {
           },
         ]
       }
+      contacts: {
+        Row: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          job_title: string | null
+          last_name: string | null
+          notes: string | null
+          phone: string | null
+          phone_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          job_title?: string | null
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+          phone_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          job_title?: string | null
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+          phone_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_contact_links: {
+        Row: {
+          company_id: string
+          contact_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          is_primary: boolean
+          receives_invoices: boolean
+          receives_job_confirmations: boolean
+          roles: string[]
+        }
+        Insert: {
+          company_id?: string
+          contact_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_primary?: boolean
+          receives_invoices?: boolean
+          receives_job_confirmations?: boolean
+          roles?: string[]
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_primary?: boolean
+          receives_invoices?: boolean
+          receives_job_confirmations?: boolean
+          roles?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_contact_links_company_id_contact_id_fkey"
+            columns: ["company_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_contact_links_company_id_customer_id_fkey"
+            columns: ["company_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_contact_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          archived_at: string | null
+          billing_address_line_1: string | null
+          billing_address_line_2: string | null
+          billing_city: string | null
+          billing_country_code: string
+          billing_postal_code: string | null
+          billing_state: string | null
+          business_name: string
+          company_id: string
+          created_at: string
+          credit_hold: boolean
+          credit_limit: number | null
+          customer_number: string | null
+          customer_type: string | null
+          dispatch_note: string | null
+          email: string | null
+          id: string
+          internal_notes: string | null
+          is_active: boolean
+          legal_name: string | null
+          payment_terms_days: number | null
+          phone: string | null
+          requires_po: boolean
+          status: Database["public"]["Enums"]["customer_status"]
+          tax_exempt: boolean
+          tax_exempt_number: string | null
+          tier: string | null
+          updated_at: string
+          version: number
+          website: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          billing_address_line_1?: string | null
+          billing_address_line_2?: string | null
+          billing_city?: string | null
+          billing_country_code?: string
+          billing_postal_code?: string | null
+          billing_state?: string | null
+          business_name: string
+          company_id?: string
+          created_at?: string
+          credit_hold?: boolean
+          credit_limit?: number | null
+          customer_number?: string | null
+          customer_type?: string | null
+          dispatch_note?: string | null
+          email?: string | null
+          id?: string
+          internal_notes?: string | null
+          is_active?: boolean
+          legal_name?: string | null
+          payment_terms_days?: number | null
+          phone?: string | null
+          requires_po?: boolean
+          status?: Database["public"]["Enums"]["customer_status"]
+          tax_exempt?: boolean
+          tax_exempt_number?: string | null
+          tier?: string | null
+          updated_at?: string
+          version?: number
+          website?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          billing_address_line_1?: string | null
+          billing_address_line_2?: string | null
+          billing_city?: string | null
+          billing_country_code?: string
+          billing_postal_code?: string | null
+          billing_state?: string | null
+          business_name?: string
+          company_id?: string
+          created_at?: string
+          credit_hold?: boolean
+          credit_limit?: number | null
+          customer_number?: string | null
+          customer_type?: string | null
+          dispatch_note?: string | null
+          email?: string | null
+          id?: string
+          internal_notes?: string | null
+          is_active?: boolean
+          legal_name?: string | null
+          payment_terms_days?: number | null
+          phone?: string | null
+          requires_po?: boolean
+          status?: Database["public"]["Enums"]["customer_status"]
+          tax_exempt?: boolean
+          tax_exempt_number?: string | null
+          tier?: string | null
+          updated_at?: string
+          version?: number
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_sequences: {
         Row: {
           company_id: string
@@ -388,6 +609,93 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "document_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_sites: {
+        Row: {
+          access_notes: string | null
+          address_line_1: string
+          address_line_2: string | null
+          city: string
+          company_id: string
+          country_code: string
+          created_at: string
+          customer_id: string | null
+          gate_code: string | null
+          hazard_notes: string | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          postal_code: string | null
+          setup_notes: string | null
+          state: string
+          timezone: string | null
+          updated_at: string
+          washout_notes: string | null
+        }
+        Insert: {
+          access_notes?: string | null
+          address_line_1: string
+          address_line_2?: string | null
+          city: string
+          company_id?: string
+          country_code?: string
+          created_at?: string
+          customer_id?: string | null
+          gate_code?: string | null
+          hazard_notes?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          postal_code?: string | null
+          setup_notes?: string | null
+          state: string
+          timezone?: string | null
+          updated_at?: string
+          washout_notes?: string | null
+        }
+        Update: {
+          access_notes?: string | null
+          address_line_1?: string
+          address_line_2?: string | null
+          city?: string
+          company_id?: string
+          country_code?: string
+          created_at?: string
+          customer_id?: string | null
+          gate_code?: string | null
+          hazard_notes?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          postal_code?: string | null
+          setup_notes?: string | null
+          state?: string
+          timezone?: string | null
+          updated_at?: string
+          washout_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_sites_company_id_customer_id_fkey"
+            columns: ["company_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "job_sites_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

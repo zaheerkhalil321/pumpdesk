@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,9 +19,7 @@ import {
   LayoutGrid,
   Table as TableIcon,
   FileText,
-  Pin,
-  MoreHorizontal,
-  Trash2,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,203 +29,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 import { AppSelect } from '@/components/ui/app-select';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import {
+  archiveJobSite,
+  createContact,
+  createJobSite,
+  updateCustomer,
+  updateJobSite,
+} from '@/features/crm/server/actions';
+import {
+  createContactSchema,
+  createJobSiteSchema,
+  updateCustomerSchema,
+  updateJobSiteSchema,
+} from '@/features/crm/schemas';
+import { reportAction } from '@/features/crm/action-feedback';
+import type { CustomerDetail, JobSiteItem } from '@/features/crm/types';
 
 interface CustomerDetailViewProps {
-  customerId: string;
+  customer: CustomerDetail;
 }
-
-interface ContactPerson {
-  id: string;
-  name: string;
-  title: string;
-  roles: string[];
-  phone: string;
-  email: string;
-}
-
-interface JobSite {
-  id: string;
-  name: string;
-  address: string;
-}
-
-interface RecentOrder {
-  id: string;
-  date: string;
-  status: 'Confirmed' | 'Completed' | 'Pending';
-}
-
-interface CustomerNote {
-  id: string;
-  content: string;
-  author: string;
-  date: string;
-  isPinned?: boolean;
-}
-
-interface CustomerFullData {
-  id: string;
-  name: string;
-  nickname: string;
-  phone: string;
-  email: string;
-  address: string;
-  customerSince: string;
-  location: string;
-  status: 'Active' | 'Inactive';
-  contacts: ContactPerson[];
-  jobSites: JobSite[];
-  recentOrders: RecentOrder[];
-  defaultInvoiceRecipient: string;
-  notes?: CustomerNote[];
-}
-
-const CUSTOMERS_DB: Record<string, CustomerFullData> = {
-  'CUST-101': {
-    id: 'CUST-101',
-    name: 'Accurate Concrete',
-    nickname: 'Not set',
-    phone: '(207) 555-0101',
-    email: 'office@accurate.example',
-    address: '318 Main Street, Winthrop, ME 04364',
-    customerSince: 'December 10, 2025',
-    location: 'Winthrop, Maine',
-    status: 'Active',
-    contacts: [
-      {
-        id: 'c1',
-        name: 'Alex Morgan',
-        title: 'Project manager',
-        roles: ['Primary contact', 'Site contact'],
-        phone: '(207) 555-0110',
-        email: 'alex@accurate.example',
-      },
-      {
-        id: 'c2',
-        name: 'Jamie Lee',
-        title: 'Accounts payable',
-        roles: ['Invoicing'],
-        phone: '(207) 555-0111',
-        email: 'billing@accurate.example',
-      },
-      {
-        id: 'c3',
-        name: 'Sam Taylor',
-        title: 'Site superintendent',
-        roles: ['Site contact'],
-        phone: '(207) 555-0112',
-        email: 'sam@accurate.example',
-      },
-    ],
-    jobSites: [
-      {
-        id: 's1',
-        name: 'Appleton',
-        address: 'Appleton, ME · Street address not provided',
-      },
-    ],
-    recentOrders: [
-      { id: 'ORD-1522', date: 'Sep 15, 2026', status: 'Confirmed' },
-      { id: 'ORD-1482', date: 'Aug 28, 2026', status: 'Completed' },
-    ],
-    defaultInvoiceRecipient: 'Jamie Lee · billing@accurate.example',
-    notes: [
-      {
-        id: 'n1',
-        content: 'Call the primary contact to confirm site access before dispatch.',
-        author: 'Jessie Black',
-        date: 'Sep 10, 2026',
-        isPinned: true,
-      },
-    ],
-  },
-  'CUST-104': {
-    id: 'CUST-104',
-    name: 'Coastal Foundations',
-    nickname: 'Coastal',
-    phone: '(207) 555-0104',
-    email: 'office@coastal.example',
-    address: '18 Main Street, Rockland, ME 04841',
-    customerSince: 'January 15, 2026',
-    location: 'Rockland, Maine',
-    status: 'Active',
-    contacts: [
-      {
-        id: 'c1',
-        name: 'Dave Miller',
-        title: 'Lead Superintendent',
-        roles: ['Primary contact', 'Site contact'],
-        phone: '(207) 555-0199',
-        email: 'dave@coastal.example',
-      },
-    ],
-    jobSites: [
-      {
-        id: 's1',
-        name: 'Rockland Pier',
-        address: '18 Main Street, Rockland, ME',
-      },
-    ],
-    recentOrders: [
-      { id: 'ORD-1525', date: 'Sep 18, 2026', status: 'Confirmed' },
-    ],
-    defaultInvoiceRecipient: 'Dave Miller · dave@coastal.example',
-  },
-  'CUST-108': {
-    id: 'CUST-108',
-    name: 'Turner Construction',
-    nickname: 'Turner',
-    phone: '(207) 555-0108',
-    email: 'billing@turner.example',
-    address: '24 Bay View Street, Camden, ME 04843',
-    customerSince: 'September 1, 2025',
-    location: 'Camden, Maine',
-    status: 'Active',
-    contacts: [
-      {
-        id: 'c1',
-        name: 'Mike Vance',
-        title: 'Lead Superintendent',
-        roles: ['Primary contact', 'Site contact'],
-        phone: '(207) 555-0142',
-        email: 'mvance@turner.example',
-      },
-    ],
-    jobSites: [
-      {
-        id: 's1',
-        name: 'Bay View Tower',
-        address: '24 Bay View Street, Camden, ME 04843',
-      },
-    ],
-    recentOrders: [
-      { id: 'ORD-1518', date: 'Sep 12, 2026', status: 'Completed' },
-    ],
-    defaultInvoiceRecipient: 'Accounting · billing@turner.example',
-  },
-};
 
 type ActiveTab = 'overview' | 'contacts_sites';
+type NewContactRole = 'Site contact' | 'Primary contact' | 'Invoicing';
 
-export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
+export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
   const router = useRouter();
-  const initial = CUSTOMERS_DB[customerId] || {
-    ...CUSTOMERS_DB['CUST-101'],
-    id: customerId,
-    name: customerId.startsWith('CUST-') ? `Customer ${customerId}` : customerId,
-  };
-
-  const [customer, setCustomer] = useState<CustomerFullData>(initial);
+  const [isSaving, startSaving] = useTransition();
+  const refresh = () => router.refresh();
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
 
   // Responsive layout switcher for Contacts in Contacts & Sites tab
@@ -247,72 +80,32 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
   // Contact list search in Contacts & Sites tab
   const [contactSearchQuery, setContactSearchQuery] = useState('');
 
-  // Selected site contact in Job contacts card
-  const [selectedSiteContact, setSelectedSiteContact] = useState<string>(
-    customer.contacts[2]?.name || customer.contacts[0]?.name || ''
-  );
-
   // Modals state
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [isAddSiteModalOpen, setIsAddSiteModalOpen] = useState(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
+  const [siteBeingEdited, setSiteBeingEdited] = useState<JobSiteItem | null>(null);
 
   // Add Contact Form State
   const [newContactName, setNewContactName] = useState('');
   const [newContactTitle, setNewContactTitle] = useState('');
   const [newContactPhone, setNewContactPhone] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
-  const [newContactRole, setNewContactRole] = useState<'Site contact' | 'Primary contact' | 'Invoicing'>('Site contact');
+  const [newContactRole, setNewContactRole] = useState<NewContactRole>('Site contact');
 
-  // Add Site Form State
-  const [newSiteName, setNewSiteName] = useState('');
-  const [newSiteAddress, setNewSiteAddress] = useState('');
+  // Add / Edit Site Form State
+  const [siteName, setSiteName] = useState('');
+  const [siteStreet, setSiteStreet] = useState('');
+  const [siteCity, setSiteCity] = useState('');
+  const [siteState, setSiteState] = useState('ME');
+  const [sitePostal, setSitePostal] = useState('');
 
   // Edit Customer Form State
   const [editCustName, setEditCustName] = useState(customer.name);
   const [editCustPhone, setEditCustPhone] = useState(customer.phone);
   const [editCustEmail, setEditCustEmail] = useState(customer.email);
-  const [editCustAddress, setEditCustAddress] = useState(customer.address);
-
-  // Customer Notes State
-  const [notes, setNotes] = useState<CustomerNote[]>(
-    customer.notes || [
-      {
-        id: 'n1',
-        content: 'Call the primary contact to confirm site access before dispatch.',
-        author: 'Jessie Black',
-        date: 'Sep 10, 2026',
-        isPinned: true,
-      },
-    ]
-  );
-  const [newNoteText, setNewNoteText] = useState('');
-
-  const handleAddNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNoteText.trim()) return;
-    const newNote: CustomerNote = {
-      id: `note-${Date.now()}`,
-      content: newNoteText.trim(),
-      author: 'Jessie Black',
-      date: 'Oct 9, 2026',
-      isPinned: false,
-    };
-    setNotes((prev) => [newNote, ...prev]);
-    setNewNoteText('');
-    toast.success('Customer note added');
-  };
-
-  const handleTogglePin = (noteId: string) => {
-    setNotes((prev) =>
-      prev.map((n) => (n.id === noteId ? { ...n, isPinned: !n.isPinned } : n))
-    );
-  };
-
-  const handleDeleteNote = (noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== noteId));
-    toast.success('Customer note deleted');
-  };
+  const [editCustAddress, setEditCustAddress] = useState(customer.addressLine1);
+  const [editCustStatus, setEditCustStatus] = useState<'Active' | 'Inactive'>(customer.status);
 
   // Actions
   const handleCall = (phone: string, targetName: string) => {
@@ -332,78 +125,160 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
     window.open(url, '_blank');
   };
 
+  const openEditCustomer = () => {
+    setEditCustName(customer.name);
+    setEditCustPhone(customer.phone);
+    setEditCustEmail(customer.email);
+    setEditCustAddress(customer.addressLine1);
+    setEditCustStatus(customer.status);
+    setIsEditCustomerModalOpen(true);
+  };
+
+  const openAddSite = () => {
+    setSiteName('');
+    setSiteStreet('');
+    setSiteCity('');
+    setSiteState('ME');
+    setSitePostal('');
+    setIsAddSiteModalOpen(true);
+  };
+
+  const openEditSite = (site: JobSiteItem) => {
+    setSiteName(site.name === site.addressLine1 ? '' : site.name);
+    setSiteStreet(site.addressLine1);
+    setSiteCity(site.city);
+    setSiteState(site.state);
+    setSitePostal(site.postalCode);
+    setSiteBeingEdited(site);
+  };
+
   // Add Contact Submit
   const handleCreateContact = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newContactName.trim() || !newContactPhone.trim()) {
-      toast.error('Name and phone are required');
+    const parts = newContactName.trim().split(/\s+/);
+    const payload = {
+      firstName: parts[0] ?? '',
+      lastName: parts.slice(1).join(' '),
+      jobTitle: newContactTitle,
+      phone: newContactPhone,
+      email: newContactEmail,
+      phoneType: 'Mobile' as const,
+      customerId: customer.id,
+      roles: [newContactRole],
+    };
+    const check = createContactSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
       return;
     }
 
-    const formatted = formatUSPhone(newContactPhone) || newContactPhone.trim();
-    const newContact: ContactPerson = {
-      id: `c-${Date.now()}`,
-      name: newContactName.trim(),
-      title: newContactTitle.trim() || 'Site Representative',
-      roles: [newContactRole],
-      phone: formatted,
-      email: newContactEmail.trim() || `contact@${customer.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.example`,
-    };
-
-    setCustomer((prev) => ({
-      ...prev,
-      contacts: [...prev.contacts, newContact],
-    }));
-
-    setIsAddContactModalOpen(false);
-    setNewContactName('');
-    setNewContactTitle('');
-    setNewContactPhone('');
-    setNewContactEmail('');
-    toast.success('Contact added', {
-      description: `${newContact.name} linked to ${customer.name}.`,
+    startSaving(async () => {
+      const result = await createContact(payload);
+      if (!reportAction(result, { entity: 'contact', refresh })) return;
+      setIsAddContactModalOpen(false);
+      setNewContactName('');
+      setNewContactTitle('');
+      setNewContactPhone('');
+      setNewContactEmail('');
+      toast.success('Contact added', {
+        description: `${newContactName.trim()} linked to ${customer.name}.`,
+      });
     });
   };
 
   // Add Site Submit
   const handleCreateSite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSiteName.trim()) {
-      toast.error('Site name is required');
+    const payload = {
+      customerId: customer.id,
+      name: siteName,
+      addressLine1: siteStreet,
+      city: siteCity,
+      state: siteState,
+      postalCode: sitePostal,
+      timezone: '',
+    };
+    const check = createJobSiteSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
       return;
     }
 
-    const newSite: JobSite = {
-      id: `s-${Date.now()}`,
-      name: newSiteName.trim(),
-      address: newSiteAddress.trim() || `${newSiteName.trim()}, ME · Street address not provided`,
+    startSaving(async () => {
+      const result = await createJobSite(payload);
+      if (!reportAction(result, { entity: 'job site', refresh })) return;
+      setIsAddSiteModalOpen(false);
+      toast.success('Job site added', {
+        description: `${siteName.trim() || siteStreet.trim()} added to authorized sites.`,
+      });
+    });
+  };
+
+  // Edit Site Submit
+  const handleSaveSite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!siteBeingEdited) return;
+    const payload = {
+      id: siteBeingEdited.id,
+      name: siteName,
+      addressLine1: siteStreet,
+      city: siteCity,
+      state: siteState,
+      postalCode: sitePostal,
+      timezone: '',
     };
+    const check = updateJobSiteSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
+      return;
+    }
 
-    setCustomer((prev) => ({
-      ...prev,
-      jobSites: [...prev.jobSites, newSite],
-    }));
+    startSaving(async () => {
+      const result = await updateJobSite(payload);
+      if (!reportAction(result, { entity: 'job site', refresh })) return;
+      setSiteBeingEdited(null);
+      toast.success('Job site updated');
+    });
+  };
 
-    setIsAddSiteModalOpen(false);
-    setNewSiteName('');
-    setNewSiteAddress('');
-    toast.success('Job site added', {
-      description: `${newSite.name} added to authorized sites.`,
+  const handleArchiveSite = () => {
+    if (!siteBeingEdited) return;
+    startSaving(async () => {
+      const result = await archiveJobSite({ id: siteBeingEdited.id });
+      if (!reportAction(result, { entity: 'job site', refresh })) return;
+      setSiteBeingEdited(null);
+      toast.success('Job site archived');
     });
   };
 
   // Edit Customer Submit
   const handleSaveCustomer = (e: React.FormEvent) => {
     e.preventDefault();
-    setCustomer((prev) => ({
-      ...prev,
-      name: editCustName.trim() || prev.name,
-      phone: formatUSPhone(editCustPhone) || prev.phone,
-      email: editCustEmail.trim() || prev.email,
-      address: editCustAddress.trim() || prev.address,
-    }));
-    setIsEditCustomerModalOpen(false);
-    toast.success('Customer details updated');
+    const payload = {
+      id: customer.id,
+      version: customer.version,
+      businessName: editCustName,
+      phone: editCustPhone,
+      email: editCustEmail,
+      addressLine1: editCustAddress,
+      status: editCustStatus === 'Active' ? ('active' as const) : ('inactive' as const),
+    };
+    const check = updateCustomerSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
+      return;
+    }
+
+    startSaving(async () => {
+      const result = await updateCustomer(payload);
+      if (!reportAction(result, { entity: 'customer', refresh })) return;
+      setIsEditCustomerModalOpen(false);
+      toast.success('Customer details updated');
+    });
   };
 
   // Filter contacts by search
@@ -451,7 +326,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsEditCustomerModalOpen(true)}
+              onClick={openEditCustomer}
               className="h-9 px-2.5 sm:px-3.5 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs gap-1.5"
             >
               <Pencil className="h-3.5 w-3.5 text-slate-500" />
@@ -468,6 +343,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                 <span>New order</span>
               </Button>
             </Link>
+
           </div>
         </div>
       </div>
@@ -529,8 +405,8 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                 </div>
 
                 <div className="flex items-start justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500 font-medium w-32">Nickname</span>
-                  <span className="text-slate-600 font-medium flex-1">{customer.nickname}</span>
+                  <span className="text-slate-500 font-medium w-32">Account tier</span>
+                  <span className="text-slate-600 font-medium flex-1">{customer.tier || 'Not set'}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
@@ -657,7 +533,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                   <span className="font-semibold text-slate-700">Job sites</span>
                   <button
                     type="button"
-                    onClick={() => setIsAddSiteModalOpen(true)}
+                    onClick={openAddSite}
                     className="text-brand hover:underline font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
@@ -666,13 +542,18 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                 </div>
 
                 {customer.jobSites.map((site) => (
-                  <div key={site.id} className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    key={site.id}
+                    onClick={() => openEditSite(site)}
+                    className="w-full text-left p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between text-xs cursor-pointer hover:border-brand/40 transition-colors"
+                  >
                     <div>
                       <div className="font-semibold text-slate-900">{site.name}</div>
                       <div className="text-slate-500 text-[11px] mt-0.5">{site.address}</div>
                     </div>
                     <ChevronRight className="h-4 w-4 text-slate-400" />
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -688,95 +569,15 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
               </div>
             </div>
 
-            {/* Card 3: Customer notes */}
+            {/* Card 3: Customer notes (not saved in V1) */}
             <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-[#0D5294]" />
                 <h3 className="font-bold text-base text-[#0D5294]">Customer notes</h3>
               </div>
-
-              {/* Add Note Form */}
-              <form onSubmit={handleAddNote} className="flex items-center gap-2">
-                <Input
-                  value={newNoteText}
-                  onChange={(e) => setNewNoteText(e.target.value)}
-                  placeholder="Add a note..."
-                  className="h-9 rounded-xl border-slate-200/90 text-xs sm:text-sm bg-white focus-visible:border-brand"
-                />
-                <Button
-                  type="submit"
-                  disabled={!newNoteText.trim()}
-                  className="h-9 px-4 rounded-xl bg-[#0D5294] hover:bg-[#0a4277] text-white text-xs sm:text-sm font-semibold shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
-                >
-                  Add note
-                </Button>
-              </form>
-
-              {/* Notes List */}
-              <div className="space-y-2.5 pt-1">
-                {notes.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic py-1">
-                    No notes recorded for this customer yet.
-                  </p>
-                ) : (
-                  [...notes]
-                    .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
-                    .map((note) => (
-                      <div
-                        key={note.id}
-                        className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 flex items-start justify-between gap-3 text-xs"
-                      >
-                        <div className="flex items-start gap-2.5 min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => handleTogglePin(note.id)}
-                            className="mt-0.5 text-[#0D5294] hover:text-slate-700 cursor-pointer transition-colors"
-                            title={note.isPinned ? 'Unpin note' : 'Pin note'}
-                          >
-                            <Pin
-                              className={cn(
-                                'h-4 w-4',
-                                note.isPinned
-                                  ? 'text-[#0D5294] fill-[#0D5294]/20 rotate-45'
-                                  : 'text-slate-300'
-                              )}
-                            />
-                          </button>
-                          <div className="space-y-1 min-w-0">
-                            <p className="text-slate-900 font-medium text-xs sm:text-sm leading-snug">
-                              {note.content}
-                            </p>
-                            <div className="text-[11px] text-slate-400">
-                              {note.author} &bull; {note.date}
-                            </div>
-                          </div>
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="h-6 w-6 rounded-md hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 flex items-center justify-center shrink-0 cursor-pointer transition-colors">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36 rounded-xl p-1 shadow-lg border-slate-200">
-                            <DropdownMenuItem
-                              onClick={() => handleTogglePin(note.id)}
-                              className="text-xs cursor-pointer flex items-center gap-2 p-2 rounded-lg"
-                            >
-                              <Pin className="h-3.5 w-3.5 text-slate-500" />
-                              <span>{note.isPinned ? 'Unpin note' : 'Pin note'}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteNote(note.id)}
-                              className="text-xs cursor-pointer flex items-center gap-2 p-2 rounded-lg text-rose-600 focus:text-rose-600"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-                              <span>Delete note</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    ))
-                )}
-              </div>
+              <p className="text-xs text-slate-400 italic py-1">
+                Customer notes are coming in a later release.
+              </p>
             </div>
           </div>
 
@@ -819,36 +620,9 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                 </Link>
               </div>
 
-              <div className="divide-y divide-slate-100 text-xs">
-                {customer.recentOrders.map((ord) => (
-                  <Link
-                    key={ord.id}
-                    href={`/orders/${ord.id}`}
-                    className="py-3 flex items-center justify-between hover:bg-slate-50/80 -mx-2 px-2 rounded-lg transition-colors group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-bold text-slate-900 group-hover:text-brand transition-colors">
-                        {ord.id}
-                      </span>
-                      <span className="text-slate-500 font-medium">{ord.date}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'px-2 py-0.5 rounded-full text-[11px] font-semibold border',
-                          ord.status === 'Confirmed'
-                            ? 'bg-brand-light text-brand border-brand/20'
-                            : 'bg-brand-light text-brand border-brand/20'
-                        )}
-                      >
-                        {ord.status}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <p className="text-xs text-slate-400 italic py-1">
+                No orders yet. Orders for this customer appear here once booking is live.
+              </p>
             </div>
           </div>
         </div>
@@ -958,7 +732,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
 
                           <button
                             type="button"
-                            onClick={() => toast.info(`Editing ${contact.name}`)}
+                            onClick={() => router.push(`/contacts/${contact.id}`)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
                             title="Edit contact"
                           >
@@ -1153,7 +927,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => toast.info(`Editing ${contact.name}`)}
+                              onClick={() => router.push(`/contacts/${contact.id}`)}
                               className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-slate-50 shadow-2xs gap-1"
                             >
                               <Pencil className="h-3 w-3 text-slate-500" />
@@ -1173,7 +947,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Left Column: Job Contacts & Job Sites */}
             <div className="space-y-5">
-              {/* Card 1: Job contacts */}
+              {/* Card 1: Job contacts (chosen per order, available once booking is live) */}
               <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-3.5">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Job contacts</h3>
@@ -1181,47 +955,9 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                     Choose the site contact on each order.
                   </p>
                 </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-900">ORD-1522 &bull; Appleton</span>
-                    <Link
-                      href="/orders/ORD-1522"
-                      className="text-xs font-semibold text-[#0D5294] hover:underline inline-flex items-center gap-0.5"
-                    >
-                      <span>Open order</span>
-                      <ChevronRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 block">Site contact</label>
-                    <AppSelect
-                      size="sm"
-                      value={selectedSiteContact}
-                      onChange={setSelectedSiteContact}
-                      options={customer.contacts.map((c) => ({
-                        value: c.name,
-                        label: c.name,
-                        description: c.title,
-                      }))}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddContactModalOpen(true)}
-                    className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Additional contact</span>
-                  </button>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    For this order only; account contacts stay unchanged.
-                  </p>
-                </div>
+                <p className="text-xs text-slate-400 italic">
+                  No orders yet. Site contacts for each order show here once booking is live.
+                </p>
               </div>
 
               {/* Card 2: Job sites */}
@@ -1230,7 +966,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                   <h3 className="text-sm font-bold text-slate-900">Job sites</h3>
                   <button
                     type="button"
-                    onClick={() => setIsAddSiteModalOpen(true)}
+                    onClick={openAddSite}
                     className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
@@ -1250,10 +986,10 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => toast.info(`Viewing job site: ${site.name}`)}
+                        onClick={() => openEditSite(site)}
                         className="text-xs font-semibold text-[#0D5294] hover:underline inline-flex items-center gap-0.5 cursor-pointer"
                       >
-                        <span>View site</span>
+                        <span>Edit site</span>
                         <ChevronRight className="h-3 w-3" />
                       </button>
                     </div>
@@ -1284,18 +1020,9 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                   <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 </div>
 
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => toast.info('Edit invoice recipient contacts')}
-                    className="text-xs font-semibold text-[#0D5294] hover:underline cursor-pointer"
-                  >
-                    Edit recipients
-                  </button>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Used for new invoices; recipients can be changed before sending.
-                  </p>
-                </div>
+                <p className="text-[11px] text-slate-400">
+                  Used for new invoices; recipients can be changed before sending.
+                </p>
               </div>
 
               {/* Notification Preferences Banner */}
@@ -1308,13 +1035,12 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                     Manage confirmations, operator details, en-route updates, authorization requests, work-ticket review, and missing-detail reminders from each contact&apos;s profile.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => toast.info('Manage notification routing')}
+                <Link
+                  href="/contacts"
                   className="text-xs font-semibold text-[#0D5294] hover:underline whitespace-nowrap cursor-pointer shrink-0 mt-0.5"
                 >
                   Manage contacts &rarr;
-                </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -1383,7 +1109,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
               <AppSelect
                 size="lg"
                 value={newContactRole}
-                onChange={(val) => setNewContactRole(val as 'Site contact' | 'Primary contact' | 'Invoicing')}
+                onChange={(val) => setNewContactRole(val as NewContactRole)}
                 options={[
                   "Primary contact",
                   "Site contact",
@@ -1403,9 +1129,10 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
               </Button>
               <Button
                 type="submit"
+                disabled={isSaving}
                 className="h-9 px-4.5 text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs transition-colors focus-visible:outline-none"
               >
-                Add contact
+                {isSaving ? 'Saving...' : 'Add contact'}
               </Button>
             </div>
           </form>
@@ -1423,22 +1150,53 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
 
           <form onSubmit={handleCreateSite} className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Site name *</label>
+              <label className="text-xs font-semibold text-slate-700 block">Site name</label>
               <Input
-                value={newSiteName}
-                onChange={(e) => setNewSiteName(e.target.value)}
+                value={siteName}
+                onChange={(e) => setSiteName(e.target.value)}
                 placeholder="e.g. Rockland Medical Plaza"
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
-                required
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Street address</label>
+              <label className="text-xs font-semibold text-slate-700 block">Street address *</label>
               <Input
-                value={newSiteAddress}
-                onChange={(e) => setNewSiteAddress(e.target.value)}
-                placeholder="e.g. 1400 Stemmons Fwy, Rockland, ME"
+                value={siteStreet}
+                onChange={(e) => setSiteStreet(e.target.value)}
+                placeholder="e.g. 18 Main Street"
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">City *</label>
+                <Input
+                  value={siteCity}
+                  onChange={(e) => setSiteCity(e.target.value)}
+                  placeholder="e.g. Rockland"
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">State *</label>
+                <Input
+                  value={siteState}
+                  onChange={(e) => setSiteState(e.target.value.toUpperCase())}
+                  maxLength={2}
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">ZIP code</label>
+              <Input
+                value={sitePostal}
+                onChange={(e) => setSitePostal(e.target.value)}
+                maxLength={10}
+                placeholder="e.g. 04841"
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
               />
             </div>
@@ -1454,9 +1212,10 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
               </Button>
               <Button
                 type="submit"
+                disabled={isSaving}
                 className="h-9 px-4.5 text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs transition-colors focus-visible:outline-none"
               >
-                Add job site
+                {isSaving ? 'Saving...' : 'Add job site'}
               </Button>
             </div>
           </form>
@@ -1505,11 +1264,28 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Physical address</label>
+              <label className="text-xs font-semibold text-slate-700 block">Street address</label>
               <Input
                 value={editCustAddress}
                 onChange={(e) => setEditCustAddress(e.target.value)}
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2.5">
+              <div>
+                <span className="text-xs font-semibold text-slate-700 block">Account status</span>
+                <span className="text-[11px] text-slate-500">
+                  {editCustStatus === 'Active'
+                    ? 'Active: shows first in the customer list.'
+                    : 'Inactive: kept on file, listed after active customers.'}
+                </span>
+              </div>
+              <Switch
+                checked={editCustStatus === 'Active'}
+                onCheckedChange={(on) => setEditCustStatus(on ? 'Active' : 'Inactive')}
+                aria-label="Customer is active"
+                label={editCustStatus}
               />
             </div>
 
@@ -1524,10 +1300,102 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
               </Button>
               <Button
                 type="submit"
+                disabled={isSaving}
                 className="h-9 px-4.5 text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs transition-colors focus-visible:outline-none"
               >
-                Save changes
+                {isSaving ? 'Saving...' : 'Save changes'}
               </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── 10. Dialog: Edit / Archive Job Site ── */}
+      <Dialog open={siteBeingEdited !== null} onOpenChange={(open) => !open && setSiteBeingEdited(null)}>
+        <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
+              Edit job site
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveSite} className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">Site name</label>
+              <Input
+                value={siteName}
+                onChange={(e) => setSiteName(e.target.value)}
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">Street address *</label>
+              <Input
+                value={siteStreet}
+                onChange={(e) => setSiteStreet(e.target.value)}
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">City *</label>
+                <Input
+                  value={siteCity}
+                  onChange={(e) => setSiteCity(e.target.value)}
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">State *</label>
+                <Input
+                  value={siteState}
+                  onChange={(e) => setSiteState(e.target.value.toUpperCase())}
+                  maxLength={2}
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">ZIP code</label>
+              <Input
+                value={sitePostal}
+                onChange={(e) => setSitePostal(e.target.value)}
+                maxLength={10}
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+              />
+            </div>
+
+            <div className="pt-3 flex items-center justify-between gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleArchiveSite}
+                disabled={isSaving}
+                className="h-9 px-3 text-xs font-semibold border-slate-200 bg-white hover:bg-red-50 text-red-600 rounded-lg cursor-pointer shadow-2xs gap-1.5"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                <span>Archive site</span>
+              </Button>
+              <div className="flex items-center gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSiteBeingEdited(null)}
+                  className="h-9 px-4 text-xs font-semibold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg cursor-pointer shadow-2xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="h-9 px-4.5 text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs"
+                >
+                  {isSaving ? 'Saving...' : 'Save site'}
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>

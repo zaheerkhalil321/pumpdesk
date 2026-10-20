@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -12,44 +13,32 @@ import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
-import { addContact, ContactItem } from '@/lib/contacts-store';
+import { createContact } from '@/features/crm/server/actions';
+import { createContactSchema } from '@/features/crm/schemas';
+import { reportAction } from '@/features/crm/action-feedback';
+import { CONTACT_ROLE_OPTIONS, type CustomerOption } from '@/features/crm/types';
 
 interface NewContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onContactCreated?: (contact: ContactItem) => void;
+  customerOptions: CustomerOption[];
 }
-
-const CUSTOMER_OPTIONS = [
-  { value: 'CUST-101', label: 'Accurate Concrete' },
-  { value: 'CUST-104', label: 'Coastal Foundations' },
-  { value: 'CUST-105', label: 'Granite State Builders' },
-  { value: 'CUST-106', label: 'Harbor Builders' },
-  { value: 'CUST-107', label: 'Pine Tree Concrete' },
-  { value: 'CUST-108', label: 'Turner Construction' },
-];
-
-const ROLE_OPTIONS = [
-  'Primary contact',
-  'Site contact',
-  'Invoicing',
-  'Additional contact',
-];
 
 export function NewContactModal({
   open,
   onOpenChange,
-  onContactCreated,
+  customerOptions,
 }: NewContactModalProps) {
+  const router = useRouter();
+  const [isSaving, startSaving] = useTransition();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [title, setTitle] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState('CUST-101');
+  const [selectedCustomerId, setSelectedCustomerId] = useState(customerOptions[0]?.value ?? '');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['Primary contact']);
   const [phone, setPhone] = useState('');
   const [phoneType, setPhoneType] = useState<'Mobile' | 'Office'>('Mobile');
   const [email, setEmail] = useState('');
-  const [tag, setTag] = useState('');
 
   // Validation error states
   const [firstNameError, setFirstNameError] = useState(false);
@@ -69,12 +58,11 @@ export function NewContactModal({
     setFirstName('');
     setLastName('');
     setTitle('');
-    setSelectedCustomerId('CUST-101');
+    setSelectedCustomerId(customerOptions[0]?.value ?? '');
     setSelectedRoles(['Primary contact']);
     setPhone('');
     setPhoneType('Mobile');
     setEmail('');
-    setTag('');
     setFirstNameError(false);
     setLastNameError(false);
     setPhoneError(false);
@@ -116,66 +104,34 @@ export function NewContactModal({
 
     if (hasError) return;
 
-    const customerObj = CUSTOMER_OPTIONS.find((c) => c.value === selectedCustomerId);
-    const customerName = customerObj ? customerObj.label : 'Accurate Concrete';
-
-    // Compute role display string
-    let roleDisplay = 'Contact';
-    if (selectedRoles.includes('Primary contact') && selectedRoles.includes('Site contact')) {
-      roleDisplay = 'Primary + Site';
-    } else if (selectedRoles.includes('Primary contact')) {
-      roleDisplay = 'Primary';
-    } else if (selectedRoles.includes('Invoicing')) {
-      roleDisplay = 'Invoicing';
-    } else if (selectedRoles.includes('Site contact')) {
-      roleDisplay = 'Site';
-    } else if (selectedRoles.length > 0) {
-      roleDisplay = selectedRoles[0];
-    }
-
-    const created = addContact({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      name: `${firstName.trim()} ${lastName.trim()}`,
-      title: title.trim() || 'Project manager',
-      company: customerName,
-      customerId: selectedCustomerId,
-      roles: selectedRoles.length > 0 ? selectedRoles : ['Site contact'],
-      roleDisplay,
-      phone: phone.trim(),
+    const payload = {
+      firstName,
+      lastName,
+      jobTitle: title,
+      phone,
       phoneType,
-      email: email.trim().toLowerCase(),
-      status: 'Active',
-      tags: tag.trim() ? [tag.trim()] : ['Site coordination'],
-      createdAt: 'Today',
-      linkedAccounts: [
-        {
-          customerId: selectedCustomerId,
-          customerName,
-          roles: selectedRoles.length > 0 ? selectedRoles : ['Site contact'],
-        },
-      ],
-      notificationPreferences: [
-        { id: 'pref-1', title: 'Order confirmation', description: 'Request confirmation or updated details', channel: 'Email' },
-        { id: 'pref-2', title: 'Operator details', description: 'Share assigned operator information', channel: 'Text' },
-        { id: 'pref-3', title: 'Pump en route', description: 'Notify when the pump is on its way', channel: 'Text' },
-        { id: 'pref-4', title: 'Pre-work authorization', description: 'Request approval to begin setup', channel: 'Off' },
-        { id: 'pref-5', title: 'Work ticket review', description: 'Request review after the pour', channel: 'Email' },
-        { id: 'pref-6', title: 'Missing order details', description: 'Request outstanding job information', channel: 'Email' },
-      ],
-      assignedOrders: [],
-    });
-
-    toast.success(`Contact created: ${created.name}`, {
-      description: `${created.title} · ${created.company}`,
-    });
-
-    if (onContactCreated) {
-      onContactCreated(created);
+      email,
+      customerId: selectedCustomerId || undefined,
+      roles: selectedRoles,
+    };
+    const check = createContactSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
+      return;
     }
 
-    resetForm();
-    onOpenChange(false);
+    startSaving(async () => {
+      const result = await createContact(payload);
+      if (!reportAction(result, { entity: 'contact', refresh: () => router.refresh() })) return;
+
+      const customerName = customerOptions.find((c) => c.value === selectedCustomerId)?.label;
+      toast.success(`Contact created: ${firstName.trim()} ${lastName.trim()}`, {
+        description: [title.trim(), customerName].filter(Boolean).join(' · '),
+      });
+      resetForm();
+      onOpenChange(false);
+    });
   };
 
   return (
@@ -265,7 +221,7 @@ export function NewContactModal({
             <AppSelect
               value={selectedCustomerId}
               onChange={setSelectedCustomerId}
-              options={CUSTOMER_OPTIONS}
+              options={customerOptions}
               className="h-9 text-xs rounded-lg border-slate-200 bg-white"
             />
           </div>
@@ -276,7 +232,7 @@ export function NewContactModal({
               Contact roles
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {ROLE_OPTIONS.map((r) => {
+              {CONTACT_ROLE_OPTIONS.map((r) => {
                 const isSelected = selectedRoles.includes(r);
                 return (
                   <button
@@ -368,19 +324,6 @@ export function NewContactModal({
             )}
           </div>
 
-          {/* Tag */}
-          <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Tag / Specialization
-            </label>
-            <Input
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-              placeholder="e.g. Site coordination, High-rise, VIP"
-              className="h-9 text-xs rounded-lg border-slate-200 focus-visible:border-brand"
-            />
-          </div>
-
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <Button
@@ -396,9 +339,10 @@ export function NewContactModal({
               type="submit"
               variant="brand"
               size="sm"
+              disabled={isSaving}
               className="h-9 px-4 text-xs font-semibold cursor-pointer shadow-xs"
             >
-              Save contact
+              {isSaving ? 'Saving...' : 'Save contact'}
             </Button>
           </div>
         </form>

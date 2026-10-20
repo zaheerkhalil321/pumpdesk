@@ -1,3 +1,6 @@
+import { notFound } from 'next/navigation';
+
+import { getCustomer } from '@/features/crm/server/queries';
 import { CustomerDetailView } from './customer-detail-view';
 
 interface PageProps {
@@ -6,5 +9,7 @@ interface PageProps {
 
 export default async function CustomerDetailPage({ params }: PageProps) {
   const { id } = await params;
-  return <CustomerDetailView customerId={id} />;
+  const customer = await getCustomer(id);
+  if (!customer) notFound();
+  return <CustomerDetailView customer={customer} />;
 }

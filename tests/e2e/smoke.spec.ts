@@ -17,13 +17,13 @@ test.describe("Dispatch Control Tower Smoke Tests", () => {
     await page.goto("/schedule");
     await expect(page).toHaveTitle(/PumpDesk/i);
     await expect(page.getByText("Midcoast Pumping")).toBeVisible();
-    await expect(page.getByText("01 - 34M Putzmeister Boom")).toBeVisible();
-    await expect(page.getByText("Pour Orders")).toBeVisible();
+    await expect(page.getByText("34M Putzmeister Boom").first()).toBeVisible();
+    await expect(page.getByText("Orders", { exact: true }).first()).toBeVisible();
   });
 
   test("Customers directory navigation works", async ({ page }) => {
     await page.goto("/customers");
-    await expect(page.getByText("Customers & Accounts")).toBeVisible();
-    await expect(page.getByText("Turner Construction")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
+    await expect(page.getByText("Turner Construction").first()).toBeVisible();
   });
 });

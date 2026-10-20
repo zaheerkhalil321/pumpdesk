@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
+import { Toaster } from "@/components/ui/sonner";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <ThemeProvider>
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

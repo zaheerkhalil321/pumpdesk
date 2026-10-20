@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -11,38 +12,27 @@ import { Button } from '@/components/ui/button';
 import { AppSelect } from '@/components/ui/app-select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { updateContact, ContactItem, LinkedCustomerAccount } from '@/lib/contacts-store';
+import { linkContactToCustomer } from '@/features/crm/server/actions';
+import { linkContactSchema } from '@/features/crm/schemas';
+import { reportAction } from '@/features/crm/action-feedback';
+import { CONTACT_ROLE_OPTIONS, type ContactItem, type CustomerOption } from '@/features/crm/types';
 
 interface LinkAccountModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contact: ContactItem;
-  onAccountLinked?: (contact: ContactItem) => void;
+  customerOptions: CustomerOption[];
 }
-
-const CUSTOMER_OPTIONS = [
-  { value: 'CUST-101', label: 'Accurate Concrete' },
-  { value: 'CUST-104', label: 'Coastal Foundations' },
-  { value: 'CUST-105', label: 'Granite State Builders' },
-  { value: 'CUST-106', label: 'Harbor Builders' },
-  { value: 'CUST-107', label: 'Pine Tree Concrete' },
-  { value: 'CUST-108', label: 'Turner Construction' },
-];
-
-const ROLE_OPTIONS = [
-  'Primary contact',
-  'Site contact',
-  'Invoicing',
-  'Additional contact',
-];
 
 export function LinkAccountModal({
   open,
   onOpenChange,
   contact,
-  onAccountLinked,
+  customerOptions,
 }: LinkAccountModalProps) {
-  const [selectedCustomerId, setSelectedCustomerId] = useState('CUST-104');
+  const router = useRouter();
+  const [isSaving, startSaving] = useTransition();
+  const [selectedCustomerId, setSelectedCustomerId] = useState(customerOptions[0]?.value ?? '');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['Site contact']);
 
   const toggleRole = (role: string) => {
@@ -54,37 +44,24 @@ export function LinkAccountModal({
   const handleLink = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const customerObj = CUSTOMER_OPTIONS.find((c) => c.value === selectedCustomerId);
-    const customerName = customerObj ? customerObj.label : 'Accurate Concrete';
-
-    const newLink: LinkedCustomerAccount = {
+    const payload = {
+      contactId: contact.id,
       customerId: selectedCustomerId,
-      customerName,
-      roles: selectedRoles.length > 0 ? selectedRoles : ['Site contact'],
+      roles: selectedRoles,
     };
-
-    // Check if already linked
-    const existingIndex = contact.linkedAccounts.findIndex(
-      (a) => a.customerId === selectedCustomerId
-    );
-
-    const updatedAccounts = [...contact.linkedAccounts];
-    if (existingIndex >= 0) {
-      updatedAccounts[existingIndex] = newLink;
-    } else {
-      updatedAccounts.push(newLink);
+    const check = linkContactSchema.safeParse(payload);
+    if (!check.success) {
+      toast.error('Pick a customer account to link.');
+      return;
     }
 
-    const updated = updateContact(contact.id, {
-      linkedAccounts: updatedAccounts,
+    startSaving(async () => {
+      const result = await linkContactToCustomer(payload);
+      if (!reportAction(result, { entity: 'contact', refresh: () => router.refresh() })) return;
+      const customerName = customerOptions.find((c) => c.value === selectedCustomerId)?.label;
+      toast.success(`Linked ${customerName ?? 'customer'} to ${contact.name}`);
+      onOpenChange(false);
     });
-
-    if (updated) {
-      toast.success(`Linked ${customerName} to ${contact.name}`);
-      if (onAccountLinked) onAccountLinked(updated);
-    }
-
-    onOpenChange(false);
   };
 
   return (
@@ -107,7 +84,7 @@ export function LinkAccountModal({
             <AppSelect
               value={selectedCustomerId}
               onChange={setSelectedCustomerId}
-              options={CUSTOMER_OPTIONS}
+              options={customerOptions}
               className="h-9 text-xs rounded-lg border-slate-200 bg-white"
             />
           </div>
@@ -117,7 +94,7 @@ export function LinkAccountModal({
               Assigned roles for this account
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {ROLE_OPTIONS.map((r) => {
+              {CONTACT_ROLE_OPTIONS.map((r) => {
                 const isSelected = selectedRoles.includes(r);
                 return (
                   <button
@@ -152,9 +129,10 @@ export function LinkAccountModal({
               type="submit"
               variant="brand"
               size="sm"
+              disabled={isSaving}
               className="h-9 px-4 text-xs font-semibold cursor-pointer shadow-xs"
             >
-              Link account
+              {isSaving ? 'Saving...' : 'Link account'}
             </Button>
           </div>
         </form>
