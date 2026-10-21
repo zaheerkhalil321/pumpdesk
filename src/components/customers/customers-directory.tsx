@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AppSelect } from '@/components/ui/app-select';
+import { StatusSwitch } from '@/components/ui/status-switch';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
@@ -622,11 +623,12 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 block">Status</label>
-                <AppSelect
-                  size="lg"
-                  value={newCustomerStatus}
-                  onChange={(val) => setNewCustomerStatus(val as 'Active' | 'Inactive')}
-                  options={["Active", "Inactive"]}
+                <StatusSwitch
+                  compact
+                  ariaLabel="Customer is active"
+                  checked={newCustomerStatus === 'Active'}
+                  onCheckedChange={(on) => setNewCustomerStatus(on ? 'Active' : 'Inactive')}
+                  className="h-10"
                 />
               </div>
             </div>

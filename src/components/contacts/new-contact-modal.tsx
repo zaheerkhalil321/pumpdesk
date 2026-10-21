@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { createContact } from '@/features/crm/server/actions';
@@ -23,6 +24,11 @@ interface NewContactModalProps {
   onOpenChange: (open: boolean) => void;
   customerOptions: CustomerOption[];
 }
+
+const PHONE_TYPE_OPTIONS = [
+  { value: 'Mobile', label: 'Mobile' },
+  { value: 'Office', label: 'Office' },
+] as const;
 
 export function NewContactModal({
   open,
@@ -285,14 +291,11 @@ export function NewContactModal({
               <label className="text-xs font-semibold text-slate-700 block mb-1">
                 Type
               </label>
-              <AppSelect
+              <SegmentedControl
+                ariaLabel="Phone type"
                 value={phoneType}
-                onChange={(v) => setPhoneType(v as 'Mobile' | 'Office')}
-                options={[
-                  { value: 'Mobile', label: 'Mobile' },
-                  { value: 'Office', label: 'Office' },
-                ]}
-                className="h-9 text-xs rounded-lg border-slate-200 bg-white"
+                onChange={setPhoneType}
+                options={PHONE_TYPE_OPTIONS}
               />
             </div>
           </div>

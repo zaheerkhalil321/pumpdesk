@@ -11,6 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
+import { StatusSwitch } from '@/components/ui/status-switch';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { updateContact, updateContactLink } from '@/features/crm/server/actions';
@@ -23,6 +25,11 @@ interface EditContactModalProps {
   onOpenChange: (open: boolean) => void;
   contact: ContactItem;
 }
+
+const PHONE_TYPE_OPTIONS = [
+  { value: 'Mobile', label: 'Mobile' },
+  { value: 'Office', label: 'Office' },
+] as const;
 
 export function EditContactModal({
   open,
@@ -205,14 +212,11 @@ export function EditContactModal({
               <label className="text-xs font-semibold text-slate-700 block mb-1">
                 Status
               </label>
-              <AppSelect
-                value={status}
-                onChange={(v) => setStatus(v as 'Active' | 'Inactive')}
-                options={[
-                  { value: 'Active', label: 'Active' },
-                  { value: 'Inactive', label: 'Inactive' },
-                ]}
-                className="h-9 text-xs rounded-lg border-slate-200 bg-white"
+              <StatusSwitch
+                compact
+                ariaLabel="Contact is active"
+                checked={status === 'Active'}
+                onCheckedChange={(on) => setStatus(on ? 'Active' : 'Inactive')}
               />
             </div>
           </div>
@@ -292,14 +296,11 @@ export function EditContactModal({
               <label className="text-xs font-semibold text-slate-700 block mb-1">
                 Type
               </label>
-              <AppSelect
+              <SegmentedControl
+                ariaLabel="Phone type"
                 value={phoneType}
-                onChange={(v) => setPhoneType(v as 'Mobile' | 'Office')}
-                options={[
-                  { value: 'Mobile', label: 'Mobile' },
-                  { value: 'Office', label: 'Office' },
-                ]}
-                className="h-9 text-xs rounded-lg border-slate-200 bg-white"
+                onChange={setPhoneType}
+                options={PHONE_TYPE_OPTIONS}
               />
             </div>
           </div>

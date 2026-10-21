@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AppSelect } from '@/components/ui/app-select';
-import { Switch } from '@/components/ui/switch';
+import { StatusSwitch } from '@/components/ui/status-switch';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
@@ -1282,22 +1282,17 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2.5">
-              <div>
-                <span className="text-xs font-semibold text-slate-700 block">Account status</span>
-                <span className="text-[11px] text-slate-500">
-                  {editCustStatus === 'Active'
-                    ? 'Active: shows first in the customer list.'
-                    : 'Inactive: kept on file, listed after active customers.'}
-                </span>
-              </div>
-              <Switch
-                checked={editCustStatus === 'Active'}
-                onCheckedChange={(on) => setEditCustStatus(on ? 'Active' : 'Inactive')}
-                aria-label="Customer is active"
-                label={editCustStatus}
-              />
-            </div>
+            <StatusSwitch
+              title="Account status"
+              ariaLabel="Customer is active"
+              checked={editCustStatus === 'Active'}
+              onCheckedChange={(on) => setEditCustStatus(on ? 'Active' : 'Inactive')}
+              description={(on) =>
+                on
+                  ? 'Active: shows first in the customer list.'
+                  : 'Inactive: kept on file, listed after active customers.'
+              }
+            />
 
             <div className="pt-3 flex items-center justify-end gap-2.5">
               <Button
