@@ -19,7 +19,7 @@ import {
   LayoutGrid,
   Table as TableIcon,
   FileText,
-  Archive,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import {
-  archiveJobSite,
+  deleteJobSite,
   createContact,
   createJobSite,
   updateCustomer,
@@ -47,7 +47,7 @@ import {
   updateCustomerSchema,
   updateJobSiteSchema,
 } from '@/features/crm/schemas';
-import { reportAction } from '@/features/crm/action-feedback';
+import { reportAction } from '@/lib/action-feedback';
 import type { CustomerDetail, JobSiteItem } from '@/features/crm/types';
 
 interface CustomerDetailViewProps {
@@ -244,13 +244,13 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
     });
   };
 
-  const handleArchiveSite = () => {
+  const handleDeleteSite = () => {
     if (!siteBeingEdited) return;
     startSaving(async () => {
-      const result = await archiveJobSite({ id: siteBeingEdited.id });
+      const result = await deleteJobSite({ id: siteBeingEdited.id });
       if (!reportAction(result, { entity: 'job site', refresh })) return;
       setSiteBeingEdited(null);
-      toast.success('Job site archived');
+      toast.success('Job site deleted');
     });
   };
 
@@ -1315,7 +1315,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
         </DialogContent>
       </Dialog>
 
-      {/* ── 10. Dialog: Edit / Archive Job Site ── */}
+      {/* ── 10. Dialog: Edit / Delete Job Site ── */}
       <Dialog open={siteBeingEdited !== null} onOpenChange={(open) => !open && setSiteBeingEdited(null)}>
         <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
@@ -1377,12 +1377,12 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleArchiveSite}
+                onClick={handleDeleteSite}
                 disabled={isSaving}
                 className="h-9 px-3 text-xs font-semibold border-slate-200 bg-white hover:bg-red-50 text-red-600 rounded-lg cursor-pointer shadow-2xs gap-1.5"
               >
-                <Archive className="h-3.5 w-3.5" />
-                <span>Archive site</span>
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete site</span>
               </Button>
               <div className="flex items-center gap-2.5">
                 <Button

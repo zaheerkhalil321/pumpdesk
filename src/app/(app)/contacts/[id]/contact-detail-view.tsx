@@ -33,7 +33,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { unlinkContactFromCustomer, updateContact } from '@/features/crm/server/actions';
-import { reportAction } from '@/features/crm/action-feedback';
+import { reportAction } from '@/lib/action-feedback';
 import type { ContactItem, CustomerOption } from '@/features/crm/types';
 import { EditContactModal } from '@/components/contacts/edit-contact-modal';
 import { LinkAccountModal } from '@/components/contacts/link-account-modal';

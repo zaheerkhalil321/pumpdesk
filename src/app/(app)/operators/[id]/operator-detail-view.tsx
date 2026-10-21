@@ -2,9 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
-  ChevronLeft,
   ChevronRight,
   Phone,
   MessageSquare,
@@ -15,52 +13,17 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import {
-  useOperators,
-  getOperatorById,
-} from '@/lib/operators-store';
+import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { EditOperatorModal } from '@/components/operators/edit-operator-modal';
 
 interface OperatorDetailViewProps {
-  operatorId: string;
+  operator: OperatorItem;
+  pumps: PumpItem[];
+  branchOptions: BranchOption[];
 }
 
-export function OperatorDetailView({ operatorId }: OperatorDetailViewProps) {
-  const router = useRouter();
-  const operators = useOperators();
-
-  // Find operator in reactive store
-  const operator = operators.find((op) => op.id === operatorId) || getOperatorById(operatorId);
-
+export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorDetailViewProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  if (!operator) {
-    return (
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
-        <Link
-          href="/operators"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>Back to operators</span>
-        </Link>
-        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
-          <p className="text-base font-semibold text-slate-800">Operator not found</p>
-          <p className="text-xs text-slate-400 mt-1">
-            Could not find an operator with ID &quot;{operatorId}&quot;.
-          </p>
-          <Button
-            variant="brand"
-            size="sm"
-            onClick={() => router.push('/operators')}
-            className="mt-4 text-xs font-semibold"
-          >
-            Return to Operators directory
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   const handleCopy = (text: string, label: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -226,7 +189,7 @@ export function OperatorDetailView({ operatorId }: OperatorDetailViewProps) {
             <div className="py-3 flex items-center justify-between gap-4">
               <span className="text-slate-500 font-medium">Branch</span>
               <span className="text-slate-900 font-medium text-right">
-                {operator.branch || 'Warren'}
+                {operator.branch || 'Not set'}
               </span>
             </div>
 
@@ -335,17 +298,9 @@ export function OperatorDetailView({ operatorId }: OperatorDetailViewProps) {
               </div>
             </div>
           ) : (
-            <div className="py-6 text-center text-xs text-slate-500 space-y-2">
+            <div className="py-6 text-center text-xs text-slate-500">
               <p>No emergency contacts on file.</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditModalOpen(true)}
-                className="h-8 text-xs font-semibold cursor-pointer"
-              >
-                Add emergency contact
-              </Button>
+              <p className="text-[11px] text-slate-400 mt-1">Emergency contacts are coming in a later release.</p>
             </div>
           )}
         </div>
@@ -356,6 +311,8 @@ export function OperatorDetailView({ operatorId }: OperatorDetailViewProps) {
         operator={operator}
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
+        pumps={pumps}
+        branchOptions={branchOptions}
       />
     </div>
   );

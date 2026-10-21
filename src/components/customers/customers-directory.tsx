@@ -35,7 +35,7 @@ import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { CustomerTileCard } from '@/components/customers/customer-tile-card';
 import { createCustomer } from '@/features/crm/server/actions';
 import { createCustomerSchema } from '@/features/crm/schemas';
-import { reportAction } from '@/features/crm/action-feedback';
+import { reportAction } from '@/lib/action-feedback';
 import type { CustomerItem } from '@/features/crm/types';
 
 type StatusFilter = 'All' | 'Active' | 'Inactive';

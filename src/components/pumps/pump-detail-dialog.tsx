@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -22,28 +23,20 @@ import {
   ExternalLink,
   Pencil,
   Trash2,
-  Plus,
   FileText,
-  Download,
-  X,
-  FileCheck,
   UserPlus,
-  UploadCloud,
 } from 'lucide-react';
 import {
-  PumpItem,
-  usePumps,
-  updatePump,
-  deletePump,
-  addPumpDocument,
-  deletePumpDocument,
   getPumpDisplayName,
   formatHourlyRate,
   parseHourlyRate,
   formatMinHours,
   parseMinHours,
-} from '@/lib/pumps-store';
-import { useOperators, OperatorItem } from '@/lib/operators-store';
+} from '@/features/fleet/format';
+import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
+import { assignPumpOperator, deletePump, updatePump } from '@/features/fleet/server/actions';
+import { updatePumpSchema } from '@/features/fleet/schemas';
+import { reportAction } from '@/lib/action-feedback';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
 import { EditOperatorModal } from '@/components/operators/edit-operator-modal';
 import { toast } from 'sonner';
@@ -51,37 +44,32 @@ import { cn } from '@/lib/utils';
 
 interface PumpDetailDialogProps {
   pump: PumpItem | null;
+  pumps: PumpItem[];
+  operators: OperatorItem[];
+  branchOptions: BranchOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   inspectionMode?: boolean;
 }
 
-const DOCUMENT_TYPES = [
-  'DOT Inspection',
-  'Boom Certificate',
-  'Insurance Policy',
-  'Vehicle Registration',
-  'Maintenance Log',
-  'Safety Certification',
-  'Other',
-];
-
 export function PumpDetailDialog({
   pump,
+  pumps,
+  operators,
+  branchOptions,
   open,
   onOpenChange,
   inspectionMode = false,
 }: PumpDetailDialogProps) {
-  const allPumps = usePumps();
-  const operators = useOperators();
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+  const refresh = () => router.refresh();
 
-  // Always bind to the active reactive pump instance from store
-  const currentPump = (pump ? allPumps.find((p) => p.id === pump.id) : null) || pump;
+  const currentPump = pump;
 
   const [activeTab, setActiveTab] = useState<'specs' | 'documents'>('specs');
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAddingDoc, setIsAddingDoc] = useState(false);
 
   // Reset edit mode and child dialog states whenever dialog closes or active pump changes
   const [prevPumpId, setPrevPumpId] = useState(pump?.id);
@@ -92,7 +80,6 @@ export function PumpDetailDialog({
     setPrevOpen(open);
     if (!open || pump?.id !== prevPumpId) {
       setIsEditing(false);
-      setIsAddingDoc(false);
       setIsDeleteDialogOpen(false);
       setActiveTab('specs');
     }
@@ -100,7 +87,6 @@ export function PumpDetailDialog({
 
   const handleClose = () => {
     setIsEditing(false);
-    setIsAddingDoc(false);
     setIsDeleteDialogOpen(false);
     onOpenChange(false);
   };
@@ -156,15 +142,6 @@ export function PumpDetailDialog({
       Number(editYear) < 1980 ||
       Number(editYear) > 2030);
 
-  // New Document Form state
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [docName, setDocName] = useState('');
-  const [docType, setDocType] = useState('DOT Inspection');
-  const [docIssueDate, setDocIssueDate] = useState('');
-  const [docExpiryDate, setDocExpiryDate] = useState('');
-  const [selectedFileName, setSelectedFileName] = useState('');
-  const [selectedFileSize, setSelectedFileSize] = useState('1.8 MB');
-
   // Sync edit state whenever entering edit mode or pump changes
   const startEditing = () => {
     if (!currentPump) return;
@@ -186,244 +163,99 @@ export function PumpDetailDialog({
     setEditHourlyRate(String(parseHourlyRate(currentPump.hourlyRate) || 195));
     setEditMinHours(String(parseMinHours(currentPump.minHours)));
     setEditStatus(currentPump.status);
-    setEditOperatorId(currentPump.defaultOperator?.id || 'none');
+    setEditOperatorId(
+      currentPump.defaultOperator && currentPump.defaultOperator.id !== 'unassigned'
+        ? currentPump.defaultOperator.id
+        : 'none'
+    );
     setEditMaintenanceNote(currentPump.maintenanceNote || '');
-    setEditInspectionDate(currentPump.nextInspection?.date || 'Dec 15, 2026');
+    setEditInspectionDate(currentPump.nextInspection?.iso || '');
     setIsEditing(true);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPump) return;
-    const cleanUnit = editUnitNumber.trim();
-    if (!cleanUnit) {
-      toast.error('Unit number is required');
-      return;
-    }
-    if (cleanUnit.length > 15) {
-      toast.error('Unit number must be 15 characters or fewer');
-      return;
-    }
-    if (isEditBoomInvalid) {
-      toast.error('Boom size must be between 1 and 100 meters');
-      return;
-    }
-    if (isEditReachInvalid) {
-      toast.error('Horizontal reach must be between 0 and 500 feet');
-      return;
-    }
-    if (isEditRateInvalid) {
-      toast.error('Hourly rate must be between $0 and $5,000 / hr');
-      return;
-    }
-    if (isEditMinHoursInvalid) {
-      toast.error('Minimum callout must be between 1 and 24 hours');
-      return;
-    }
-    if (isEditYearInvalid) {
-      toast.error('Model year must be between 1980 and 2030');
-      return;
-    }
 
-    const matchedOp = editOperatorId !== 'none'
-      ? operators.find((op) => op.id === editOperatorId)
-      : null;
-
-    const assignedOp = matchedOp
-      ? {
-          id: matchedOp.id,
-          name: matchedOp.name,
-          role: matchedOp.role,
-          badge: null,
-        }
-      : editOperatorId === 'none'
-      ? {
-          id: 'unassigned',
-          name: 'Unassigned',
-          role: 'None',
-          badge: null,
-        }
-      : currentPump.defaultOperator;
-
-    const parsedBoomSize = editBoomSize.trim() ? Number(editBoomSize) : undefined;
-    const parsedReach = editHorizontalReach.trim() ? Number(editHorizontalReach) : undefined;
-    const parsedRate = editHourlyRate.trim() ? Number(editHourlyRate) : 195;
-    const parsedMinHours = editMinHours.trim() ? Number(editMinHours) : 4.0;
-
-    const typeLabel =
-      editType === 'boom_pump'
-        ? (parsedBoomSize ? `Boom pump · ${parsedBoomSize}M` : 'Boom pump')
-        : 'Line pump';
-
-    const boomLength =
-      editType === 'boom_pump'
-        ? (parsedBoomSize
-            ? `${parsedBoomSize}M${parsedReach ? ` (${parsedReach} ft)` : ''}`
-            : '38M (124 ft)')
-        : (parsedReach ? `Ground Line (${parsedReach}ft)` : 'Ground Line (500ft)');
-
-    const inMaintenance = editStatus === 'maintenance';
-    const todayStatus =
-      editStatus === 'booked'
-        ? { type: 'booked' as const, label: 'Booked · On Job' }
-        : editStatus === 'maintenance'
-        ? { type: 'maintenance' as const, label: 'Maintenance · Unavailable' }
-        : { type: 'available' as const, label: 'Available · Yard Ready' };
-
-    updatePump(currentPump.id, {
-      unitNumber: cleanUnit,
-      make: editMake.trim() || currentPump.make,
-      model: editModel.trim() || currentPump.model,
-      year: editYear.trim() || currentPump.year,
+    const parse = (value: string) => (value.trim() === '' ? null : Number(value));
+    const payload = {
+      id: currentPump.id,
+      unitNumber: editUnitNumber,
+      make: editMake,
+      model: editModel,
+      year: parse(editYear),
       type: editType,
-      typeLabel,
-      boomSize: parsedBoomSize,
-      horizontalReach: parsedReach,
-      boomLength,
-      hourlyRate: parsedRate,
-      minHours: `${parsedMinHours.toFixed(1)} hrs`,
+      boomSize: editType === 'boom_pump' ? parse(editBoomSize) : null,
+      horizontalReach: parse(editHorizontalReach),
+      hourlyRate: parse(editHourlyRate),
+      minHours: parse(editMinHours),
+      defaultOperatorId: editOperatorId === 'none' ? null : editOperatorId,
       status: editStatus,
-      inMaintenance,
-      maintenanceNote: inMaintenance ? editMaintenanceNote.trim() : undefined,
-      defaultOperator: assignedOp,
-      todayStatus,
-      nextInspection: {
-        date: editInspectionDate.trim() || currentPump.nextInspection?.date || 'Dec 15, 2026',
-        dueSoon: currentPump.nextInspection?.dueSoon || false,
-      },
-    });
+      maintenanceNote: editMaintenanceNote,
+      inspectionDate: editInspectionDate,
+    };
 
-    const displayCode = parsedBoomSize ? `${cleanUnit} · ${parsedBoomSize}M` : cleanUnit;
+    const check = updatePumpSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      toast.error(first ?? 'Please check the form.');
+      return;
+    }
 
-    toast.success('Equipment details updated', {
-      description: `Unit ${displayCode} specifications have been saved.`,
-    });
-    setIsEditing(false);
+    setIsSaving(true);
+    updatePump(payload)
+      .then((result) => {
+        if (!reportAction(result, { entity: 'pump', refresh })) return;
+        const displayCode =
+          editType === 'boom_pump' && editBoomSize.trim()
+            ? `${editUnitNumber.trim()} · ${editBoomSize.trim()}M`
+            : editUnitNumber.trim();
+        toast.success('Equipment details updated', {
+          description: `Unit ${displayCode} specifications have been saved.`,
+        });
+        setIsEditing(false);
+      })
+      .finally(() => setIsSaving(false));
   };
 
   const handleDeleteEquipment = () => {
     if (!currentPump) return;
     const unit = currentPump.unitNumber;
-    deletePump(currentPump.id);
-    setIsDeleteDialogOpen(false);
-    onOpenChange(false);
-    toast.success('Equipment deleted', {
-      description: `Unit ${unit} has been removed from fleet.`,
-    });
+    setIsSaving(true);
+    deletePump({ id: currentPump.id })
+      .then((result) => {
+        if (!reportAction(result, { entity: 'pump', refresh })) return;
+        setIsDeleteDialogOpen(false);
+        onOpenChange(false);
+        toast.success('Pump deleted', {
+          description: `Unit ${unit} was removed from the active fleet.`,
+        });
+      })
+      .finally(() => setIsSaving(false));
   };
 
-  // Direct Operator assignment in view mode
+  // Direct operator assignment in view mode
   const handleAssignOperator = (operatorIdToAssign: string) => {
     if (!currentPump) return;
-    if (operatorIdToAssign === 'none') {
-      updatePump(currentPump.id, {
-        defaultOperator: {
-          id: 'unassigned',
-          name: 'Unassigned',
-          role: 'None',
-          badge: null,
-        },
-      });
-      toast.info('Operator unassigned from pump');
-      return;
-    }
-
-    const op = operators.find((o) => o.id === operatorIdToAssign);
-    if (op) {
-      updatePump(currentPump.id, {
-        defaultOperator: {
-          id: op.id,
-          name: op.name,
-          role: op.role,
-          badge: null,
-        },
-      });
-      toast.success('Operator assigned', {
-        description: `${op.name} is now the primary operator for unit ${currentPump.unitNumber}.`,
-      });
-    }
+    const operatorId = operatorIdToAssign === 'none' ? null : operatorIdToAssign;
+    assignPumpOperator({ id: currentPump.id, operatorId }).then((result) => {
+      if (!reportAction(result, { entity: 'pump', refresh })) return;
+      const op = operators.find((o) => o.id === operatorId);
+      if (op) {
+        toast.success('Operator assigned', {
+          description: `${op.name} is now the primary operator for unit ${currentPump.unitNumber}.`,
+        });
+      } else {
+        toast.info('Operator unassigned from pump');
+      }
+    });
   };
 
   // Open Edit Operator modal for current operator
   const handleEditCurrentOperator = () => {
     if (!currentPump) return;
     const op = operators.find((o) => o.id === currentPump.defaultOperator?.id);
-    if (op) {
-      setEditingOperator(op);
-    } else {
-      // If operator not found in roster (e.g. legacy name), create mock object
-      setEditingOperator({
-        id: currentPump.defaultOperator?.id || `op-${Date.now()}`,
-        name: currentPump.defaultOperator?.name || 'Operator',
-        role: currentPump.defaultOperator?.role || 'Operator',
-        phone: '(207) 555-0100',
-        email: `${(currentPump.defaultOperator?.name || 'operator').toLowerCase().replace(/\s+/g, '')}@midcoast.example`,
-        branch: 'Warren',
-        defaultPump: currentPump.unitNumber,
-        todayStatus: { type: 'available', label: 'Available' },
-        status: 'Active',
-        emergencyContact: { name: 'Not provided', relationship: 'Not provided', phone: 'Not provided' },
-        emergencyContacts: [],
-      });
-    }
-  };
-
-  // File picker handler
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSelectedFileName(file.name);
-    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-    setSelectedFileSize(Number(sizeMb) > 0 ? `${sizeMb} MB` : `${Math.round(file.size / 1024)} KB`);
-    if (!docName.trim()) {
-      setDocName(file.name.replace(/\.[^/.]+$/, ''));
-    }
-  };
-
-  const handleAddDocument = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentPump) return;
-
-    const finalDocName =
-      docName.trim() ||
-      selectedFileName ||
-      `${docType} - ${currentPump.unitNumber} (${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`;
-
-    addPumpDocument(currentPump.id, {
-      name: finalDocName,
-      type: docType,
-      issueDate:
-        docIssueDate.trim() ||
-        new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      expiryDate: docExpiryDate.trim() || undefined,
-      fileSize: selectedFileSize || '1.8 MB',
-    });
-
-    toast.success('Document uploaded successfully', {
-      description: `${finalDocName} has been attached to unit ${currentPump.unitNumber}.`,
-    });
-
-    setDocName('');
-    setDocType('DOT Inspection');
-    setDocIssueDate('');
-    setDocExpiryDate('');
-    setSelectedFileName('');
-    setIsAddingDoc(false);
-    setActiveTab('documents');
-  };
-
-  const handleDeleteDoc = (docId: string, docTitle: string) => {
-    if (!currentPump) return;
-    deletePumpDocument(currentPump.id, docId);
-    toast.success('Document removed', {
-      description: `${docTitle} has been deleted.`,
-    });
-  };
-
-  const handleDownloadDoc = (docTitle: string) => {
-    toast.info(`Downloading ${docTitle}`, {
-      description: 'Document file package generated from compliance repository.',
-    });
+    if (op) setEditingOperator(op);
   };
 
   if (!currentPump) return null;
@@ -556,9 +388,6 @@ export function PumpDetailDialog({
               >
                 <FileText className="h-3.5 w-3.5" />
                 <span>Documents &amp; Records</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                  {currentPump.documents?.length || 0}
-                </span>
               </button>
             </div>
           )}
@@ -845,7 +674,6 @@ export function PumpDetailDialog({
                     onChange={(val) => setEditStatus(val as PumpItem['status'])}
                     options={[
                       { value: 'available', label: 'Available (Yard Ready)' },
-                      { value: 'booked', label: 'Booked (On Job)' },
                       { value: 'maintenance', label: 'In Maintenance' },
                     ]}
                   />
@@ -866,9 +694,9 @@ export function PumpDetailDialog({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 block">Next DOT Inspection Date</label>
                   <Input
+                    type="date"
                     value={editInspectionDate}
                     onChange={(e) => setEditInspectionDate(e.target.value)}
-                    placeholder="e.g. Dec 8, 2026"
                     className="h-9 text-xs"
                   />
                 </div>
@@ -887,9 +715,10 @@ export function PumpDetailDialog({
                     type="submit"
                     variant="brand"
                     size="sm"
+                    disabled={isSaving}
                     className="h-8 text-xs font-semibold cursor-pointer"
                   >
-                    Save Specifications
+                    {isSaving ? 'Saving...' : 'Save specifications'}
                   </Button>
                 </div>
               </form>
@@ -959,7 +788,7 @@ export function PumpDetailDialog({
                     <div>
                       <span className="text-slate-400 block text-[11px]">Hourly Billing Rate</span>
                       <span className="font-semibold text-slate-800 font-mono">
-                        {formatHourlyRate(currentPump.hourlyRate)}
+                        {currentPump.hourlyRate === '' ? 'Not set' : formatHourlyRate(currentPump.hourlyRate)}
                       </span>
                     </div>
                     <div>
@@ -1094,214 +923,21 @@ export function PumpDetailDialog({
                 </div>
               </div>
             ) : (
-              /* ── DOCUMENTS & RECORDS TAB ── */
+              /* ── DOCUMENTS & RECORDS TAB (not saved in V1) ── */
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Equipment Documents</h4>
-                    <p className="text-[11px] text-slate-500">
-                      DOT inspection certs, boom structural reports, and registration.
-                    </p>
-                  </div>
-
-                  {!isAddingDoc && (
-                    <Button
-                      type="button"
-                      variant="brand"
-                      size="sm"
-                      onClick={() => setIsAddingDoc(true)}
-                      className="h-8 text-xs font-semibold gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add Document</span>
-                    </Button>
-                  )}
+                <div>
+                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Equipment documents</h4>
+                  <p className="text-[11px] text-slate-500">
+                    DOT inspection certs, boom structural reports, and registration.
+                  </p>
                 </div>
-
-                {/* Add Document Expandable Form */}
-                {isAddingDoc && (
-                  <form
-                    onSubmit={handleAddDocument}
-                    className="p-4 rounded-xl bg-slate-50/90 border border-slate-200 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <FileCheck className="h-4 w-4 text-brand" />
-                        <span>Upload New Document</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingDoc(false)}
-                        className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Hidden actual file input */}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-
-                    {/* File Attachment selector */}
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border border-dashed border-slate-300 rounded-lg p-3 bg-white text-center hover:border-brand cursor-pointer transition-colors"
-                    >
-                      <UploadCloud className="h-5 w-5 text-slate-400 mx-auto mb-1" />
-                      {selectedFileName ? (
-                        <p className="text-xs font-semibold text-brand">
-                          Attached: {selectedFileName} ({selectedFileSize})
-                        </p>
-                      ) : (
-                        <p className="text-xs text-slate-600">
-                          Click to choose file or leave to attach simulated certificate
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-700 block">
-                        Document Title (Optional &bull; Defaults to document type)
-                      </label>
-                      <Input
-                        value={docName}
-                        onChange={(e) => setDocName(e.target.value)}
-                        placeholder={`e.g. ${docType} 2026`}
-                        className="h-8 text-xs bg-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-700 block">Type</label>
-                        <AppSelect
-                          size="sm"
-                          value={docType}
-                          onChange={setDocType}
-                          options={DOCUMENT_TYPES.map((t) => ({ value: t, label: t }))}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-700 block">Issue Date</label>
-                        <Input
-                          value={docIssueDate}
-                          onChange={(e) => setDocIssueDate(e.target.value)}
-                          placeholder="e.g. Oct 10, 2026"
-                          className="h-8 text-xs bg-white"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-700 block">Expiration Date</label>
-                        <Input
-                          value={docExpiryDate}
-                          onChange={(e) => setDocExpiryDate(e.target.value)}
-                          placeholder="e.g. Oct 10, 2027"
-                          className="h-8 text-xs bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsAddingDoc(false)}
-                        className="h-7 text-xs font-semibold cursor-pointer"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        variant="brand"
-                        size="sm"
-                        className="h-7 text-xs font-semibold cursor-pointer"
-                      >
-                        Upload Document
-                      </Button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Documents List */}
-                {currentPump.documents && currentPump.documents.length > 0 ? (
-                  <div className="space-y-2">
-                    {currentPump.documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all flex items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="h-9 w-9 rounded-lg bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-700 shrink-0">
-                            <FileText className="h-4.5 w-4.5 text-brand" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h5 className="font-semibold text-xs sm:text-sm text-slate-900 truncate">
-                              {doc.name}
-                            </h5>
-                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 flex-wrap">
-                              <span className="font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
-                                {doc.type}
-                              </span>
-                              <span>&bull;</span>
-                              <span>{doc.fileSize}</span>
-                              {doc.expiryDate && (
-                                <>
-                                  <span>&bull;</span>
-                                  <span className="text-slate-600">Expires: {doc.expiryDate}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadDoc(doc.name)}
-                            className="p-1.5 text-slate-400 hover:text-brand hover:bg-brand-light rounded-md transition-colors cursor-pointer"
-                            title="Download document"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteDoc(doc.id, doc.name)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
-                            title="Delete document"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 space-y-2">
-                    <FileText className="h-8 w-8 text-slate-300 mx-auto" />
-                    <p className="text-xs font-semibold text-slate-700">No documents on file for this rig</p>
-                    <p className="text-[11px] text-slate-500">
-                      Upload DOT inspections, annual boom tests, or registration papers.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsAddingDoc(true)}
-                      className="mt-2 h-7 text-xs font-semibold cursor-pointer"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add first document
-                    </Button>
-                  </div>
-                )}
+                <div className="p-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 space-y-2">
+                  <FileText className="h-8 w-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">No documents on file for this rig</p>
+                  <p className="text-[11px] text-slate-500">
+                    Document uploads are coming in a later release.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1343,7 +979,7 @@ export function PumpDetailDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Equipment Confirmation Dialog */}
+      {/* Delete Equipment Confirmation Dialog (soft delete: the record is kept) */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
           <DialogHeader>
@@ -1351,10 +987,13 @@ export function PumpDetailDialog({
               <Trash2 className="h-5 w-5" />
             </div>
             <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">
-              Delete Unit {currentPump.unitNumber}?
+              Delete unit {currentPump.unitNumber}?
             </DialogTitle>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Are you sure you want to delete <strong>{currentPump.unitNumber} ({currentPump.make} {currentPump.model})</strong>? This will permanently remove this equipment from your active fleet and dispatch scheduling.
+              <strong>
+                {currentPump.unitNumber} ({currentPump.make} {currentPump.model})
+              </strong>{' '}
+              will be removed from the active fleet. Its history is kept.
             </p>
           </DialogHeader>
 
@@ -1372,10 +1011,11 @@ export function PumpDetailDialog({
               type="button"
               variant="destructive"
               size="sm"
+              disabled={isSaving}
               onClick={handleDeleteEquipment}
               className="h-9 px-4 text-xs font-semibold cursor-pointer bg-rose-600 hover:bg-rose-700 text-white"
             >
-              Delete Equipment
+              {isSaving ? 'Deleting...' : 'Delete pump'}
             </Button>
           </div>
         </DialogContent>
@@ -1385,12 +1025,11 @@ export function PumpDetailDialog({
       <AddOperatorModal
         open={isAddOperatorOpen}
         onOpenChange={setIsAddOperatorOpen}
-        defaultAssignedPump={currentPump.unitNumber}
-        onCreated={(newOp) => {
-          handleAssignOperator(newOp.id);
-          if (isEditing) {
-            setEditOperatorId(newOp.id);
-          }
+        pumps={pumps}
+        branchOptions={branchOptions}
+        initialPumpId={currentPump.id}
+        onCreated={(newOpId) => {
+          if (isEditing) setEditOperatorId(newOpId);
         }}
       />
 
@@ -1401,18 +1040,8 @@ export function PumpDetailDialog({
         onOpenChange={(val) => {
           if (!val) setEditingOperator(null);
         }}
-        onSaved={(updatedOp) => {
-          if (currentPump.defaultOperator?.id === updatedOp.id) {
-            updatePump(currentPump.id, {
-              defaultOperator: {
-                id: updatedOp.id,
-                name: updatedOp.name,
-                role: updatedOp.role,
-                badge: null,
-              },
-            });
-          }
-        }}
+        pumps={pumps}
+        branchOptions={branchOptions}
       />
     </>
   );

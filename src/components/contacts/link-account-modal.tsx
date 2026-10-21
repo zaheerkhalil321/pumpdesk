@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { linkContactToCustomer } from '@/features/crm/server/actions';
 import { linkContactSchema } from '@/features/crm/schemas';
-import { reportAction } from '@/features/crm/action-feedback';
+import { reportAction } from '@/lib/action-feedback';
 import { CONTACT_ROLE_OPTIONS, type ContactItem, type CustomerOption } from '@/features/crm/types';
 
 interface LinkAccountModalProps {

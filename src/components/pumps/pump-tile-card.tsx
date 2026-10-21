@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { PumpItem, getPumpDisplayName, formatHourlyRate } from '@/lib/pumps-store';
+import { getPumpDisplayName, formatHourlyRate } from '@/features/fleet/format';
+import type { PumpItem } from '@/features/fleet/types';
 
 interface PumpTileCardProps {
   pump: PumpItem;

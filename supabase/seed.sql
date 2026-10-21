@@ -89,20 +89,20 @@ values
    '+12075550108', 'billing@turner.example', '24 Bay View Street', 'Camden', 'ME', '04843', true,
    'Confirm PO before scheduling.', timestamp '2026-09-12 07:30' at time zone 'America/New_York');
 
-insert into public.contacts (id, company_id, first_name, last_name, job_title, email, phone, phone_type, is_active, archived_at, created_at)
+insert into public.contacts (id, company_id, first_name, last_name, job_title, email, phone, phone_type, is_active, created_at)
 values
-  ('f1000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'Alex', 'Morgan', 'Project manager', 'alex@accurate.example', '+12075550110', 'Mobile', true, null, timestamp '2026-09-10 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'Casey', 'Brooks', 'Owner', 'casey@harbor.example', '+12075550113', 'Mobile', true, null, timestamp '2026-08-14 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'Dana', 'Reed', 'Accounts payable', 'dana@coastal.example', '+12075550114', 'Office', true, null, timestamp '2026-07-19 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000001', 'Jamie', 'Lee', 'Accounts payable', 'billing@accurate.example', '+12075550111', 'Office', true, null, timestamp '2026-01-14 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000001', 'Jordan', 'Ellis', 'Project manager', 'jordan@pinetree.example', '+12075550115', 'Mobile', false, timestamp '2026-08-01 08:00' at time zone 'America/New_York', timestamp '2026-05-22 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000001', 'Mike', 'Vance', 'Superintendent', 'mike@turner.example', '+12075550142', 'Mobile', true, null, timestamp '2026-06-03 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000001', 'Sam', 'Taylor', 'Superintendent', 'sam@accurate.example', '+12075550112', 'Mobile', true, null, timestamp '2026-03-11 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000001', 'Taylor', 'Green', 'Office manager', 'taylor@granite.example', '+12075550116', 'Office', true, null, timestamp '2026-04-09 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-000000000009', 'a0000000-0000-4000-8000-000000000001', 'Jim', 'Harris', 'Project Manager', 'jim@advanced.example', '+12075550120', 'Office', true, null, timestamp '2025-11-03 14:15' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-00000000000a', 'a0000000-0000-4000-8000-000000000001', 'Marc', 'Berube', 'Owner & Operator', 'marc@berube.example', '+12075550121', 'Mobile', true, null, timestamp '2025-08-27 11:10' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-000000000001', 'Dave', 'Miller', 'Lead Superintendent', 'dave@coastal.example', '+12075550199', 'Mobile', true, null, timestamp '2026-09-18 08:00' at time zone 'America/New_York'),
-  ('f1000000-0000-4000-8000-00000000000c', 'a0000000-0000-4000-8000-000000000001', 'Paul', 'White', 'Operations Director', 'paul@pinetree.example', '+12075550122', 'Office', true, null, timestamp '2026-09-17 07:00' at time zone 'America/New_York');
+  ('f1000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'Alex', 'Morgan', 'Project manager', 'alex@accurate.example', '+12075550110', 'Mobile', true, timestamp '2026-09-10 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'Casey', 'Brooks', 'Owner', 'casey@harbor.example', '+12075550113', 'Mobile', true, timestamp '2026-08-14 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'Dana', 'Reed', 'Accounts payable', 'dana@coastal.example', '+12075550114', 'Office', true, timestamp '2026-07-19 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000001', 'Jamie', 'Lee', 'Accounts payable', 'billing@accurate.example', '+12075550111', 'Office', true, timestamp '2026-01-14 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000001', 'Jordan', 'Ellis', 'Project manager', 'jordan@pinetree.example', '+12075550115', 'Mobile', false, timestamp '2026-05-22 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000001', 'Mike', 'Vance', 'Superintendent', 'mike@turner.example', '+12075550142', 'Mobile', true, timestamp '2026-06-03 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000001', 'Sam', 'Taylor', 'Superintendent', 'sam@accurate.example', '+12075550112', 'Mobile', true, timestamp '2026-03-11 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000001', 'Taylor', 'Green', 'Office manager', 'taylor@granite.example', '+12075550116', 'Office', true, timestamp '2026-04-09 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-000000000009', 'a0000000-0000-4000-8000-000000000001', 'Jim', 'Harris', 'Project Manager', 'jim@advanced.example', '+12075550120', 'Office', true, timestamp '2025-11-03 14:15' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-00000000000a', 'a0000000-0000-4000-8000-000000000001', 'Marc', 'Berube', 'Owner & Operator', 'marc@berube.example', '+12075550121', 'Mobile', true, timestamp '2025-08-27 11:10' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-000000000001', 'Dave', 'Miller', 'Lead Superintendent', 'dave@coastal.example', '+12075550199', 'Mobile', true, timestamp '2026-09-18 08:00' at time zone 'America/New_York'),
+  ('f1000000-0000-4000-8000-00000000000c', 'a0000000-0000-4000-8000-000000000001', 'Paul', 'White', 'Operations Director', 'paul@pinetree.example', '+12075550122', 'Office', true, timestamp '2026-09-17 07:00' at time zone 'America/New_York');
 
 insert into public.customer_contact_links (company_id, customer_id, contact_id, roles, is_primary, receives_job_confirmations, receives_invoices)
 values
@@ -143,3 +143,34 @@ insert into public.customer_contact_links (company_id, customer_id, contact_id, 
 insert into public.job_sites (company_id, customer_id, name, address_line_1, city, state, postal_code) values
   ('b0000000-0000-4000-8000-000000000002', 'e2000000-0000-4000-8000-000000000001', 'Lakeshore Tower', '500 Lake Shore Dr', 'Chicago', 'IL', '60611'),
   ('b0000000-0000-4000-8000-000000000002', 'e2000000-0000-4000-8000-000000000002', 'Prairie Yard', '77 Prairie Ave', 'Chicago', 'IL', '60616');
+
+-- ── Fleet and crew sample data (Step 2) ─────────────────────────
+insert into public.employees (id, company_id, branch_id, first_name, last_name, email, phone, status, is_operator, job_title, cdl_expires_on, medical_cert_expires_on)
+select v.id::uuid, 'a0000000-0000-4000-8000-000000000001', b.id, v.first_name, v.last_name, v.email, v.phone, 'active', true, v.job_title, v.cdl::date, v.med::date
+from (values
+  ('a1000000-0000-4000-8000-000000000001', 'Rob',    'Black', 'rob@midcoast.example',    '+12075550168', 'Lead operator',   '2026-11-10', null),
+  ('a1000000-0000-4000-8000-000000000002', 'Dave',   'Smith', 'dave@midcoast.example',   '+12075550169', 'Operator',        null,         null),
+  ('a1000000-0000-4000-8000-000000000003', 'Tony',   'Perez', 'tony@midcoast.example',   '+12075550170', 'Operator',        null,         null),
+  ('a1000000-0000-4000-8000-000000000004', 'Jordan', 'Miles', 'jordan@midcoast.example', '+12075550171', 'Operator',        null,         '2026-12-05'),
+  ('a1000000-0000-4000-8000-000000000005', 'Casey',  'Reed',  'casey@midcoast.example',  '+12075550172', 'Relief operator', null,         null)
+) as v(id, first_name, last_name, email, phone, job_title, cdl, med)
+cross join public.branches b
+where b.company_id = 'a0000000-0000-4000-8000-000000000001' and b.code = 'WAR';
+
+insert into public.equipment (id, company_id, branch_id, equipment_number, type, status, make, model, model_year, boom_length_m, horizontal_reach_ft, hourly_rate_override, min_hours_override, default_operator_id, next_inspection_due, notes)
+select v.id::uuid, 'a0000000-0000-4000-8000-000000000001', b.id, v.num, v.type::public.equipment_type, v.status::public.equipment_status,
+  v.make, v.model, v.year, v.boom, v.reach, v.rate, 4.0, v.op::uuid, v.insp::date, v.notes
+from (values
+  ('b1000000-0000-4000-8000-000000000001', '01', 'boom_pump', 'available',   'Putzmeister', '34Z',     2023::smallint, 34::numeric, 111::numeric, 195::numeric, 'a1000000-0000-4000-8000-000000000001', '2026-11-12', null),
+  ('b1000000-0000-4000-8000-000000000002', '02', 'boom_pump', 'available',   'Putzmeister', '28Z',     2021::smallint, 28::numeric,  91::numeric, 175::numeric, 'a1000000-0000-4000-8000-000000000004', '2026-10-28', null),
+  ('b1000000-0000-4000-8000-000000000003', '03', 'boom_pump', 'maintenance', 'Schwing',     'S 47 SX', 2024::smallint, 47::numeric, 154::numeric, 245::numeric, 'a1000000-0000-4000-8000-000000000002', '2026-12-08', 'Scheduled service: hydraulic pump and boom inspection'),
+  ('b1000000-0000-4000-8000-000000000004', '04', 'line_pump', 'available',   'Trailer rig', 'Reed B50', 2022::smallint, null,         500::numeric, 145::numeric, 'a1000000-0000-4000-8000-000000000003', '2026-11-20', null)
+) as v(id, num, type, status, make, model, year, boom, reach, rate, op, insp, notes)
+cross join public.branches b
+where b.company_id = 'a0000000-0000-4000-8000-000000000001' and b.code = 'WAR';
+
+-- Test Pumping Co: one operator and one pump (isolation tests)
+insert into public.employees (id, company_id, first_name, last_name, phone, status, is_operator, job_title) values
+  ('a2000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002', 'Omar', 'Test', '+13125550161', 'active', true, 'Operator');
+insert into public.equipment (id, company_id, equipment_number, type, status, make, model, boom_length_m, default_operator_id) values
+  ('b2000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002', 'T1', 'boom_pump', 'available', 'Schwing', 'S 36', 36, 'a2000000-0000-4000-8000-000000000001');

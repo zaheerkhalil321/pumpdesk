@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { OperatorItem } from '@/lib/operators-store';
+import type { OperatorItem } from '@/features/fleet/types';
 
 interface OperatorTileCardProps {
   operator: OperatorItem;

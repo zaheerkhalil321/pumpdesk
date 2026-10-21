@@ -18,6 +18,8 @@ export function reportAction<T>(
     });
   } else if (result.code === 'FORBIDDEN') {
     toast.error("You don't have permission to do that.");
+  } else if (result.code === 'DUPLICATE') {
+    toast.error(`A ${options.entity} with that number or name already exists.`);
   } else {
     toast.error(result.message);
   }

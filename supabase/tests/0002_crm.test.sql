@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(29);
 
 create function pg_temp.rows_affected(stmt text) returns bigint language plpgsql as $f$
 declare n bigint;
@@ -62,8 +62,6 @@ select throws_ok($$update public.customers set version = 50 where id = 'e1000000
   '42501', null, 'client cannot set version');
 select throws_ok($$update public.customers set created_at = now() where id = 'e1000000-0000-4000-8000-000000000101'$$,
   '42501', null, 'client cannot set created_at');
-select throws_ok($$update public.customers set archived_at = now() where id = 'e1000000-0000-4000-8000-000000000101'$$,
-  '42501', null, 'client cannot set archived_at');
 
 -- 7. Activity log: one row per write, with the right changes
 select lives_ok($$insert into public.customers (business_name) values ('Log Test Co')$$, 'dispatcher can insert a customer');
@@ -73,9 +71,9 @@ select is((select changes from public.activity_log
   where entity_type = 'customers' and entity_id = 'e1000000-0000-4000-8000-000000000101' and action = 'updated'),
   '{"tier": ["VIP Partner", "Gold"]}'::jsonb, 'update logged only the changed column');
 select is(pg_temp.rows_affected($q$update public.customers set is_active = false where business_name = 'Log Test Co'$q$),
-  1::bigint, 'dispatcher can archive');
-select is((select count(*) from public.customers where business_name = 'Log Test Co' and archived_at is not null),
-  1::bigint, 'archive set archived_at');
+  1::bigint, 'dispatcher can delete (soft)');
+select is((select count(*) from public.activity_log where entity_type = 'customers' and action = 'deleted'
+  and summary = 'Deleted customers "Log Test Co"'), 1::bigint, 'soft delete was logged as deleted');
 
 -- 8. Timezone validation on job sites
 select throws_ok(

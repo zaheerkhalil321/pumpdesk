@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { updateContact, updateContactLink } from '@/features/crm/server/actions';
 import { updateContactSchema } from '@/features/crm/schemas';
-import { reportAction } from '@/features/crm/action-feedback';
+import { reportAction } from '@/lib/action-feedback';
 import { CONTACT_ROLE_OPTIONS, type ContactItem } from '@/features/crm/types';
 
 interface EditContactModalProps {

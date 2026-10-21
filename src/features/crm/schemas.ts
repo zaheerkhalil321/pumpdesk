@@ -68,8 +68,6 @@ export const updateCustomerSchema = z.object({
   status: customerStatusSchema,
 });
 
-export const archiveCustomerSchema = z.object({ id: uuid });
-
 export const createContactSchema = z.object({
   firstName: requiredText('First name', 60),
   lastName: requiredText('Last name', 60),
@@ -91,8 +89,6 @@ export const updateContactSchema = z.object({
   phoneType: z.enum(['Mobile', 'Office']),
   isActive: z.boolean(),
 });
-
-export const archiveContactSchema = z.object({ id: uuid });
 
 export const linkContactSchema = z.object({
   contactId: uuid,
@@ -129,4 +125,4 @@ export const updateJobSiteSchema = z.object({
   ...jobSiteFields,
 });
 
-export const archiveJobSiteSchema = z.object({ id: uuid });
+export const deleteJobSiteSchema = z.object({ id: uuid });

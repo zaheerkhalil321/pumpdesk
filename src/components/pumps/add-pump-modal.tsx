@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -12,18 +13,24 @@ import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
 import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { addPump } from '@/lib/pumps-store';
-import { useOperators } from '@/lib/operators-store';
+import { createPump } from '@/features/fleet/server/actions';
+import { createPumpSchema } from '@/features/fleet/schemas';
+import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
+import { reportAction } from '@/lib/action-feedback';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
 import { cn } from '@/lib/utils';
 
 interface AddPumpModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pumps: PumpItem[];
+  operators: OperatorItem[];
+  branchOptions: BranchOption[];
 }
 
-export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
-  const operators = useOperators();
+export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptions }: AddPumpModalProps) {
+  const router = useRouter();
+  const [isSaving, startSaving] = useTransition();
 
   const [unitNumber, setUnitNumber] = useState('');
   const [make, setMake] = useState('Putzmeister');
@@ -102,79 +109,50 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
       return;
     }
 
-    const matchedOp = operatorId !== 'none' ? operators.find((op) => op.id === operatorId) : null;
-    const defaultOperator = matchedOp
-      ? {
-          id: matchedOp.id,
-          name: matchedOp.name,
-          role: matchedOp.role,
-          badge: null,
-        }
-      : {
-          id: 'unassigned',
-          name: 'Unassigned',
-          role: 'None',
-          badge: null,
-        };
-
-    const parsedBoomSize = boomSize.trim() ? Number(boomSize) : undefined;
-    const parsedReach = horizontalReach.trim() ? Number(horizontalReach) : undefined;
-    const parsedRate = hourlyRate.trim() ? Number(hourlyRate) : 195;
-
-    const typeLabel =
-      type === 'boom_pump'
-        ? (parsedBoomSize ? `Boom pump · ${parsedBoomSize}M` : 'Boom pump')
-        : 'Line pump';
-
-    const boomLength =
-      type === 'boom_pump'
-        ? (parsedBoomSize
-            ? `${parsedBoomSize}M${parsedReach ? ` (${parsedReach} ft)` : ''}`
-            : '38M (124 ft)')
-        : (parsedReach ? `Ground Line (${parsedReach}ft)` : 'Ground Line (500ft)');
-
-    addPump({
+    const parse = (value: string) => (value.trim() === '' ? null : Number(value));
+    const payload = {
       unitNumber: cleanUnit,
-      make: make.trim() || 'Putzmeister',
-      model: model.trim() || 'Custom Rig',
+      make,
+      model,
+      year: parse(year),
       type,
-      typeLabel,
-      boomSize: parsedBoomSize,
-      horizontalReach: parsedReach,
-      boomLength,
-      defaultOperator,
-      todayStatus: {
-        type: 'available',
-        label: 'Available · Assign operator',
-      },
-      nextInspection: {
-        date: 'Dec 15, 2026',
-        dueSoon: false,
-      },
-      status: 'available',
-      hourlyRate: parsedRate,
-      minHours: `${(minHours.trim() ? Number(minHours) : 4.0).toFixed(1)} hrs`,
-      inMaintenance: false,
-      year: year.trim() || '2024',
-      documents: [],
+      boomSize: type === 'boom_pump' ? parse(boomSize) : null,
+      horizontalReach: parse(horizontalReach),
+      hourlyRate: parse(hourlyRate),
+      minHours: parse(minHours),
+      defaultOperatorId: operatorId === 'none' ? null : operatorId,
+      status: 'available' as const,
+      maintenanceNote: '',
+      inspectionDate: '',
+    };
+
+    const check = createPumpSchema.safeParse(payload);
+    if (!check.success) {
+      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
+      setError(first ?? 'Please check the form.');
+      return;
+    }
+
+    startSaving(async () => {
+      const result = await createPump(payload);
+      if (!reportAction(result, { entity: 'pump', refresh: () => router.refresh() })) return;
+
+      const displayCode = payload.boomSize ? `${cleanUnit} · ${payload.boomSize}M` : cleanUnit;
+      toast.success('New pump added to fleet', {
+        description: `${displayCode} (${make} ${model.trim()}) is ready for dispatch.`,
+      });
+
+      // Reset and close
+      setUnitNumber('');
+      setModel('');
+      setBoomSize('38');
+      setHorizontalReach('124');
+      setHourlyRate('195');
+      setMinHours('4.0');
+      setOperatorId('none');
+      setError(null);
+      onOpenChange(false);
     });
-
-    const displayCode = parsedBoomSize ? `${cleanUnit} · ${parsedBoomSize}M` : cleanUnit;
-
-    toast.success('New pump added to fleet', {
-      description: `${displayCode} (${make} ${model.trim() || ''}) is ready for dispatch.`,
-    });
-
-    // Reset and close
-    setUnitNumber('');
-    setModel('');
-    setBoomSize('38');
-    setHorizontalReach('124');
-    setHourlyRate('195');
-    setMinHours('4.0');
-    setOperatorId('none');
-    setError(null);
-    onOpenChange(false);
   };
 
   const operatorOptions = [
@@ -487,9 +465,10 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
               type="submit"
               variant="brand"
               size="sm"
+              disabled={isSaving}
               className="h-9 px-4 text-xs font-semibold cursor-pointer"
             >
-              Add Rig
+              {isSaving ? 'Saving...' : 'Add rig'}
             </Button>
           </div>
         </form>
@@ -499,10 +478,9 @@ export function AddPumpModal({ open, onOpenChange }: AddPumpModalProps) {
       <AddOperatorModal
         open={isAddOperatorOpen}
         onOpenChange={setIsAddOperatorOpen}
-        defaultAssignedPump={unitNumber}
-        onCreated={(createdOp) => {
-          setOperatorId(createdOp.id);
-        }}
+        pumps={pumps}
+        branchOptions={branchOptions}
+        onCreated={(newOperatorId) => setOperatorId(newOperatorId)}
       />
     </Dialog>
   );

@@ -5,9 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { authedAction } from '@/server/action';
 import { NotFoundError, StaleVersionError } from '@/server/errors';
 import {
-  archiveContactSchema,
-  archiveCustomerSchema,
-  archiveJobSiteSchema,
+  deleteJobSiteSchema,
   createContactSchema,
   createCustomerSchema,
   createJobSiteSchema,
@@ -103,17 +101,6 @@ export const updateCustomer = authedAction({
   },
 });
 
-export const archiveCustomer = authedAction({
-  schema: archiveCustomerSchema,
-  roles: CRM_EDITORS,
-  run: async ({ input, supabase }) => {
-    const { error } = await supabase.from('customers').update({ is_active: false }).eq('id', input.id);
-    if (error) throw error;
-    revalidateCrm(input.id);
-    return { id: input.id };
-  },
-});
-
 // ── Contacts ────────────────────────────────────────────────────
 
 export const createContact = authedAction({
@@ -171,17 +158,6 @@ export const updateContact = authedAction({
     if (error) throw error;
     if (!data || data.length === 0) throw new NotFoundError();
 
-    revalidateCrm(undefined, input.id);
-    return { id: input.id };
-  },
-});
-
-export const archiveContact = authedAction({
-  schema: archiveContactSchema,
-  roles: CRM_EDITORS,
-  run: async ({ input, supabase }) => {
-    const { error } = await supabase.from('contacts').update({ is_active: false }).eq('id', input.id);
-    if (error) throw error;
     revalidateCrm(undefined, input.id);
     return { id: input.id };
   },
@@ -299,8 +275,9 @@ export const updateJobSite = authedAction({
   },
 });
 
-export const archiveJobSite = authedAction({
-  schema: archiveJobSiteSchema,
+/** Soft delete: the site is hidden but its record is kept. */
+export const deleteJobSite = authedAction({
+  schema: deleteJobSiteSchema,
   roles: CRM_EDITORS,
   run: async ({ input, supabase }) => {
     const { data, error } = await supabase

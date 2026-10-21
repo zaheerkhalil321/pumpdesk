@@ -87,7 +87,7 @@ test.describe("CRM: customers", () => {
     await expect(page.getByText("You don't have permission to do that.")).toBeVisible();
   });
 
-  test("dispatcher adds, edits and archives a job site", async ({ page }) => {
+  test("dispatcher adds, edits and deletes a job site", async ({ page }) => {
     const site = `E2E Site ${Date.now()}`;
     await login(page, "dispatcher@midcoast.test");
     await openCustomer(page, "Harbor Builders");
@@ -108,8 +108,8 @@ test.describe("CRM: customers", () => {
     await expect(page.getByText(`${site} v2`).first()).toBeVisible();
 
     await page.getByRole("button", { name: new RegExp(`${site} v2`) }).first().click();
-    await page.getByRole("button", { name: "Archive site" }).click();
-    await expect(page.getByText("Job site archived")).toBeVisible();
+    await page.getByRole("button", { name: "Delete site" }).click();
+    await expect(page.getByText("Job site deleted")).toBeVisible();
     await expect(page.getByText(`${site} v2`)).toHaveCount(0);
   });
 });
