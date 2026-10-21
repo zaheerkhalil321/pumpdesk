@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Truck,
   User,
@@ -693,11 +694,12 @@ export function PumpDetailDialog({
 
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 block">Next DOT Inspection Date</label>
-                  <Input
-                    type="date"
+                  <DatePicker
+                    size="sm"
+                    ariaLabel="Next DOT inspection date"
                     value={editInspectionDate}
-                    onChange={(e) => setEditInspectionDate(e.target.value)}
-                    className="h-9 text-xs"
+                    onChange={setEditInspectionDate}
+                    placeholder="Pick an inspection date"
                   />
                 </div>
 

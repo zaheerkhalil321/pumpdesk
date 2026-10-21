@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
+import { DatePicker } from '@/components/ui/date-picker';
 import { StatusSwitch } from '@/components/ui/status-switch';
 import { createOperator, updateOperator } from '@/features/fleet/server/actions';
 import { createOperatorSchema, updateOperatorSchema } from '@/features/fleet/schemas';
@@ -181,20 +182,20 @@ export function OperatorForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 block">CDL expires</label>
-          <Input
-            type="date"
+          <DatePicker
+            ariaLabel="CDL expiry date"
             value={cdlExpiresOn}
-            onChange={(e) => setCdlExpiresOn(e.target.value)}
-            className={INPUT_CLASS}
+            onChange={setCdlExpiresOn}
+            placeholder="Pick a date"
           />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 block">Medical certificate expires</label>
-          <Input
-            type="date"
+          <DatePicker
+            ariaLabel="Medical certificate expiry date"
             value={medicalExpiresOn}
-            onChange={(e) => setMedicalExpiresOn(e.target.value)}
-            className={INPUT_CLASS}
+            onChange={setMedicalExpiresOn}
+            placeholder="Pick a date"
           />
         </div>
       </div>
