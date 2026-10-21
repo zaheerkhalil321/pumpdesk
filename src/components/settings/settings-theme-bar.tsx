@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Check, Paintbrush, ArrowLeft, LogOut } from 'lucide-react';
-import { useBrandTheme } from '@/components/providers/brand-theme-provider';
+import { ArrowLeft, LogOut } from 'lucide-react';
 import { LogoutDialog } from '@/components/auth/logout-dialog';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 export type SettingsMainTab =
   | 'overview'
@@ -26,7 +24,6 @@ export function SettingsThemeBar({
   onTabChange,
   breadcrumbSub,
 }: SettingsThemeBarProps) {
-  const { brandTheme, setBrandTheme, themes } = useBrandTheme();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   const navContainerRef = useRef<HTMLDivElement>(null);
@@ -46,14 +43,6 @@ export function SettingsThemeBar({
       });
     }
   }, [currentTab]);
-
-  const handleThemeChange = (id: typeof brandTheme) => {
-    setBrandTheme(id);
-    const chosen = themes.find((t) => t.id === id);
-    toast.success(`Theme updated to ${chosen?.name || id}`, {
-      description: 'Workspace palette and accent styling updated immediately.',
-    });
-  };
 
   const getBreadcrumbs = () => {
     if (currentTab === 'overview') {
@@ -120,63 +109,6 @@ export function SettingsThemeBar({
             <LogOut className="h-3.5 w-3.5 text-slate-400 group-hover:text-rose-600 transition-colors" />
             <span>Log out</span>
           </button>
-        </div>
-      </div>
-
-      {/* ── Prominent Brand Theme Color Palette Strip (Requested by User) ── */}
-      <div className="px-4 sm:px-6 lg:px-8 py-2.5 bg-slate-50/70 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-slate-700">
-          <div className="h-5 w-5 rounded-md bg-brand-light text-brand flex items-center justify-center shrink-0 border border-brand/20">
-            <Paintbrush className="h-3 w-3" />
-          </div>
-          <span className="font-semibold text-slate-800">Workspace Theme:</span>
-          <span className="text-slate-500 hidden sm:inline">
-            Choose brand colors for your dispatch board and tickets
-          </span>
-        </div>
-
-        {/* 4 Theme Color Swatches */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {themes.map((t) => {
-            const isSelected = brandTheme === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => handleThemeChange(t.id)}
-                className={cn(
-                  'flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer border',
-                  isSelected
-                    ? 'bg-white border-2 border-brand text-slate-900 shadow-2xs font-semibold'
-                    : 'bg-white/70 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white'
-                )}
-                title={`${t.name} • ${t.tagline}`}
-              >
-                {/* Circular Color Swatch */}
-                <span
-                  className={cn(
-                    'h-4 w-4 rounded-full flex items-center justify-center shrink-0 shadow-2xs transition-transform',
-                    t.swatchClass,
-                    isSelected && 'scale-110'
-                  )}
-                >
-                  {isSelected && (
-                    <Check className="h-2.5 w-2.5 text-white stroke-[3]" />
-                  )}
-                </span>
-
-                <span className="truncate max-w-[100px] sm:max-w-none">
-                  {t.name}
-                </span>
-
-                {isSelected && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand bg-brand-light px-1.5 py-0.2 rounded-sm shrink-0 border border-brand/20">
-                    Active
-                  </span>
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
 

@@ -716,8 +716,8 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                       <User className="h-4.5 w-4.5 text-slate-500" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 block">
-                        Primary Contact
+                      <span className="text-[13px] font-semibold text-slate-500 block">
+                        Primary contact
                       </span>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-sm text-slate-900">
@@ -740,8 +740,8 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                       <Phone className="h-4.5 w-4.5 text-slate-500" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 block">
-                        Phone Number
+                      <span className="text-[13px] font-semibold text-slate-500 block">
+                        Phone number
                       </span>
                       <span className="font-mono text-sm font-semibold text-slate-900 tracking-tight">
                         {selectedCustomerForQuickView.phone}
@@ -768,8 +768,8 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                       <Mail className="h-4.5 w-4.5 text-slate-500" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 block">
-                        Email Address
+                      <span className="text-[13px] font-semibold text-slate-500 block">
+                        Email address
                       </span>
                       <a
                         href={`mailto:${selectedCustomerForQuickView.email}`}

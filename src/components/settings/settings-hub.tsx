@@ -11,6 +11,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { SettingsMainTab } from './settings-theme-bar';
+import { AppearanceCard } from './appearance-card';
 
 interface SettingsHubProps {
   onSelectTab: (tab: SettingsMainTab) => void;
@@ -131,6 +132,7 @@ export function SettingsHub({ onSelectTab }: SettingsHubProps) {
         })}
       </div>
 
+      <AppearanceCard />
     </div>
   );
 }

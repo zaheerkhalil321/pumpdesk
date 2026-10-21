@@ -490,7 +490,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                   </button>
                 </div>
 
-                {customer.contacts.slice(0, 1).map((c) => (
+                {customer.contacts.slice(0, 3).map((c) => (
                   <div key={c.id} className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between text-xs">
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -525,6 +525,16 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                     </div>
                   </div>
                 ))}
+
+                {customer.contacts.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('contacts_sites')}
+                    className="text-xs font-semibold text-brand hover:underline cursor-pointer"
+                  >
+                    +{customer.contacts.length - 3} more {customer.contacts.length - 3 === 1 ? 'contact' : 'contacts'}
+                  </button>
+                )}
               </div>
 
               {/* Job Sites Subsection */}
@@ -594,8 +604,8 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
               <div className="space-y-3 text-xs">
                 <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
-                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                    Default Invoice Recipient
+                  <div className="text-[11px] font-semibold text-slate-500">
+                    Default invoice recipient
                   </div>
                   <div className="font-semibold text-slate-900 text-xs">
                     {customer.defaultInvoiceRecipient}

@@ -290,8 +290,8 @@ export function AppSidebar() {
               align="start"
               className="w-60 p-1.5 rounded-xl shadow-lg border-slate-200"
             >
-              <DropdownMenuLabel className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">
-                Dispatch Yards
+              <DropdownMenuLabel className="text-[11px] font-semibold text-slate-400 px-2 py-1">
+                Dispatch yards
               </DropdownMenuLabel>
               {dummyYards.map((yard) => {
                 const isSelected = selectedYard.id === yard.id;

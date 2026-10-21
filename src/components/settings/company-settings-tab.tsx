@@ -430,8 +430,8 @@ export function CompanySettingsTab() {
 
           {isAddBranchOpen && (
             <div className="rounded-xl border border-brand/30 bg-brand-light/30 p-4 space-y-3">
-              <h4 className="font-bold text-xs text-brand uppercase tracking-wider">
-                Add Staging Branch
+              <h4 className="font-bold text-xs text-brand">
+                Add staging branch
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input

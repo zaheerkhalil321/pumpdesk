@@ -107,8 +107,8 @@ export function OrdersFilterSheet({
         <div className="p-4 space-y-5 overflow-y-auto">
           {/* 1. Quick Search */}
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
-              Search Jobs
+            <label className="text-xs font-bold text-slate-700 block mb-1.5">
+              Search jobs
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
@@ -133,8 +133,8 @@ export function OrdersFilterSheet({
 
           {/* 2. Status Category */}
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-2 uppercase tracking-wider">
-              Status Category
+            <label className="text-xs font-bold text-slate-700 block mb-2">
+              Status category
             </label>
             <div className="grid grid-cols-1 gap-1.5">
               {statusOptions.map((opt) => {
@@ -175,9 +175,9 @@ export function OrdersFilterSheet({
 
           {/* 3. Sort Order */}
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-2 uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-xs font-bold text-slate-700 block mb-2 flex items-center gap-1.5">
               <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
-              <span>Sort By</span>
+              <span>Sort by</span>
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button

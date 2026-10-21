@@ -147,8 +147,8 @@ export function IntegrationsSettingsTab() {
             </p>
 
             <div className="space-y-2 pt-1">
-              <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
-                Planned Capabilities
+              <h4 className="text-xs font-semibold text-slate-900">
+                Planned capabilities
               </h4>
               <ul className="space-y-1.5">
                 {selectedIntegration.details.map((d, i) => (

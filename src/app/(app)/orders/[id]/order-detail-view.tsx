@@ -1348,7 +1348,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                         <User className="h-5 w-5 text-brand" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assigned Operator</div>
+                        <div className="text-[11px] font-bold text-slate-400">Assigned operator</div>
                         <div className="font-bold text-slate-900 text-sm whitespace-nowrap truncate">{order.assignedOperator}</div>
                         {order.operatorPhone ? (
                           <div className="text-slate-500 text-xs font-mono whitespace-nowrap">{order.operatorPhone}</div>
