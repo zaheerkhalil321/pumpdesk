@@ -62,7 +62,10 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
   const [newContactPerson, setNewContactPerson] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
-  const [newCustomerTier, setNewCustomerTier] = useState('Commercial Tier 1');
+  const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [newCustomerCity, setNewCustomerCity] = useState('');
+  const [newCustomerState, setNewCustomerState] = useState('');
+  const [newCustomerPostal, setNewCustomerPostal] = useState('');
   const [newCustomerStatus, setNewCustomerStatus] = useState<'Active' | 'Inactive'>('Active');
 
   const handleOpenAddModal = () => {
@@ -71,7 +74,10 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
     setNewContactPerson('');
     setNewCustomerPhone('');
     setNewCustomerEmail('');
-    setNewCustomerTier('Commercial Tier 1');
+    setNewCustomerAddress('');
+    setNewCustomerCity('');
+    setNewCustomerState('');
+    setNewCustomerPostal('');
     setNewCustomerStatus('Active');
     setIsAddModalOpen(true);
   };
@@ -106,12 +112,11 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
           const matchName = cust.name.toLowerCase().includes(q);
           const matchEmail = cust.email.toLowerCase().includes(q);
           const matchContact = cust.contactName.toLowerCase().includes(q);
-          const matchTier = cust.tier.toLowerCase().includes(q);
           const matchPhone =
             cust.phone.toLowerCase().includes(q) ||
             (searchDigits.length > 2 && cleanPhone.includes(searchDigits));
 
-          if (!matchName && !matchEmail && !matchPhone && !matchContact && !matchTier) return false;
+          if (!matchName && !matchEmail && !matchPhone && !matchContact) return false;
         }
 
         return true;
@@ -141,7 +146,10 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
       contactName: newContactPerson,
       phone: newCustomerPhone,
       email: newCustomerEmail,
-      tier: newCustomerTier,
+      addressLine1: newCustomerAddress,
+      city: newCustomerCity,
+      state: newCustomerState,
+      postalCode: newCustomerPostal,
       status: newCustomerStatus === 'Active' ? ('active' as const) : ('inactive' as const),
     };
 
@@ -440,8 +448,6 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                           </span>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
                             <span>{cust.contactName}</span>
-                            <span className="text-slate-300">&bull;</span>
-                            <span className="text-slate-500">{cust.tier}</span>
                           </div>
                         </div>
                       </div>
@@ -449,6 +455,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
 
                     {/* Phone with copy-on-click */}
                     <td className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap">
+                      {cust.phone && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -459,33 +466,36 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                         title="Click to copy phone"
                       >
                         <span>{cust.phone}</span>
-                        <Copy className="h-3 w-3 opacity-0 group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
+                        <Copy className="h-3 w-3 sm:opacity-0 sm:group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
                       </button>
+                      )}
                     </td>
 
                     {/* Email with copy-on-click */}
                     <td className="py-3.5 px-4 font-normal text-slate-600 truncate max-w-[320px]">
-                      <div className="inline-flex items-center gap-1.5 group/email">
-                        <a
-                          href={`mailto:${cust.email}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="hover:text-slate-900 hover:underline transition-colors truncate"
-                          title={`Send email to ${cust.email}`}
-                        >
-                          {cust.email}
-                        </a>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyEmail(cust.email, cust.name);
-                          }}
-                          className="inline-flex items-center text-slate-400 hover:text-brand cursor-pointer opacity-0 group-hover/email:opacity-100 transition-opacity p-0.5"
-                          title="Click to copy email"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      </div>
+{cust.email && (
+                        <div className="inline-flex items-center gap-1.5 group/email">
+                          <a
+                            href={`mailto:${cust.email}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-slate-900 hover:underline transition-colors truncate"
+                            title={`Send email to ${cust.email}`}
+                          >
+                            {cust.email}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyEmail(cust.email, cust.name);
+                            }}
+                            className="inline-flex items-center text-slate-400 hover:text-brand cursor-pointer sm:opacity-0 sm:group-hover/email:opacity-100 transition-opacity p-0.5"
+                            title="Click to copy email"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        </div>
+)}
                     </td>
 
                     {/* Created Date & Time */}
@@ -515,27 +525,31 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="inline-flex items-center justify-start gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCall(cust.contactName, cust.phone)}
-                          className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-                          title={`Call ${cust.phone}`}
-                        >
-                          <Phone className="h-3.5 w-3.5 text-brand" />
-                          <span>Call</span>
-                        </Button>
+                        {cust.phone && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCall(cust.contactName, cust.phone)}
+                            className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                            title={`Call ${cust.phone}`}
+                          >
+                            <Phone className="h-3.5 w-3.5 text-brand" />
+                            <span>Call</span>
+                          </Button>
+                        )}
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleText(cust.contactName, cust.phone)}
-                          className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-                          title={`Text ${cust.phone}`}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5 text-brand" />
-                          <span>Text</span>
-                        </Button>
+                        {cust.phone && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleText(cust.contactName, cust.phone)}
+                            className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                            title={`Text ${cust.phone}`}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                            <span>Text</span>
+                          </Button>
+                        )}
 
                         <Link
                           href={`/customers/${cust.id}`}
@@ -603,7 +617,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
               <Input
                 value={newContactPerson}
                 onChange={(e) => setNewContactPerson(e.target.value)}
-                placeholder="e.g. John Doe (Superintendent)"
+                placeholder="e.g. John Doe"
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
               />
             </div>
@@ -645,18 +659,45 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Account tier</label>
-              <AppSelect
-                size="lg"
-                value={newCustomerTier}
-                onChange={setNewCustomerTier}
-                options={[
-                  "Commercial Tier 1",
-                  "Commercial Tier 2",
-                  "VIP Partner",
-                  "Residential & Civil",
-                  "Municipal",
-                ]}
+              <label className="text-xs font-semibold text-slate-700 block">Street address <span className="font-normal text-slate-400">(optional)</span></label>
+              <Input
+                value={newCustomerAddress}
+                onChange={(e) => setNewCustomerAddress(e.target.value)}
+                placeholder="e.g. 18 Main Street"
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">City <span className="font-normal text-slate-400">(optional)</span></label>
+                <Input
+                  value={newCustomerCity}
+                  onChange={(e) => setNewCustomerCity(e.target.value)}
+                  placeholder="e.g. Rockland"
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">State <span className="font-normal text-slate-400">(optional)</span></label>
+                <Input
+                  value={newCustomerState}
+                  onChange={(e) => setNewCustomerState(e.target.value.toUpperCase())}
+                  maxLength={2}
+                  placeholder="ME"
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">ZIP code <span className="font-normal text-slate-400">(optional)</span></label>
+              <Input
+                value={newCustomerPostal}
+                onChange={(e) => setNewCustomerPostal(e.target.value)}
+                maxLength={10}
+                placeholder="e.g. 04841"
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
               />
             </div>
 
@@ -736,64 +777,68 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                 </div>
 
                 {/* Phone */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/phone">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
-                      <Phone className="h-4.5 w-4.5 text-slate-500" />
+{selectedCustomerForQuickView.phone && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/phone">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
+                        <Phone className="h-4.5 w-4.5 text-slate-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[13px] font-semibold text-slate-500 block">
+                          Phone number
+                        </span>
+                        <span className="font-mono text-sm font-semibold text-slate-900 tracking-tight">
+                          {selectedCustomerForQuickView.phone}
+                        </span>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <span className="text-[13px] font-semibold text-slate-500 block">
-                        Phone number
-                      </span>
-                      <span className="font-mono text-sm font-semibold text-slate-900 tracking-tight">
-                        {selectedCustomerForQuickView.phone}
-                      </span>
-                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleCopyPhone(selectedCustomerForQuickView.phone, selectedCustomerForQuickView.name)}
+                      className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
+                      title="Click to copy phone"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">Copy</span>
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleCopyPhone(selectedCustomerForQuickView.phone, selectedCustomerForQuickView.name)}
-                    className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
-                    title="Click to copy phone"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">Copy</span>
-                  </Button>
-                </div>
+)}
 
                 {/* Email */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/email">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
-                      <Mail className="h-4.5 w-4.5 text-slate-500" />
+{selectedCustomerForQuickView.email && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/email">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
+                        <Mail className="h-4.5 w-4.5 text-slate-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[13px] font-semibold text-slate-500 block">
+                          Email address
+                        </span>
+                        <a
+                          href={`mailto:${selectedCustomerForQuickView.email}`}
+                          className="text-sm font-semibold text-slate-900 hover:text-brand hover:underline truncate block"
+                          title={`Send email to ${selectedCustomerForQuickView.email}`}
+                        >
+                          {selectedCustomerForQuickView.email}
+                        </a>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <span className="text-[13px] font-semibold text-slate-500 block">
-                        Email address
-                      </span>
-                      <a
-                        href={`mailto:${selectedCustomerForQuickView.email}`}
-                        className="text-sm font-semibold text-slate-900 hover:text-brand hover:underline truncate block"
-                        title={`Send email to ${selectedCustomerForQuickView.email}`}
-                      >
-                        {selectedCustomerForQuickView.email}
-                      </a>
-                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleCopyEmail(selectedCustomerForQuickView.email, selectedCustomerForQuickView.name)}
+                      className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
+                      title="Click to copy email"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">Copy</span>
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleCopyEmail(selectedCustomerForQuickView.email, selectedCustomerForQuickView.name)}
-                    className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
-                    title="Click to copy email"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">Copy</span>
-                  </Button>
-                </div>
+)}
               </div>
 
               {/* Dispatch Note (Shown only when there's a note for the customer) */}
@@ -814,29 +859,33 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
               {/* Direct Actions */}
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCall(selectedCustomerForQuickView.contactName, selectedCustomerForQuickView.phone)}
-                    className="h-8.5 px-3 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs hover:bg-brand-light hover:text-brand hover:border-brand/30"
-                  >
-                    <Phone className="h-3.5 w-3.5 text-brand" />
-                    <span>Call</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleText(selectedCustomerForQuickView.contactName, selectedCustomerForQuickView.phone)}
-                    className="h-8.5 px-3 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs hover:bg-brand-light hover:text-brand hover:border-brand/30"
-                  >
-                    <MessageSquare className="h-3.5 w-3.5 text-brand" />
-                    <span>Text</span>
-                  </Button>
+                  {selectedCustomerForQuickView.phone && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCall(selectedCustomerForQuickView.contactName, selectedCustomerForQuickView.phone)}
+                      className="h-8.5 px-3 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs hover:bg-brand-light hover:text-brand hover:border-brand/30"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-brand" />
+                      <span>Call</span>
+                    </Button>
+                  )}
+                  {selectedCustomerForQuickView.phone && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleText(selectedCustomerForQuickView.contactName, selectedCustomerForQuickView.phone)}
+                      className="h-8.5 px-3 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs hover:bg-brand-light hover:text-brand hover:border-brand/30"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                      <span>Text</span>
+                    </Button>
+                  )}
                 </div>
 
                 <Link
                   href={`/customers/${selectedCustomerForQuickView.id}`}
-                  className="h-8.5 px-3.5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
+                  className="ml-auto h-8.5 px-3.5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
                 >
                   <span>View details</span>
                   <ExternalLink className="h-3.5 w-3.5" />

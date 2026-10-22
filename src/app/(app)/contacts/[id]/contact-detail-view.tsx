@@ -37,6 +37,7 @@ import { reportAction } from '@/lib/action-feedback';
 import type { ContactItem, CustomerOption } from '@/features/crm/types';
 import { EditContactModal } from '@/components/contacts/edit-contact-modal';
 import { LinkAccountModal } from '@/components/contacts/link-account-modal';
+import { CopyButton } from '@/components/ui/copy-button';
 
 interface ContactDetailViewProps {
   contact: ContactItem;
@@ -148,38 +149,44 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCall}
-            className="h-9 px-3.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5"
-          >
-            <Phone className="h-3.5 w-3.5 text-brand" />
-            <span>Call</span>
-          </Button>
+          {contact.phone && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCall}
+              className="h-9 px-3.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5"
+            >
+              <Phone className="h-3.5 w-3.5 text-brand" />
+              <span>Call</span>
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleText}
-            className="h-9 px-3.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5"
-          >
-            <MessageSquare className="h-3.5 w-3.5 text-brand" />
-            <span>Text</span>
-          </Button>
+          {contact.phone && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleText}
+              className="h-9 px-3.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-brand" />
+              <span>Text</span>
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleEmail}
-            className="h-9 px-3.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5"
-          >
-            <Mail className="h-3.5 w-3.5 text-brand" />
-            <span>Email</span>
-          </Button>
+          {contact.email && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleEmail}
+              className="h-9 px-3.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5"
+            >
+              <Mail className="h-3.5 w-3.5 text-brand" />
+              <span>Email</span>
+            </Button>
+          )}
 
           <Button
             type="button"
@@ -275,22 +282,30 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
 
                 <div className="py-2.5 flex items-center justify-between">
                   <span className="text-slate-500 font-medium">Primary phone</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-medium text-slate-900">{contact.phone}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium">
-                      {contact.phoneType}
-                    </span>
-                  </div>
+                  {contact.phone && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-medium text-slate-900">{contact.phone}</span>
+                      <CopyButton value={contact.phone} label="Phone" />
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium">
+                        {contact.phoneType}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="py-2.5 flex items-center justify-between">
                   <span className="text-slate-500 font-medium">Email</span>
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="font-medium text-brand hover:underline"
-                  >
-                    {contact.email}
-                  </a>
+                  {contact.email && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`mailto:${contact.email}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {contact.email}
+                      </a>
+                      <CopyButton value={contact.email} label="Email" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="py-2.5 flex items-center justify-between">

@@ -4,13 +4,18 @@ import type { ActionResult } from '@/server/action';
 
 /**
  * Shows the right toast for a failed Server Action. Returns true when the action succeeded.
- * `refresh` is called by the "Reload" button on a stale-version toast.
+ * `refresh` re-reads the page: it runs after every success and from the "Reload" button on a stale-version toast.
  */
 export function reportAction<T>(
   result: ActionResult<T>,
   options: { entity: string; refresh?: () => void },
 ): result is Extract<ActionResult<T>, { ok: true }> {
-  if (result.ok) return true;
+  if (result.ok) {
+    // Re-read the page data so the list always shows the change, even if the
+    // server-side revalidation did not reach this tab.
+    options.refresh?.();
+    return true;
+  }
 
   if (result.code === 'STALE') {
     toast.error(`Someone else changed this ${options.entity}. Reload to see the latest.`, {

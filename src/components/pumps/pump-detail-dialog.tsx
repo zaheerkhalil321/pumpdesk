@@ -42,6 +42,7 @@ import { AddOperatorModal } from '@/components/operators/add-operator-modal';
 import { EditOperatorModal } from '@/components/operators/edit-operator-modal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CopyButton } from '@/components/ui/copy-button';
 
 interface PumpDetailDialogProps {
   pump: PumpItem | null;
@@ -856,10 +857,13 @@ export function PumpDetailDialog({
                               </Link>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5 truncate">
-                            {currentPump.defaultOperator?.role || 'Operator'} &bull;{' '}
-                            {currentOpInRoster?.phone || '(207) 555-0168'}
-                          </p>
+                          <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+                            <span className="truncate">
+                              {currentPump.defaultOperator?.role || 'Operator'}
+                              {currentOpInRoster?.phone && <> &bull; {currentOpInRoster.phone}</>}
+                            </span>
+                            <CopyButton value={currentOpInRoster?.phone ?? ''} label="Phone" />
+                          </div>
                         </div>
                       </div>
 

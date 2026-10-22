@@ -49,6 +49,7 @@ import {
 } from '@/features/crm/schemas';
 import { reportAction } from '@/lib/action-feedback';
 import type { CustomerDetail, JobSiteItem } from '@/features/crm/types';
+import { CopyButton } from '@/components/ui/copy-button';
 
 interface CustomerDetailViewProps {
   customer: CustomerDetail;
@@ -105,9 +106,18 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
   const [editCustPhone, setEditCustPhone] = useState(customer.phone);
   const [editCustEmail, setEditCustEmail] = useState(customer.email);
   const [editCustAddress, setEditCustAddress] = useState(customer.addressLine1);
+  const [editCustCity, setEditCustCity] = useState(customer.city);
+  const [editCustState, setEditCustState] = useState(customer.state);
+  const [editCustPostal, setEditCustPostal] = useState(customer.postalCode);
   const [editCustStatus, setEditCustStatus] = useState<'Active' | 'Inactive'>(customer.status);
 
   // Actions
+  const copyValue = (value: string, label: string) => {
+    if (!value) return;
+    navigator.clipboard.writeText(value);
+    toast.success(`${label} copied`, { description: value });
+  };
+
   const handleCall = (phone: string, targetName: string) => {
     toast.info(`Calling ${targetName}`, { description: phone });
   };
@@ -130,6 +140,9 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
     setEditCustPhone(customer.phone);
     setEditCustEmail(customer.email);
     setEditCustAddress(customer.addressLine1);
+    setEditCustCity(customer.city);
+    setEditCustState(customer.state);
+    setEditCustPostal(customer.postalCode);
     setEditCustStatus(customer.status);
     setIsEditCustomerModalOpen(true);
   };
@@ -211,7 +224,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
       if (!reportAction(result, { entity: 'job site', refresh })) return;
       setIsAddSiteModalOpen(false);
       toast.success('Job site added', {
-        description: `${siteName.trim() || siteStreet.trim()} added to authorized sites.`,
+        description: `${siteName.trim() || siteStreet.trim() || siteCity.trim()} added to authorized sites.`,
       });
     });
   };
@@ -264,6 +277,9 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
       phone: editCustPhone,
       email: editCustEmail,
       addressLine1: editCustAddress,
+      city: editCustCity,
+      state: editCustState,
+      postalCode: editCustPostal,
       status: editCustStatus === 'Active' ? ('active' as const) : ('inactive' as const),
     };
     const check = updateCustomerSchema.safeParse(payload);
@@ -317,7 +333,8 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Customer since {customer.customerSince} &bull; {customer.location}
+              Customer since {customer.customerSince}
+              {customer.location && <> &bull; {customer.location}</>}
             </p>
           </div>
 
@@ -404,34 +421,45 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                   <span className="text-slate-900 font-semibold flex-1">{customer.name}</span>
                 </div>
 
-                <div className="flex items-start justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500 font-medium w-32">Account tier</span>
-                  <span className="text-slate-600 font-medium flex-1">{customer.tier || 'Not set'}</span>
-                </div>
-
                 <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
                   <span className="text-slate-500 font-medium w-32">Main phone</span>
                   <div className="flex-1 flex items-center justify-between gap-2">
                     <span className="text-slate-900 font-mono font-medium">{customer.phone}</span>
                     <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCall(customer.phone, customer.name)}
-                        className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
-                      >
-                        <Phone className="h-3 w-3 text-brand" />
-                        <span>Call</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleText(customer.phone, customer.name)}
-                        className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
-                      >
-                        <MessageSquare className="h-3 w-3 text-brand" />
-                        <span>Text</span>
-                      </Button>
+                      {customer.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-label="Copy phone"
+                          title="Copy phone"
+                          onClick={() => copyValue(customer.phone, 'Phone')}
+                          className="h-7 w-7 p-0 text-slate-500 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {customer.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCall(customer.phone, customer.name)}
+                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
+                        >
+                          <Phone className="h-3 w-3 text-brand" />
+                          <span>Call</span>
+                        </Button>
+                      )}
+                      {customer.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleText(customer.phone, customer.name)}
+                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
+                        >
+                          <MessageSquare className="h-3 w-3 text-brand" />
+                          <span>Text</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -440,31 +468,59 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                   <span className="text-slate-500 font-medium w-32">Email</span>
                   <div className="flex-1 flex items-center justify-between gap-2">
                     <span className="text-slate-900 font-medium truncate max-w-[200px]">{customer.email}</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEmail(customer.email)}
-                      className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs"
-                    >
-                      <Mail className="h-3 w-3 text-brand" />
-                      <span>Email</span>
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      {customer.email && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-label="Copy email"
+                          title="Copy email"
+                          onClick={() => copyValue(customer.email, 'Email')}
+                          className="h-7 w-7 p-0 text-slate-500 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      )}
+                    {customer.email && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEmail(customer.email)}
+                        className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs"
+                      >
+                        <Mail className="h-3 w-3 text-brand" />
+                        <span>Email</span>
+                      </Button>
+                    )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-start justify-between py-1.5">
                   <span className="text-slate-500 font-medium w-32">Physical address</span>
                   <div className="flex-1 flex items-start justify-between gap-2">
-                    <span className="text-slate-900 font-medium">{customer.address}</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDirections(customer.address)}
-                      className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs shrink-0"
-                    >
-                      <MapPin className="h-3 w-3 text-brand" />
-                      <span>Directions</span>
-                    </Button>
+                    {customer.address ? (
+                      <>
+                        <span className="text-slate-900 font-medium">{customer.address}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDirections(customer.address)}
+                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs shrink-0"
+                        >
+                          <MapPin className="h-3 w-3 text-brand" />
+                          <span>Directions</span>
+                        </Button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={openEditCustomer}
+                        className="text-brand font-medium hover:underline cursor-pointer"
+                      >
+                        Add address
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -501,27 +557,36 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                           </span>
                         )}
                       </div>
-                      <div className="text-slate-500 font-mono text-[11px] mt-0.5">{c.phone}</div>
+                      {c.phone && (
+                        <div className="flex items-center gap-1 text-slate-500 font-mono text-[11px] mt-0.5">
+                          <span>{c.phone}</span>
+                          <CopyButton value={c.phone} label="Phone" />
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCall(c.phone, c.name)}
-                        className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
-                      >
-                        <Phone className="h-3 w-3 text-brand" />
-                        <span>Call</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleText(c.phone, c.name)}
-                        className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
-                      >
-                        <MessageSquare className="h-3 w-3 text-brand" />
-                        <span>Text</span>
-                      </Button>
+                      {c.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCall(c.phone, c.name)}
+                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
+                        >
+                          <Phone className="h-3 w-3 text-brand" />
+                          <span>Call</span>
+                        </Button>
+                      )}
+                      {c.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleText(c.phone, c.name)}
+                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
+                        >
+                          <MessageSquare className="h-3 w-3 text-brand" />
+                          <span>Text</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -771,73 +836,84 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
                         {/* Phone & Email */}
                         <div className="space-y-1.5 pt-1 text-xs">
-                          <div
-                            className="flex items-center justify-between text-slate-700 hover:text-brand cursor-pointer transition-colors font-mono text-[11.5px]"
-                            onClick={() => {
-                              if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                                navigator.clipboard.writeText(contact.phone);
-                                toast.success('Phone copied to clipboard', { description: contact.phone });
-                              }
-                            }}
-                            title="Click to copy phone"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                              <span>{contact.phone}</span>
-                            </div>
-                            <Copy className="h-3 w-3 text-slate-400 hover:text-brand shrink-0" />
-                          </div>
-
-                          <div className="flex items-center gap-2 text-slate-500 text-[11.5px] truncate">
-                            <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <a
-                              href={`mailto:${contact.email}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="hover:underline hover:text-brand truncate"
-                              title={`Email ${contact.email}`}
+                          {contact.phone && (
+                            <div
+                              className="flex items-center justify-between text-slate-700 hover:text-brand cursor-pointer transition-colors font-mono text-[11.5px]"
+                              onClick={() => {
+                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                  navigator.clipboard.writeText(contact.phone);
+                                  toast.success('Phone copied to clipboard', { description: contact.phone });
+                                }
+                              }}
+                              title="Click to copy phone"
                             >
-                              {contact.email}
-                            </a>
-                          </div>
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                <span>{contact.phone}</span>
+                              </div>
+                              <Copy className="h-3 w-3 text-slate-400 hover:text-brand shrink-0" />
+                            </div>
+                          )}
+
+                          {contact.email && (
+                            <div className="flex items-center gap-2 text-slate-500 text-[11.5px] truncate">
+                              <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <a
+                                href={`mailto:${contact.email}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:underline hover:text-brand truncate"
+                                title={`Email ${contact.email}`}
+                              >
+                                {contact.email}
+                              </a>
+                              <CopyButton value={contact.email} label="Email" className="ml-auto" />
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Footer Actions */}
                       <div className="px-4 py-2.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCall(contact.phone, contact.name)}
-                            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-                          >
-                            <Phone className="h-3 w-3 text-brand" />
-                            <span>Call</span>
-                          </Button>
+                          {contact.phone && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCall(contact.phone, contact.name)}
+                              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+                            >
+                              <Phone className="h-3 w-3 text-brand" />
+                              <span>Call</span>
+                            </Button>
+                          )}
 
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleText(contact.phone, contact.name)}
-                            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-                          >
-                            <MessageSquare className="h-3 w-3 text-brand" />
-                            <span>Text</span>
-                          </Button>
+                          {contact.phone && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleText(contact.phone, contact.name)}
+                              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+                            >
+                              <MessageSquare className="h-3 w-3 text-brand" />
+                              <span>Text</span>
+                            </Button>
+                          )}
                         </div>
 
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEmail(contact.email)}
-                          className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-                        >
-                          <Mail className="h-3 w-3 text-brand" />
-                          <span>Email</span>
-                        </Button>
+                        {contact.email && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEmail(contact.email)}
+                            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+                          >
+                            <Mail className="h-3 w-3 text-brand" />
+                            <span>Email</span>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -892,10 +968,18 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
                         {/* Phone & Email */}
                         <td className="py-3.5 px-4">
-                          <div className="font-mono text-slate-800 text-xs">{contact.phone}</div>
-                          <div className="text-slate-400 text-[11px] truncate max-w-[180px]">
-                            {contact.email}
-                          </div>
+                          {contact.phone && (
+                            <div className="flex items-center gap-1 font-mono text-slate-800 text-xs">
+                              <span>{contact.phone}</span>
+                              <CopyButton value={contact.phone} label="Phone" />
+                            </div>
+                          )}
+                          {contact.email && (
+                            <div className="flex items-center gap-1 text-slate-400 text-[11px] max-w-[220px]">
+                              <span className="truncate">{contact.email}</span>
+                              <CopyButton value={contact.email} label="Email" />
+                            </div>
+                          )}
                         </td>
 
                         {/* Actions */}
@@ -904,35 +988,41 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="inline-flex items-center justify-end gap-1.5">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCall(contact.phone, contact.name)}
-                              className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
-                            >
-                              <Phone className="h-3 w-3 text-brand" />
-                              <span>Call</span>
-                            </Button>
+                            {contact.phone && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCall(contact.phone, contact.name)}
+                                className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
+                              >
+                                <Phone className="h-3 w-3 text-brand" />
+                                <span>Call</span>
+                              </Button>
+                            )}
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleText(contact.phone, contact.name)}
-                              className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
-                            >
-                              <MessageSquare className="h-3 w-3 text-brand" />
-                              <span>Text</span>
-                            </Button>
+                            {contact.phone && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleText(contact.phone, contact.name)}
+                                className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
+                              >
+                                <MessageSquare className="h-3 w-3 text-brand" />
+                                <span>Text</span>
+                              </Button>
+                            )}
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEmail(contact.email)}
-                              className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
-                            >
-                              <Mail className="h-3 w-3 text-brand" />
-                              <span>Email</span>
-                            </Button>
+                            {contact.email && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEmail(contact.email)}
+                                className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
+                              >
+                                <Mail className="h-3 w-3 text-brand" />
+                                <span>Email</span>
+                              </Button>
+                            )}
 
                             <Button
                               variant="outline"
@@ -1170,18 +1260,18 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Street address *</label>
+              <label className="text-xs font-semibold text-slate-700 block">Address or cross streets <span className="font-normal text-slate-400">(optional)</span></label>
               <Input
                 value={siteStreet}
                 onChange={(e) => setSiteStreet(e.target.value)}
-                placeholder="e.g. 18 Main Street"
+                placeholder="Optional: street or cross streets"
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
               />
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">City *</label>
+                <label className="text-xs font-semibold text-slate-700 block">Town *</label>
                 <Input
                   value={siteCity}
                   onChange={(e) => setSiteCity(e.target.value)}
@@ -1201,7 +1291,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">ZIP code</label>
+              <label className="text-xs font-semibold text-slate-700 block">ZIP code <span className="font-normal text-slate-400">(optional)</span></label>
               <Input
                 value={sitePostal}
                 onChange={(e) => setSitePostal(e.target.value)}
@@ -1274,11 +1364,45 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Street address</label>
+              <label className="text-xs font-semibold text-slate-700 block">Street address <span className="font-normal text-slate-400">(optional)</span></label>
               <Input
                 value={editCustAddress}
                 onChange={(e) => setEditCustAddress(e.target.value)}
-                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
+                placeholder="Optional: street or cross streets"
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">City <span className="font-normal text-slate-400">(optional)</span></label>
+                <Input
+                  value={editCustCity}
+                  onChange={(e) => setEditCustCity(e.target.value)}
+                  placeholder="e.g. Rockland"
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">State <span className="font-normal text-slate-400">(optional)</span></label>
+                <Input
+                  value={editCustState}
+                  onChange={(e) => setEditCustState(e.target.value.toUpperCase())}
+                  maxLength={2}
+                  placeholder="ME"
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">ZIP code <span className="font-normal text-slate-400">(optional)</span></label>
+              <Input
+                value={editCustPostal}
+                onChange={(e) => setEditCustPostal(e.target.value)}
+                maxLength={10}
+                placeholder="e.g. 04841"
+                className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
               />
             </div>
 
@@ -1335,7 +1459,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Street address *</label>
+              <label className="text-xs font-semibold text-slate-700 block">Address or cross streets <span className="font-normal text-slate-400">(optional)</span></label>
               <Input
                 value={siteStreet}
                 onChange={(e) => setSiteStreet(e.target.value)}
@@ -1345,7 +1469,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">City *</label>
+                <label className="text-xs font-semibold text-slate-700 block">Town *</label>
                 <Input
                   value={siteCity}
                   onChange={(e) => setSiteCity(e.target.value)}
@@ -1364,7 +1488,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">ZIP code</label>
+              <label className="text-xs font-semibold text-slate-700 block">ZIP code <span className="font-normal text-slate-400">(optional)</span></label>
               <Input
                 value={sitePostal}
                 onChange={(e) => setSitePostal(e.target.value)}

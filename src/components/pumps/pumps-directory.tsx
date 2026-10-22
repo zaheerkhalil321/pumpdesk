@@ -33,6 +33,7 @@ import type {
 import { AddPumpModal } from '@/components/pumps/add-pump-modal';
 import { PumpDetailDialog } from '@/components/pumps/pump-detail-dialog';
 import { PumpTileCard } from '@/components/pumps/pump-tile-card';
+import { IllustratedEmptyState } from '@/components/layout/illustrated-empty-state';
 
 type ViewLayout = 'table' | 'tiles';
 
@@ -159,6 +160,29 @@ export function PumpsDirectory({
     setIsInspectionMode(inspection);
     setSelectedPumpId(pump.id);
   };
+
+  if (pumps.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
+        <PageHeader title="Pumps" description="Manage equipment, availability, and maintenance." />
+        <IllustratedEmptyState
+          imageSrc="/illustrations/boom-pump.webp"
+          imageAlt="Boom pump truck"
+          title="You haven't added a pump yet"
+          description="Add your first pump to start managing your fleet, availability, and maintenance."
+          actionLabel="Add your first pump"
+          onAction={() => setIsAddModalOpen(true)}
+        />
+        <AddPumpModal
+          open={isAddModalOpen}
+          onOpenChange={setIsAddModalOpen}
+          pumps={pumps}
+          operators={operators}
+          branchOptions={branchOptions}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">

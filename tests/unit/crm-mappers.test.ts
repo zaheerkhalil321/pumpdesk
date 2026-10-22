@@ -16,7 +16,6 @@ const customer: CustomerRow = {
   customer_number: "CUST-101",
   business_name: "Accurate Concrete",
   status: "active",
-  tier: "VIP Partner",
   phone: "+12075550101",
   email: "office@accurate.example",
   billing_address_line_1: "318 Main Street",

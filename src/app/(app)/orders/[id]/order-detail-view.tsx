@@ -39,6 +39,7 @@ import { format, parse } from 'date-fns';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
 import { getFullOrderDetail } from '@/lib/orders-store';
+import { CopyButton } from '@/components/ui/copy-button';
 
 interface OrderDetailViewProps {
   orderId: string;
@@ -1265,29 +1266,38 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   <div className="flex items-center justify-between sm:justify-end gap-3 min-w-0">
                     <div className="text-left sm:text-right min-w-0">
                       <div className="font-semibold text-slate-900 whitespace-nowrap">{order.customerContact}</div>
-                      <div className="text-slate-500 text-[11px] font-mono whitespace-nowrap">{order.customerPhone}</div>
+                      {order.customerPhone && (
+                        <div className="flex items-center gap-1 text-slate-500 text-[11px] font-mono whitespace-nowrap sm:justify-end">
+                          <span>{order.customerPhone}</span>
+                          <CopyButton value={order.customerPhone} label="Phone" />
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCall(order.customerContact, order.customerPhone)}
-                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
-                      >
-                        <Phone className="h-3 w-3 text-brand" />
-                        <span>Call</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleText(order.customerContact, order.customerPhone)}
-                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
-                      >
-                        <MessageSquare className="h-3 w-3 text-brand" />
-                        <span>Text</span>
-                      </Button>
+                      {order.customerPhone && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCall(order.customerContact, order.customerPhone)}
+                          className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
+                        >
+                          <Phone className="h-3 w-3 text-brand" />
+                          <span>Call</span>
+                        </Button>
+                      )}
+                      {order.customerPhone && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleText(order.customerContact, order.customerPhone)}
+                          className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
+                        >
+                          <MessageSquare className="h-3 w-3 text-brand" />
+                          <span>Text</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1351,7 +1361,10 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                         <div className="text-[11px] font-bold text-slate-400">Assigned operator</div>
                         <div className="font-bold text-slate-900 text-sm whitespace-nowrap truncate">{order.assignedOperator}</div>
                         {order.operatorPhone ? (
-                          <div className="text-slate-500 text-xs font-mono whitespace-nowrap">{order.operatorPhone}</div>
+                          <div className="flex items-center gap-1 text-slate-500 text-xs font-mono whitespace-nowrap">
+                            <span>{order.operatorPhone}</span>
+                            <CopyButton value={order.operatorPhone} label="Phone" />
+                          </div>
                         ) : (
                           <div className="text-amber-600 text-xs font-medium">No phone listed</div>
                         )}

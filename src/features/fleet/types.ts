@@ -78,6 +78,15 @@ export interface OperatorItem {
   } | null;
 }
 
+/** One expiring (or expired) operator credential, shown on the schedule page. */
+export interface CredentialAlertItem {
+  operatorId: string;
+  operatorName: string;
+  title: string;
+  date: string;
+  daysRemaining: number;
+}
+
 export interface BranchOption {
   value: string;
   label: string;

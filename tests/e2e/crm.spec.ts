@@ -28,7 +28,7 @@ test.describe("CRM: customers", () => {
     await page.goto("/customers");
     await page.getByRole("button", { name: "New customer" }).click();
     await page.getByPlaceholder("e.g. Acme Concrete Contractors").fill(name);
-    await page.getByPlaceholder("e.g. John Doe (Superintendent)").fill("Nora Fields");
+    await page.getByPlaceholder("e.g. John Doe").fill("Nora Fields");
     await page.getByPlaceholder("(207) 555-0188").fill("2075550188");
     await page.getByRole("button", { name: "Add customer" }).click();
     await expect(page.getByText("Customer account created")).toBeVisible();
@@ -95,7 +95,7 @@ test.describe("CRM: customers", () => {
     await page.getByRole("button", { name: "Add site" }).first().click();
     const add = page.getByRole("dialog");
     await add.getByPlaceholder("e.g. Rockland Medical Plaza").fill(site);
-    await add.getByPlaceholder("e.g. 18 Main Street").fill("5 Test Lane");
+    await add.getByPlaceholder("Optional: street or cross streets").fill("5 Test Lane");
     await add.getByPlaceholder("e.g. Rockland", { exact: true }).fill("Belfast");
     await add.getByRole("button", { name: "Add job site" }).click();
     await expect(page.getByText("Job site added")).toBeVisible();

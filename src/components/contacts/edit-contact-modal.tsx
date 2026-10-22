@@ -51,7 +51,6 @@ export function EditContactModal({
   const [firstNameError, setFirstNameError] = useState(false);
   const [lastNameError, setLastNameError] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
-  const [emailError, setEmailError] = useState(false);
 
   const toggleRole = (role: string) => {
     setSelectedRoles((prev) =>
@@ -82,13 +81,6 @@ export function EditContactModal({
       hasError = true;
     } else {
       setPhoneError(false);
-    }
-
-    if (!email.trim()) {
-      setEmailError(true);
-      hasError = true;
-    } else {
-      setEmailError(false);
     }
 
     if (hasError) return;
@@ -308,27 +300,14 @@ export function EditContactModal({
           {/* Email */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Email address <span className="text-red-500">*</span>
+              Email address <span className="font-normal text-slate-400">(optional)</span>
             </label>
             <Input
               type="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (emailError && e.target.value.trim()) setEmailError(false);
-              }}
-              className={cn(
-                'h-9 text-xs rounded-lg transition-colors',
-                emailError
-                  ? 'border-red-500 bg-red-50/20 text-red-900'
-                  : 'border-slate-200 focus-visible:border-brand'
-              )}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-9 text-xs rounded-lg border-slate-200 focus-visible:border-brand transition-colors"
             />
-            {emailError && (
-              <p className="text-[11px] text-red-500 font-medium mt-1">
-                Email address is required
-              </p>
-            )}
           </div>
 
           {/* Action buttons */}

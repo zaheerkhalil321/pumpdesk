@@ -9,6 +9,7 @@ import {
   createContactSchema,
   createCustomerSchema,
   createJobSiteSchema,
+  findContactsByPhoneSchema,
   linkContactSchema,
   unlinkContactSchema,
   updateContactLinkSchema,
@@ -44,7 +45,10 @@ export const createCustomer = authedAction({
         business_name: input.businessName,
         phone: input.phone ?? null,
         email: input.email ?? null,
-        tier: input.tier ?? null,
+        billing_address_line_1: input.addressLine1 ?? null,
+        billing_city: input.city ?? null,
+        billing_state: input.state ?? null,
+        billing_postal_code: input.postalCode ?? null,
         status: input.status,
       })
       .select('id')
@@ -57,7 +61,12 @@ export const createCustomer = authedAction({
       const { first, last } = splitName(input.contactName);
       const contact = await supabase
         .from('contacts')
-        .insert({ first_name: first, last_name: last })
+        .insert({
+          first_name: first,
+          last_name: last,
+          phone: input.phone ?? null,
+          email: input.email ?? null,
+        })
         .select('id')
         .single();
       const link = contact.data
@@ -88,6 +97,9 @@ export const updateCustomer = authedAction({
         phone: input.phone,
         email: input.email,
         billing_address_line_1: input.addressLine1,
+        billing_city: input.city,
+        billing_state: input.state,
+        billing_postal_code: input.postalCode,
         status: input.status,
       })
       .eq('id', input.id)
@@ -135,6 +147,26 @@ export const createContact = authedAction({
 
     revalidateCrm(input.customerId, data.id);
     return { id: data.id };
+  },
+});
+
+/** Active contacts that already use this phone number, so the form can ask before adding another. */
+export const findContactsByPhone = authedAction({
+  schema: findContactsByPhoneSchema,
+  roles: CRM_EDITORS,
+  run: async ({ input, supabase }) => {
+    if (!input.phone) return [];
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('id, first_name, last_name')
+      .eq('phone', input.phone)
+      .eq('is_active', true)
+      .limit(5);
+    if (error) throw error;
+    return data.map((c) => ({
+      id: c.id,
+      name: [c.first_name, c.last_name].filter(Boolean).join(' '),
+    }));
   },
 });
 

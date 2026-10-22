@@ -14,7 +14,7 @@ import { AppSelect } from '@/components/ui/app-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
-import { createContact } from '@/features/crm/server/actions';
+import { createContact, findContactsByPhone } from '@/features/crm/server/actions';
 import { createContactSchema } from '@/features/crm/schemas';
 import { reportAction } from '@/lib/action-feedback';
 import { CONTACT_ROLE_OPTIONS, type CustomerOption } from '@/features/crm/types';
@@ -46,11 +46,13 @@ export function NewContactModal({
   const [phoneType, setPhoneType] = useState<'Mobile' | 'Office'>('Mobile');
   const [email, setEmail] = useState('');
 
+  // Contacts that already use the typed phone number; the user must confirm to add another.
+  const [duplicates, setDuplicates] = useState<{ id: string; name: string }[]>([]);
+
   // Validation error states
   const [firstNameError, setFirstNameError] = useState(false);
   const [lastNameError, setLastNameError] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
-  const [emailError, setEmailError] = useState(false);
 
   const toggleRole = (role: string) => {
     setSelectedRoles((prev) =>
@@ -72,7 +74,7 @@ export function NewContactModal({
     setFirstNameError(false);
     setLastNameError(false);
     setPhoneError(false);
-    setEmailError(false);
+    setDuplicates([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -101,13 +103,6 @@ export function NewContactModal({
       setPhoneError(false);
     }
 
-    if (!email.trim()) {
-      setEmailError(true);
-      hasError = true;
-    } else {
-      setEmailError(false);
-    }
-
     if (hasError) return;
 
     const payload = {
@@ -128,6 +123,14 @@ export function NewContactModal({
     }
 
     startSaving(async () => {
+      if (duplicates.length === 0) {
+        const found = await findContactsByPhone({ phone });
+        if (found.ok && found.data.length > 0) {
+          setDuplicates(found.data);
+          return;
+        }
+      }
+
       const result = await createContact(payload);
       if (!reportAction(result, { entity: 'contact', refresh: () => router.refresh() })) return;
 
@@ -270,6 +273,7 @@ export function NewContactModal({
                 onChange={(e) => {
                   const formatted = formatUSPhone(e.target.value);
                   setPhone(formatted);
+                  setDuplicates([]);
                   if (phoneError && formatted.trim()) setPhoneError(false);
                 }}
                 placeholder="(207) 555-0100"
@@ -303,29 +307,29 @@ export function NewContactModal({
           {/* Email */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Email address <span className="text-red-500">*</span>
+              Email address <span className="font-normal text-slate-400">(optional)</span>
             </label>
             <Input
               type="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (emailError && e.target.value.trim()) setEmailError(false);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="alex@accurate.example"
-              className={cn(
-                'h-9 text-xs rounded-lg transition-colors',
-                emailError
-                  ? 'border-red-500 bg-red-50/20 text-red-900 focus-visible:border-red-500'
-                  : 'border-slate-200 focus-visible:border-brand'
-              )}
+              className="h-9 text-xs rounded-lg border-slate-200 focus-visible:border-brand transition-colors"
             />
-            {emailError && (
-              <p className="text-[11px] text-red-500 font-medium mt-1">
-                Email address is required
-              </p>
-            )}
           </div>
+
+          {duplicates.length > 0 && (
+            <div
+              role="alert"
+              className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
+            >
+              <p className="font-semibold">This phone number is already saved</p>
+              <p className="mt-0.5">
+                {duplicates.map((d) => d.name).join(', ')} already uses {phone}. Add this contact
+                anyway?
+              </p>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -345,7 +349,7 @@ export function NewContactModal({
               disabled={isSaving}
               className="h-9 px-4 text-xs font-semibold cursor-pointer shadow-xs"
             >
-              {isSaving ? 'Saving...' : 'Save contact'}
+              {isSaving ? 'Saving...' : duplicates.length > 0 ? 'Add anyway' : 'Save contact'}
             </Button>
           </div>
         </form>

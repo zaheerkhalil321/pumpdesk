@@ -14,7 +14,7 @@ import { createOperatorSchema, updateOperatorSchema } from '@/features/fleet/sch
 import { getPumpDisplayName } from '@/features/fleet/format';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { reportAction } from '@/lib/action-feedback';
-import { formatUSPhone } from '@/lib/utils';
+import { cn, formatUSPhone } from '@/lib/utils';
 
 const ROLE_OPTIONS = ['Operator', 'Lead operator', 'Relief operator'];
 const NO_PUMP = 'none';
@@ -22,6 +22,15 @@ const NO_BRANCH = 'none';
 
 const INPUT_CLASS =
   'h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand rounded-lg shadow-2xs';
+
+const ERROR_INPUT_CLASS = 'border-red-500 bg-red-50/20 text-red-900 focus-visible:border-red-500';
+
+type FieldErrors = Partial<Record<string, string>>;
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-[11px] text-red-500 font-medium">{message}</p>;
+}
 
 interface OperatorFormProps {
   /** Pass an operator to edit it, or leave empty to create one. */
@@ -60,6 +69,14 @@ export function OperatorForm({
   const [cdlExpiresOn, setCdlExpiresOn] = useState(operator?.cdlExpiresOn ?? '');
   const [medicalExpiresOn, setMedicalExpiresOn] = useState(operator?.medicalCertExpiresOn ?? '');
   const [isActive, setIsActive] = useState(operator ? operator.status === 'Active' : true);
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  /** Updates a field and clears its error message as soon as the user types again. */
+  const edit = (field: string, setter: (value: string) => void) => (value: string) => {
+    setter(value);
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+  const inputClass = (field: string) => cn(INPUT_CLASS, errors[field] && ERROR_INPUT_CLASS);
 
   const roleOptions = ROLE_OPTIONS.includes(role) ? ROLE_OPTIONS : [...ROLE_OPTIONS, role];
   const pumpOptions = [
@@ -89,10 +106,14 @@ export function OperatorForm({
 
     const check = (operator ? updateOperatorSchema : createOperatorSchema).safeParse(payload);
     if (!check.success) {
-      const first = Object.values(check.error.flatten().fieldErrors).flat()[0];
-      toast.error(first ?? 'Please check the form.');
+      const fieldErrors = check.error.flatten().fieldErrors as Record<string, string[] | undefined>;
+      const next: FieldErrors = {};
+      for (const [field, messages] of Object.entries(fieldErrors)) next[field] = messages?.[0];
+      setErrors(next);
+      if (Object.keys(next).length === 0) toast.error('Please check the form.');
       return;
     }
+    setErrors({});
 
     startSaving(async () => {
       const refresh = () => router.refresh();
@@ -110,7 +131,7 @@ export function OperatorForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 block">
@@ -118,10 +139,11 @@ export function OperatorForm({
           </label>
           <Input
             value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+            onChange={(e) => edit('firstName', setFirstName)(e.target.value)}
             placeholder="e.g. Rob"
-            className={INPUT_CLASS}
+            className={inputClass('firstName')}
           />
+          <FieldError message={errors.firstName} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 block">
@@ -129,10 +151,11 @@ export function OperatorForm({
           </label>
           <Input
             value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            onChange={(e) => edit('lastName', setLastName)(e.target.value)}
             placeholder="e.g. Black"
-            className={INPUT_CLASS}
+            className={inputClass('lastName')}
           />
+          <FieldError message={errors.lastName} />
         </div>
       </div>
 
@@ -156,21 +179,23 @@ export function OperatorForm({
           <Input
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(formatUSPhone(e.target.value))}
+            onChange={(e) => edit('phone', setPhone)(formatUSPhone(e.target.value))}
             placeholder="(207) 555-0168"
             maxLength={14}
-            className={INPUT_CLASS}
+            className={inputClass('phone')}
           />
+          <FieldError message={errors.phone} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 block">Email</label>
           <Input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => edit('email', setEmail)(e.target.value)}
             placeholder="rob@midcoast.example"
-            className={INPUT_CLASS}
+            className={inputClass('email')}
           />
+          <FieldError message={errors.email} />
         </div>
       </div>
 

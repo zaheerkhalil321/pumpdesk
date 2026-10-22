@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { EditOperatorModal } from '@/components/operators/edit-operator-modal';
+import { CopyButton } from '@/components/ui/copy-button';
 
 interface OperatorDetailViewProps {
   operator: OperatorItem;
@@ -79,27 +80,31 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
 
         {/* Right Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCall}
-            className="h-9 px-3 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-          >
-            <Phone className="h-3.5 w-3.5 text-brand" />
-            <span>Call</span>
-          </Button>
+          {operator.phone && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCall}
+                className="h-9 px-3 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+              >
+                <Phone className="h-3.5 w-3.5 text-brand" />
+                <span>Call</span>
+              </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleText}
-            className="h-9 px-3 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-          >
-            <MessageSquare className="h-3.5 w-3.5 text-brand" />
-            <span>Text</span>
-          </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleText}
+                className="h-9 px-3 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                <span>Text</span>
+              </Button>
+            </>
+          )}
 
           <Button
             type="button"
@@ -162,27 +167,34 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
             {/* Phone */}
             <div className="py-3 flex items-center justify-between gap-4">
               <span className="text-slate-500 font-medium">Phone</span>
-              <button
-                type="button"
-                onClick={() => handleCopy(operator.phone, 'Phone number')}
-                className="font-mono text-slate-900 hover:text-brand font-medium inline-flex items-center gap-1.5 cursor-pointer group/phone text-right"
-                title="Click to copy phone"
-              >
-                <span>{operator.phone}</span>
-                <Copy className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover/phone:opacity-100 transition-opacity" />
-              </button>
+              {operator.phone && (
+                <button
+                  type="button"
+                  onClick={() => handleCopy(operator.phone, 'Phone number')}
+                  className="font-mono text-slate-900 hover:text-brand font-medium inline-flex items-center gap-1.5 cursor-pointer group/phone text-right"
+                  title="Click to copy phone"
+                >
+                  <span>{operator.phone}</span>
+                  <Copy className="h-3.5 w-3.5 text-slate-400 sm:opacity-0 sm:group-hover/phone:opacity-100 transition-opacity" />
+                </button>
+              )}
             </div>
 
             {/* Email */}
             <div className="py-3 flex items-center justify-between gap-4">
               <span className="text-slate-500 font-medium">Email</span>
-              <a
-                href={`mailto:${operator.email}`}
-                className="text-slate-900 hover:text-brand hover:underline font-medium text-right truncate max-w-[260px]"
-                title={`Send email to ${operator.email}`}
-              >
-                {operator.email}
-              </a>
+              {operator.email && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <a
+                    href={`mailto:${operator.email}`}
+                    className="text-slate-900 hover:text-brand hover:underline font-medium text-right truncate max-w-[260px]"
+                    title={`Send email to ${operator.email}`}
+                  >
+                    {operator.email}
+                  </a>
+                  <CopyButton value={operator.email} label="Email" />
+                </div>
+              )}
             </div>
 
             {/* Branch */}
@@ -257,7 +269,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
                         title="Click to copy emergency phone"
                       >
                         <span>{contact.phone}</span>
-                        <Copy className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover/em:opacity-100 transition-opacity" />
+                        <Copy className="h-3.5 w-3.5 text-slate-400 sm:opacity-0 sm:group-hover/em:opacity-100 transition-opacity" />
                       </button>
                     ) : (
                       <span className="text-slate-400 font-medium text-right">Not provided</span>
@@ -290,7 +302,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
                     title="Click to copy emergency phone"
                   >
                     <span>{operator.emergencyContact.phone}</span>
-                    <Copy className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover/em:opacity-100 transition-opacity" />
+                    <Copy className="h-3.5 w-3.5 text-slate-400 sm:opacity-0 sm:group-hover/em:opacity-100 transition-opacity" />
                   </button>
                 ) : (
                   <span className="text-slate-400 font-medium text-right">Not provided</span>

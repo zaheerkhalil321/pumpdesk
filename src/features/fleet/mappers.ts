@@ -43,7 +43,8 @@ export type EmployeeRow = Pick<
 >;
 
 const DUE_SOON_DAYS = 14;
-const CREDENTIAL_ALERT_DAYS = 60;
+/** CDL and medical certificate alerts start this many days before the expiry date. */
+export const CREDENTIAL_ALERT_DAYS = 30;
 const NOT_PROVIDED = { name: 'Not provided', relationship: 'Not provided', phone: 'Not provided' };
 
 /** Whole days from `today` to `isoDate`; both are yyyy-mm-dd. Negative when `isoDate` is past. */
@@ -68,12 +69,11 @@ export function fullName(person: { first_name: string; last_name: string }): str
   return `${person.first_name} ${person.last_name}`.trim();
 }
 
-export function mapOperator(
-  row: EmployeeRow,
-  branchesById: Map<string, string>,
-  defaultPumpLabel: string | undefined,
+/** CDL and medical cert alerts that are due within the alert window (or already expired), soonest first. */
+export function credentialAlertsFor(
+  row: Pick<EmployeeRow, 'cdl_expires_on' | 'medical_cert_expires_on'>,
   today: string,
-): OperatorItem {
+): { title: string; date: string; daysRemaining: number }[] {
   const alerts: { title: string; date: string; daysRemaining: number }[] = [];
   const addAlert = (label: string, iso: string | null) => {
     if (!iso) return;
@@ -90,7 +90,16 @@ export function mapOperator(
   };
   addAlert('CDL', row.cdl_expires_on);
   addAlert('Medical Examiner Cert', row.medical_cert_expires_on);
-  alerts.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  return alerts.sort((a, b) => a.daysRemaining - b.daysRemaining);
+}
+
+export function mapOperator(
+  row: EmployeeRow,
+  branchesById: Map<string, string>,
+  defaultPumpLabel: string | undefined,
+  today: string,
+): OperatorItem {
+  const alerts = credentialAlertsFor(row, today);
 
   return {
     id: row.id,

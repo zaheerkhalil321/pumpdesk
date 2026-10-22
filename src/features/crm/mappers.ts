@@ -12,7 +12,7 @@ import type {
 } from '@/features/crm/types';
 
 export const CUSTOMER_COLUMNS =
-  'id, customer_number, business_name, status, tier, phone, email, billing_address_line_1, billing_city, billing_state, billing_postal_code, dispatch_note, version, created_at';
+  'id, customer_number, business_name, status, phone, email, billing_address_line_1, billing_city, billing_state, billing_postal_code, dispatch_note, version, created_at';
 export const CONTACT_COLUMNS =
   'id, first_name, last_name, job_title, email, phone, phone_type, is_active, created_at';
 export const LINK_COLUMNS =
@@ -26,7 +26,6 @@ export type CustomerRow = Pick<
   | 'customer_number'
   | 'business_name'
   | 'status'
-  | 'tier'
   | 'phone'
   | 'email'
   | 'billing_address_line_1'
@@ -99,7 +98,6 @@ export function mapCustomerListItem(
     contactRole: contact?.job_title ?? '',
     phone: formatE164(row.phone),
     email: row.email ?? '',
-    tier: row.tier ?? '',
     activeSites,
     createdDate: formatInTimeZone(row.created_at, timezone, 'MMM d, yyyy'),
     createdTime: formatInTimeZone(row.created_at, timezone, 'h:mm a'),
@@ -112,14 +110,14 @@ export function mapCustomerListItem(
 export function mapJobSite(row: JobSiteRow): JobSiteItem {
   return {
     id: row.id,
-    name: row.name ?? row.address_line_1,
+    name: row.name ?? row.address_line_1 ?? row.city,
     address: formatAddress({
       line1: row.address_line_1,
       city: row.city,
       state: row.state,
       postalCode: row.postal_code,
     }),
-    addressLine1: row.address_line_1,
+    addressLine1: row.address_line_1 ?? '',
     city: row.city,
     state: row.state,
     postalCode: row.postal_code ?? '',
@@ -162,7 +160,6 @@ export function mapCustomerDetail(
       ? `Accounting · ${row.email}`
       : 'Not set';
 
-  const cityState = [row.billing_city, row.billing_state].filter(Boolean).join(', ');
   const stateName = row.billing_state === 'ME' ? 'Maine' : row.billing_state;
   const location = [row.billing_city, stateName].filter(Boolean).join(', ');
 
@@ -171,19 +168,21 @@ export function mapCustomerDetail(
     version: row.version,
     number: row.customer_number,
     name: row.business_name,
-    tier: row.tier ?? '',
     phone: formatE164(row.phone),
     email: row.email ?? '',
     addressLine1: row.billing_address_line_1 ?? '',
+    city: row.billing_city ?? '',
+    state: row.billing_state ?? '',
+    postalCode: row.billing_postal_code ?? '',
     address:
       formatAddress({
         line1: row.billing_address_line_1,
         city: row.billing_city,
         state: row.billing_state,
         postalCode: row.billing_postal_code,
-      }) || (cityState ? cityState : 'Not set'),
+      }),
     customerSince: formatInTimeZone(row.created_at, timezone, 'MMMM d, yyyy'),
-    location: location || 'Location not set',
+    location,
     status: customerStatus(row.status),
     contacts,
     jobSites: sites.map(mapJobSite),

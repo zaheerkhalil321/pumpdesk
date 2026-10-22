@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
+import { IllustratedEmptyState } from '@/components/layout/illustrated-empty-state';
 import { OperatorTileCard } from '@/components/operators/operator-tile-card';
 
 type StatusFilterOption = 'all' | 'Active' | 'Inactive';
@@ -148,6 +149,28 @@ export function OperatorsDirectory({
     e.stopPropagation();
     toast.info(`Opening SMS with ${name}`, { description: phone });
   };
+
+  if (operators.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
+        <PageHeader title="Operators" description="Manage your crew, timesheets, and time off." />
+        <IllustratedEmptyState
+          imageSrc="/illustrations/operator-remote.webp"
+          imageAlt="Pump operator remote control"
+          title="You haven't added an operator yet"
+          description="Add your first operator to manage your crew, availability, and time off."
+          actionLabel="Add your first operator"
+          onAction={() => setIsAddModalOpen(true)}
+        />
+        <AddOperatorModal
+          open={isAddModalOpen}
+          onOpenChange={setIsAddModalOpen}
+          pumps={pumps}
+          branchOptions={branchOptions}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
@@ -376,15 +399,17 @@ export function OperatorsDirectory({
 
                       {/* 3. Phone */}
                       <td className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={(e) => handleCopyPhone(e, op.phone, op.name)}
-                          className="inline-flex items-center gap-1 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone"
-                          title="Click to copy phone"
-                        >
-                          <span>{op.phone}</span>
-                          <Copy className="h-3 w-3 opacity-0 group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
-                        </button>
+                        {op.phone && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyPhone(e, op.phone, op.name)}
+                            className="inline-flex items-center gap-1 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone"
+                            title="Click to copy phone"
+                          >
+                            <span>{op.phone}</span>
+                            <Copy className="h-3 w-3 sm:opacity-0 sm:group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
+                          </button>
+                        )}
                       </td>
 
                       {/* 4. Default Pump Badge */}
@@ -426,29 +451,33 @@ export function OperatorsDirectory({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="inline-flex items-center justify-start gap-1.5">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => handleCall(e, op.phone, op.name)}
-                            className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-                            title={`Call ${op.phone}`}
-                          >
-                            <Phone className="h-3.5 w-3.5 text-brand" />
-                            <span>Call</span>
-                          </Button>
+                          {op.phone && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => handleCall(e, op.phone, op.name)}
+                              className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                              title={`Call ${op.phone}`}
+                            >
+                              <Phone className="h-3.5 w-3.5 text-brand" />
+                              <span>Call</span>
+                            </Button>
+                          )}
 
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => handleText(e, op.phone, op.name)}
-                            className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-                            title={`Text ${op.phone}`}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5 text-brand" />
-                            <span>Text</span>
-                          </Button>
+                          {op.phone && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => handleText(e, op.phone, op.name)}
+                              className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                              title={`Text ${op.phone}`}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                              <span>Text</span>
+                            </Button>
+                          )}
 
                           <Link
                             href={`/operators/${op.id}`}

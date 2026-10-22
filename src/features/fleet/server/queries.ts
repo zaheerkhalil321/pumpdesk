@@ -6,7 +6,9 @@ import { createClient } from '@/server/supabase';
 import { requireSession } from '@/server/session';
 import { getPumpDisplayName } from '@/features/fleet/format';
 import {
+  credentialAlertsFor,
   EMPLOYEE_COLUMNS,
+  fullName,
   EQUIPMENT_COLUMNS,
   mapOperator,
   mapPump,
@@ -15,7 +17,7 @@ import {
   type EmployeeRow,
   type EquipmentRow,
 } from '@/features/fleet/mappers';
-import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
+import type { BranchOption, CredentialAlertItem, OperatorItem, PumpItem } from '@/features/fleet/types';
 
 // All reads go through the user-scoped client, so RLS applies. Explicit column lists only.
 
@@ -50,6 +52,29 @@ function buildOperators(fleet: Awaited<ReturnType<typeof loadFleet>>): OperatorI
   return fleet.employees.map((e) =>
     mapOperator(e, branchesById, pumpLabelByOperator.get(e.id), fleet.today),
   );
+}
+
+/** Active operators whose CDL or medical cert is expiring soon (or expired), soonest first. */
+export async function listCredentialAlerts(): Promise<CredentialAlertItem[]> {
+  const session = await requireSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('employees')
+    .select(EMPLOYEE_COLUMNS)
+    .eq('is_operator', true)
+    .eq('status', 'active');
+  if (error) throw error;
+
+  const today = todayIn(session.timezone);
+  return ((data ?? []) as EmployeeRow[])
+    .flatMap((row) =>
+      credentialAlertsFor(row, today).map((alert) => ({
+        operatorId: row.id,
+        operatorName: fullName(row),
+        ...alert,
+      })),
+    )
+    .sort((a, b) => a.daysRemaining - b.daysRemaining);
 }
 
 export async function listPumps(): Promise<PumpItem[]> {

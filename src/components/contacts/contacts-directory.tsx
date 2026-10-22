@@ -472,33 +472,37 @@ export function ContactsDirectory({
                       {/* 4. Phone & Email */}
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col text-xs space-y-1">
-                          <button
-                            type="button"
-                            onClick={(e) => handleCopyPhone(e, contact.phone, contact.name)}
-                            className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone text-left"
-                            title="Click to copy phone"
-                          >
-                            <span>{contact.phone}</span>
-                            <Copy className="h-3 w-3 opacity-0 group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
-                          </button>
-                          <div className="inline-flex items-center gap-1.5 group/email">
-                            <a
-                              href={`mailto:${contact.email}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-slate-500 hover:text-slate-900 hover:underline transition-colors truncate max-w-[200px]"
-                              title={`Send email to ${contact.email}`}
-                            >
-                              {contact.email}
-                            </a>
+                          {contact.phone && (
                             <button
                               type="button"
-                              onClick={(e) => handleCopyEmail(e, contact.email, contact.name)}
-                              className="opacity-0 group-hover/email:opacity-100 p-0.5 hover:bg-slate-200/60 rounded text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
-                              title="Copy email address"
+                              onClick={(e) => handleCopyPhone(e, contact.phone, contact.name)}
+                              className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand font-mono text-xs cursor-pointer group/phone text-left"
+                              title="Click to copy phone"
                             >
-                              <Copy className="h-3 w-3" />
+                              <span>{contact.phone}</span>
+                              <Copy className="h-3 w-3 sm:opacity-0 sm:group-hover/phone:opacity-100 text-slate-400 transition-opacity" />
                             </button>
-                          </div>
+                          )}
+                          {contact.email && (
+                            <div className="inline-flex items-center gap-1.5 group/email">
+                              <a
+                                href={`mailto:${contact.email}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-slate-500 hover:text-slate-900 hover:underline transition-colors truncate max-w-[200px]"
+                                title={`Send email to ${contact.email}`}
+                              >
+                                {contact.email}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyEmail(e, contact.email, contact.name)}
+                                className="sm:opacity-0 sm:group-hover/email:opacity-100 p-0.5 hover:bg-slate-200/60 rounded text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+                                title="Copy email address"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -523,29 +527,33 @@ export function ContactsDirectory({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="inline-flex items-center justify-start gap-1.5">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => handleCall(e, contact.phone, contact.name)}
-                            className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-                            title={`Call ${contact.phone}`}
-                          >
-                            <Phone className="h-3.5 w-3.5 text-brand" />
-                            <span>Call</span>
-                          </Button>
+                          {contact.phone && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => handleCall(e, contact.phone, contact.name)}
+                              className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                              title={`Call ${contact.phone}`}
+                            >
+                              <Phone className="h-3.5 w-3.5 text-brand" />
+                              <span>Call</span>
+                            </Button>
+                          )}
 
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => handleText(e, contact.phone, contact.name)}
-                            className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
-                            title={`Text ${contact.phone}`}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5 text-brand" />
-                            <span>Text</span>
-                          </Button>
+                          {contact.phone && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => handleText(e, contact.phone, contact.name)}
+                              className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                              title={`Text ${contact.phone}`}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                              <span>Text</span>
+                            </Button>
+                          )}
 
                           <Link
                             href={`/contacts/${contact.id}`}

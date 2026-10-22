@@ -135,75 +135,83 @@ export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
           </div>
 
           {/* Phone */}
-          <div className="flex items-center justify-between text-xs pt-0.5">
-            <div
-              className="flex items-center gap-2 text-slate-700 font-mono text-[11.5px] cursor-pointer hover:text-brand transition-colors"
-              onClick={(e) => handleCopy(e, contact.phone, 'Phone')}
-              title="Click to copy phone"
-            >
-              <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span>{contact.phone}</span>
-              <Copy className="h-3 w-3 text-slate-400 hover:text-brand" />
-            </div>
+{contact.phone && (
+            <div className="flex items-center justify-between text-xs pt-0.5">
+              <div
+                className="flex items-center gap-2 text-slate-700 font-mono text-[11.5px] cursor-pointer hover:text-brand transition-colors"
+                onClick={(e) => handleCopy(e, contact.phone, 'Phone')}
+                title="Click to copy phone"
+              >
+                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <span>{contact.phone}</span>
+                <Copy className="h-3 w-3 text-slate-400 hover:text-brand" />
+              </div>
 
-            <span className="text-[10.5px] text-slate-400 font-medium">
-              {contact.phoneType}
-            </span>
-          </div>
+              <span className="text-[10.5px] text-slate-400 font-medium">
+                {contact.phoneType}
+              </span>
+            </div>
+)}
 
           {/* Email with copy button */}
-          <div className="flex items-center justify-between gap-2 text-slate-500 text-[11.5px] group/email">
-            <div className="flex items-center gap-2 truncate min-w-0">
-              <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <a
-                href={`mailto:${contact.email}`}
-                className="hover:underline hover:text-brand truncate"
-                onClick={(e) => e.stopPropagation()}
-                title={`Send email to ${contact.email}`}
+{contact.email && (
+            <div className="flex items-center justify-between gap-2 text-slate-500 text-[11.5px] group/email">
+              <div className="flex items-center gap-2 truncate min-w-0">
+                <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="hover:underline hover:text-brand truncate"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Send email to ${contact.email}`}
+                >
+                  {contact.email}
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => handleCopy(e, contact.email, 'Email')}
+                className="p-1 text-slate-400 hover:text-brand hover:bg-slate-100 rounded transition-colors shrink-0 cursor-pointer"
+                title="Copy email address"
               >
-                {contact.email}
-              </a>
+                <Copy className="h-3 w-3" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={(e) => handleCopy(e, contact.email, 'Email')}
-              className="p-1 text-slate-400 hover:text-brand hover:bg-slate-100 rounded transition-colors shrink-0 cursor-pointer"
-              title="Copy email address"
-            >
-              <Copy className="h-3 w-3" />
-            </button>
-          </div>
+)}
         </div>
       </div>
 
       {/* Footer Action Bar */}
       <div className="px-4 py-2.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCall}
-            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-          >
-            <Phone className="h-3 w-3 text-brand" />
-            <span>Call</span>
-          </Button>
+          {contact.phone && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCall}
+              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+            >
+              <Phone className="h-3 w-3 text-brand" />
+              <span>Call</span>
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleText}
-            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-          >
-            <MessageSquare className="h-3 w-3 text-brand" />
-            <span>Text</span>
-          </Button>
+          {contact.phone && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleText}
+              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+            >
+              <MessageSquare className="h-3 w-3 text-brand" />
+              <span>Text</span>
+            </Button>
+          )}
         </div>
 
         <div
-          className="h-7.5 w-7.5 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand group-hover:bg-brand-light transition-colors"
+          className="ml-auto h-7.5 w-7.5 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand group-hover:bg-brand-light transition-colors"
           title="View contact details"
         >
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />

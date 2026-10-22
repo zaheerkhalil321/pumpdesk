@@ -54,7 +54,10 @@ export const createCustomerSchema = z.object({
   contactName: text(120).optional(),
   phone: phone.optional(),
   email: email.optional(),
-  tier: text(60).optional(),
+  addressLine1: text(160).optional(),
+  city: text(80).optional(),
+  state: text(40).optional(),
+  postalCode: text(12).optional(),
   status: customerStatusSchema.default('active'),
 });
 
@@ -65,6 +68,9 @@ export const updateCustomerSchema = z.object({
   phone: phone,
   email: email,
   addressLine1: text(160),
+  city: text(80),
+  state: text(40),
+  postalCode: text(12),
   status: customerStatusSchema,
 });
 
@@ -96,6 +102,8 @@ export const linkContactSchema = z.object({
   roles: contactRoles,
 });
 
+export const findContactsByPhoneSchema = z.object({ phone: phone });
+
 export const unlinkContactSchema = z.object({ linkId: uuid });
 
 export const updateContactLinkSchema = z.object({
@@ -108,7 +116,7 @@ export const updateContactLinkSchema = z.object({
 
 const jobSiteFields = {
   name: text(120),
-  addressLine1: requiredText('Street address', 160),
+  addressLine1: text(160),
   city: requiredText('City', 80),
   state: requiredText('State', 40),
   postalCode: text(12),

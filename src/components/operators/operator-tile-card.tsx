@@ -142,17 +142,19 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
           </div>
 
           {/* Phone with copy-on-click */}
-          <div className="flex items-center justify-between text-xs pt-0.5">
-            <div
-              className="flex items-center gap-2 text-slate-700 font-mono text-[11.5px] cursor-pointer hover:text-brand transition-colors"
-              onClick={(e) => handleCopyPhone(e, operator.phone, operator.name)}
-              title="Click to copy phone"
-            >
-              <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span>{operator.phone}</span>
-              <Copy className="h-3 w-3 text-slate-400 hover:text-brand" />
+{operator.phone && (
+            <div className="flex items-center justify-between text-xs pt-0.5">
+              <div
+                className="flex items-center gap-2 text-slate-700 font-mono text-[11.5px] cursor-pointer hover:text-brand transition-colors"
+                onClick={(e) => handleCopyPhone(e, operator.phone, operator.name)}
+                title="Click to copy phone"
+              >
+                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <span>{operator.phone}</span>
+                <Copy className="h-3 w-3 text-slate-400 hover:text-brand" />
+              </div>
             </div>
-          </div>
+)}
 
           {/* Credential Alert (if present) */}
           {operator.credentialAlert && (
@@ -167,30 +169,34 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
       {/* Footer Action Bar */}
       <div className="px-4 py-2.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={(e) => handleCall(e, operator.phone, operator.name)}
-            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-          >
-            <Phone className="h-3 w-3 text-brand" />
-            <span>Call</span>
-          </Button>
+          {operator.phone && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => handleCall(e, operator.phone, operator.name)}
+              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+            >
+              <Phone className="h-3 w-3 text-brand" />
+              <span>Call</span>
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={(e) => handleText(e, operator.phone, operator.name)}
-            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
-          >
-            <MessageSquare className="h-3 w-3 text-brand" />
-            <span>Text</span>
-          </Button>
+          {operator.phone && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => handleText(e, operator.phone, operator.name)}
+              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
+            >
+              <MessageSquare className="h-3 w-3 text-brand" />
+              <span>Text</span>
+            </Button>
+          )}
         </div>
 
-        <div className="h-7.5 w-7.5 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand group-hover:bg-brand-light transition-colors">
+        <div className="ml-auto h-7.5 w-7.5 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand group-hover:bg-brand-light transition-colors">
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>

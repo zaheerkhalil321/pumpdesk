@@ -266,3 +266,38 @@ body[data-brand-theme="slate"] {
     transform: rotate(360deg);
   }
 }
+
+/*
+ * Popup readability: dialogs and side sheets use small, light text that is hard to read on
+ * desktop. This bumps the small sizes by one step and darkens the lightest greys, in one place,
+ * so every popup (and any new one) gets it. :where() keeps hover and state colours winning.
+ */
+@layer utilities {
+  :where([data-slot='dialog-content'], [data-slot='sheet-content']) {
+    & .text-\[10px\],
+    & .text-\[10\.5px\],
+    & .text-\[11px\] {
+      font-size: 0.75rem;
+    }
+
+    & .text-xs {
+      font-size: 0.8125rem;
+    }
+
+    & .text-sm {
+      font-size: 0.9375rem;
+    }
+
+    & .text-slate-400 {
+      color: var(--color-slate-500);
+    }
+
+    & .text-slate-500 {
+      color: var(--color-slate-600);
+    }
+
+    & .text-slate-600 {
+      color: var(--color-slate-700);
+    }
+  }
+}

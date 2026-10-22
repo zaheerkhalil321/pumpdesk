@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { AppSelect, SelectOption } from '@/components/ui/app-select';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { CopyButton } from '@/components/ui/copy-button';
 
 const OPERATOR_ROSTER: { name: string; phone: string; cert: string }[] = [
   { name: 'Rob Black', phone: '(207) 555-0168', cert: 'ACPA Certified • 34M Lead' },
@@ -306,8 +307,9 @@ export function OrderDossierModal({
                 <span className="text-xs sm:text-sm font-semibold text-slate-800 truncate block">
                   Mike Vance
                 </span>
-                <span className="text-[11px] text-slate-500 font-mono block">
-                  (207) 555-0142
+                <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                  <span>(207) 555-0142</span>
+                  <CopyButton value="(207) 555-0142" label="Phone" />
                 </span>
               </div>
             </div>

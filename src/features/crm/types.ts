@@ -8,7 +8,6 @@ export type CustomerItem = {
   contactRole: string;
   phone: string;
   email: string;
-  tier: string;
   activeSites: number;
   createdDate: string;
   createdTime: string;
@@ -45,10 +44,12 @@ export type CustomerDetail = {
   version: number;
   number: string | null;
   name: string;
-  tier: string;
   phone: string;
   email: string;
   addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
   address: string;
   customerSince: string;
   location: string;
