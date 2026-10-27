@@ -17,7 +17,8 @@ test.describe("Dispatch Control Tower Smoke Tests", () => {
     await page.goto("/schedule");
     await expect(page).toHaveTitle(/PumpDesk/i);
     await expect(page.getByText("Midcoast Pumping")).toBeVisible();
-    await expect(page.getByText("34M Putzmeister Boom").first()).toBeVisible();
+    // Lanes come from the real pumps in the database (seeded pump 01).
+    await expect(page.getByText("Putzmeister 34Z").first()).toBeVisible();
     await expect(page.getByText("Orders", { exact: true }).first()).toBeVisible();
   });
 

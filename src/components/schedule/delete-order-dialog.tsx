@@ -54,10 +54,10 @@ export function DeleteOrderDialog({
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-slate-900 tracking-tight leading-tight">
-                Delete Order {booking.orderNumber || 'ORD'}?
+                Cancel order {booking.orderNumber || 'ORD'}?
               </DialogTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                This action cannot be undone.
+                The order stays on file as cancelled.
               </p>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function DeleteOrderDialog({
         <div className="p-3 rounded-xl bg-red-50/60 border border-red-200/70 flex items-start gap-2.5 text-xs text-red-800">
           <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
           <p className="leading-snug">
-            Deleting this order will remove it from the schedule board and release the assigned pump slot.
+            Cancelling this order removes it from the schedule board and frees its pump and operator.
           </p>
         </div>
 
@@ -123,7 +123,7 @@ export function DeleteOrderDialog({
             className="h-9 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition-all gap-1.5 cursor-pointer active:scale-98"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span>Delete order</span>
+            <span>Cancel order</span>
           </Button>
         </div>
       </DialogContent>

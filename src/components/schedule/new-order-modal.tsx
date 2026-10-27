@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { format, parse } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -19,108 +21,76 @@ import {
   Calendar as CalendarIcon,
   Clock,
   User,
-  Building2,
-  MapPin,
   Truck,
   Info,
   ExternalLink,
   Trash2,
-  Check,
   Pencil,
   AlertCircle,
 } from 'lucide-react';
 import { PumpLane, ScheduleBooking } from './schedule-types';
-import { formatInTimeZone } from 'date-fns-tz';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import type { OrderFormOptions } from '@/features/orders/types';
 import { cn } from '@/lib/utils';
 import { DeleteOrderDialog } from './delete-order-dialog';
-
-const TIMEZONE = 'America/Chicago';
+import { cancelOrder, createOrder, updateOrder } from '@/features/orders/server/actions';
+import { clockFromHour, shiftClock } from '@/features/orders/mappers';
+import { reportAction } from '@/lib/action-feedback';
+import { SiteCombobox } from '@/components/orders/site-combobox';
 
 interface NewOrderModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   pumps: PumpLane[];
+  /** Real customers, pumps and operators from the database. */
+  options: OrderFormOptions;
   initialPumpId?: string;
   initialHour?: number;
   editingBooking?: ScheduleBooking | null;
-  onAddBooking: (booking: ScheduleBooking) => void;
-  onAddUnassignedJob?: (job: ScheduleBooking) => void;
-  onUpdateBooking?: (booking: ScheduleBooking) => void;
-  onDeleteBooking?: (bookingId: string) => void;
+  /** The day the schedule is showing (yyyy-MM-dd): the default pour date. */
+  date: string;
 }
-
-const SAMPLE_CUSTOMERS = [
-  'Accurate Concrete',
-  'Advanced Concrete Solutions',
-  "Berube's Excavation & Lawn",
-  'Coastal Foundations',
-  'Concrete Services',
-  'Granite State Builders',
-  'Harbor Builders',
-  'Maine Commercial Paving',
-  'Pine Tree Concrete',
-  'Rockland Civil Contractors',
-  'Turner Construction',
-];
-
-const SAMPLE_SUPPLIERS = [
-  'Auburn Concrete',
-  'Dragon Products',
-  'S.T. Griswold',
-  'Redi-Mix Maine',
-  'Carroll Concrete',
-];
-
-const PUMP_SIZES = ['28 meters', '34 meters', '47 meters', 'Line pump'];
 
 interface FormContentProps {
   pumps: PumpLane[];
+  options: OrderFormOptions;
   initialPumpId?: string;
   initialHour?: number;
   editingBooking?: ScheduleBooking | null;
+  date: string;
   onOpenChange: (open: boolean) => void;
-  onAddBooking: (booking: ScheduleBooking) => void;
-  onAddUnassignedJob?: (job: ScheduleBooking) => void;
-  onUpdateBooking?: (booking: ScheduleBooking) => void;
-  onDeleteBooking?: (bookingId: string) => void;
 }
 
 function NewOrderModalForm({
   pumps,
+  options,
   initialPumpId,
   initialHour = 7,
   editingBooking,
+  date,
   onOpenChange,
-  onAddBooking,
-  onAddUnassignedJob,
-  onUpdateBooking,
-  onDeleteBooking,
 }: FormContentProps) {
+  const router = useRouter();
+  const [isSaving, startSaving] = useTransition();
   const isEditMode = Boolean(editingBooking);
 
   // Date State with Calendar Popover
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
-    editingBooking ? new Date(2026, 8, 12) : new Date(2026, 9, 5),
+    parse(editingBooking?.serviceDate ?? date, 'yyyy-MM-dd', new Date()),
   );
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Pour Time State
-  const [pourTime, setPourTime] = useState(() => {
-    if (editingBooking) {
-      const h = editingBooking.startHour;
-      return h <= 12 ? `${h}:00 AM` : `${h - 12}:00 PM`;
-    }
-    const h = initialHour || 14;
-    return h === 12 ? '12:00 PM' : h < 12 ? `${h}:00 AM` : `${h - 12}:00 PM`;
-  });
+  const [pourTime, setPourTime] = useState(() =>
+    clockFromHour(editingBooking ? editingBooking.startHour : initialHour || 14),
+  );
 
   // Customer & Supplier States
   const [customer, setCustomer] = useState(
     () => editingBooking?.customerName || '',
   );
-  const [supplier, setSupplier] = useState('');
+  const [supplier, setSupplier] = useState(() => editingBooking?.supplierName ?? '');
 
   // Single Unified Address State (accepts full address, street + city, or city/state)
   const [address, setAddress] = useState(() => {
@@ -142,11 +112,11 @@ function NewOrderModalForm({
     () => editingBooking?.pourType || 'Foundation',
   );
   const [volumeYards, setVolumeYards] = useState<number | string>(
-    () => editingBooking?.volumeYards ?? 80,
+    () => editingBooking?.volumeYards ?? '',
   );
 
   // Pump & Operator States
-  const [minPumpSize, setMinPumpSize] = useState('34 meters');
+  const [minPumpSize, setMinPumpSize] = useState(() => editingBooking?.minPumpSize ?? '');
   const [assignedPumpId, setAssignedPumpId] = useState<string>(
     () => editingBooking?.pumpId || initialPumpId || 'assign-later',
   );
@@ -160,30 +130,26 @@ function NewOrderModalForm({
     volume?: string;
   }>({});
 
-  const pourTimeOptions = useMemo(
-    () =>
-      [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((h) => {
-        const label =
-          h === 12
-            ? '12:00 PM'
-            : h < 12
-              ? `${h}:00 AM`
-              : `${h - 12}:00 PM`;
-        return { value: label, label };
-      }),
-    []
-  );
+  const pourTimeOptions = useMemo(() => {
+    const labels = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((h) => clockFromHour(h));
+    // An order saved at 7:30 keeps showing 7:30.
+    if (!labels.includes(pourTime)) labels.push(pourTime);
+    return labels.map((label) => ({ value: label, label }));
+  }, [pourTime]);
 
   const pumpOptions = useMemo(
     () => [
       { value: 'assign-later', label: 'Assign later' },
-      ...pumps.map((p) => ({
-        value: p.id,
-        label: `${p.code} (${p.name})`,
-        description: p.boomLength || undefined,
-      })),
+      // A pump in maintenance cannot take new work (an order already on it keeps it).
+      ...pumps
+        .filter((p) => p.status !== 'maintenance' || p.id === editingBooking?.pumpId)
+        .map((p) => ({
+          value: p.id,
+          label: `${p.code} (${p.name})`,
+          description: p.boomLength || undefined,
+        })),
     ],
-    [pumps]
+    [pumps, editingBooking?.pumpId]
   );
 
   const operatorOptions = useMemo(
@@ -193,21 +159,18 @@ function NewOrderModalForm({
         label: 'Assign later (Unassigned)',
         description: 'You can assign an operator anytime before dispatch',
       },
-      { value: 'Rob Black', label: 'Rob Black', description: 'ACPA Certified • (207) 555-0168' },
-      { value: 'Dave Smith', label: 'Dave Smith', description: '47M Heavy Boom Specialist' },
-      { value: 'Tony Perez', label: 'Tony Perez', description: 'Line Pump & Trailer Specialist' },
-      { value: 'Marcus Brody', label: 'Marcus Brody', description: 'Commercial Pours • Relief Operator' },
-      { value: 'Sam Higgins', label: 'Sam Higgins', description: 'Boom Apprentice • Yard Lead' },
+      ...options.operators.map((o) => ({
+        value: o.name,
+        label: o.name,
+        description: o.phone || undefined,
+      })),
     ],
-    []
+    [options.operators],
   );
 
-  const supplierOptions = useMemo(
-    () => [
-      { value: '', label: 'None / Not specified' },
-      ...SAMPLE_SUPPLIERS.map((s) => ({ value: s, label: s })),
-    ],
-    []
+  const pumpSizeOptions = useMemo(
+    () => [...new Set(options.pumps.map((p) => p.sizeLabel).filter(Boolean))],
+    [options.pumps],
   );
 
   const pourTypeOptions = useMemo(
@@ -225,11 +188,9 @@ function NewOrderModalForm({
     []
   );
 
-  const formattedDate = formatInTimeZone(
-    selectedDate,
-    TIMEZONE,
-    'MMMM d, yyyy',
-  );
+  // The calendar hands us the day the user clicked, so format that day as is.
+  const formattedDate = format(selectedDate, 'MMMM d, yyyy');
+  const isoDate = format(selectedDate, 'yyyy-MM-dd');
 
   const handleCreateOrder = () => {
     const errors: {
@@ -265,104 +226,92 @@ function NewOrderModalForm({
     setFormErrors({});
     const isAssignLater = assignedPumpId === 'assign-later' || !assignedPumpId;
     const selectedPump = pumps.find((p) => p.id === assignedPumpId);
+    const pumpId = isAssignLater ? null : assignedPumpId;
 
-    // Parse hour from pourTime
-    let hour = 14;
-    const match = pourTime.match(/(\d+):?(\d*)\s*(AM|PM)?/i);
-    if (match) {
-      let h = parseInt(match[1], 10);
-      const period = match[3]?.toUpperCase();
-      if (period === 'PM' && h < 12) h += 12;
-      if (period === 'AM' && h === 12) h = 0;
-      hour = h;
+    const customerRecord = options.customers.find((c) => c.name === customer);
+    if (!customerRecord) {
+      setFormErrors({ customer: 'Pick one of your customers.' });
+      return;
     }
+    const siteText = address.trim();
+    const savedSite = customerRecord.sites.find((site) => site.address === siteText);
+    // A new order with no operator picked gets the pump's usual operator. Editing never
+    // assigns someone the dispatcher left unassigned.
+    const pumpDefault = options.pumps.find((p) => p.id === pumpId)?.defaultOperatorId ?? null;
+    const operatorId =
+      options.operators.find((o) => o.name === assignedOperator)?.id ??
+      (assignedOperator === 'unassigned' && !editingBooking ? pumpDefault : null);
 
-    const trimmedAddress = address.trim();
-    let finalJobSite = trimmedAddress;
-    let finalAddress = trimmedAddress;
+    const base = {
+      customerId: customerRecord.id,
+      jobSiteId: savedSite?.id ?? null,
+      siteLabel: siteText,
+      pourType,
+      supplierName: supplier,
+      estimatedYards: Number(volumeYards),
+      minPumpSize,
+      equipmentId: pumpId,
+      employeeId: operatorId,
+    };
 
-    if (trimmedAddress.includes(',')) {
-      const parts = trimmedAddress.split(',').map((p) => p.trim());
-      finalJobSite = parts[0];
-      finalAddress = parts.slice(1).join(', ');
-    }
-
-    const parsedVolume = Number(volumeYards) || 80;
-    const finalOperator = assignedOperator !== 'unassigned' ? assignedOperator : undefined;
-    const finalDispatchStatus = finalOperator ? (editingBooking?.dispatchStatus || 'draft') : 'unassigned';
-
-    if (editingBooking && onUpdateBooking) {
-      const updated: ScheduleBooking = {
-        ...editingBooking,
-        customerName: customer,
-        jobSiteName: finalJobSite,
-        address: finalAddress,
-        pourType: pourType,
-        volumeYards: parsedVolume,
-        pumpId: isAssignLater ? '' : assignedPumpId,
-        startHour: hour,
-        operator: finalOperator,
-        dispatchStatus: finalDispatchStatus,
-      };
-      onUpdateBooking(updated);
-      toast.success('Order Updated', {
-        description: `${customer} • ${selectedPump?.code || 'Unassigned'}`,
-      });
-    } else {
-      const uniqueId =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `order-${Date.now()}`;
-      const shortCode = uniqueId.slice(0, 4).toUpperCase();
-
-      const newOrder: ScheduleBooking = {
-        id: `ord-${uniqueId}`,
-        orderNumber: `ORD-${shortCode}`,
-        pumpId: isAssignLater ? '' : assignedPumpId,
-        customerName: customer,
-        jobSiteName: finalJobSite,
-        address: finalAddress,
-        pourType: pourType,
-        startHour: hour,
-        durationHours: 3,
-        volumeYards: parsedVolume,
-        status: isAssignLater ? 'travel' : 'onsite',
-        operator: finalOperator,
-        dispatchStatus: finalDispatchStatus,
-      };
-
-      if (isAssignLater) {
-        if (onAddUnassignedJob) {
-          onAddUnassignedJob(newOrder);
-        } else {
-          onAddBooking(newOrder);
-        }
-        toast.info('Pending Order Created', {
-          description: `${customer} in ${finalAddress} added to Unassigned Jobs.`,
+    startSaving(async () => {
+      if (editingBooking) {
+        if (!editingBooking.jobId || editingBooking.version === undefined) return;
+        const result = await updateOrder({
+          ...base,
+          id: editingBooking.jobId,
+          version: editingBooking.version,
+          date: isoDate,
+          pourTime,
+        });
+        if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+        toast.success('Order updated', {
+          description: `${customer} • ${selectedPump?.code || 'Unassigned'}`,
         });
       } else {
-        onAddBooking(newOrder);
-        toast.success('Order Booked on Schedule', {
-          description: `${customer} assigned to ${selectedPump?.code || 'Rig'} at ${pourTime}.`,
+        const result = await createOrder({
+          ...base,
+          date: isoDate,
+          pourTime,
+          arriveBy: shiftClock(pourTime, -30),
+          estimatedFinish: shiftClock(pourTime, 150),
+          prepMinutes: 30,
+          pumpMinutes: 120,
+          cleanupMinutes: 30,
+          travelMinutes: 0,
+          linesOnSite: false,
+          collectOnDelivery: false,
+          bookingStatus: isAssignLater ? 'pending' : 'confirmed',
+          contactId: customerRecord.contacts[0]?.id ?? null,
         });
+        if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+        if (isAssignLater) {
+          toast.info('Pending order created', {
+            description: `${result.data.job_number} for ${customer} is waiting for a pump.`,
+          });
+        } else {
+          toast.success('Order booked on the schedule', {
+            description: `${result.data.job_number} • ${customer} on ${selectedPump?.code || 'a pump'} at ${pourTime}.`,
+          });
+        }
       }
-    }
-
-    onOpenChange(false);
+      onOpenChange(false);
+    });
   };
 
   // Delete confirmation dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleConfirmDelete = () => {
-    if (editingBooking && onDeleteBooking) {
-      onDeleteBooking(editingBooking.id);
-      toast.info('Order Removed', {
-        description: `Order ${editingBooking.orderNumber} removed from schedule.`,
-      });
+    if (!editingBooking?.jobId || editingBooking.version === undefined) return;
+    const { jobId, version, orderNumber } = editingBooking;
+    startSaving(async () => {
+      const result = await cancelOrder({ id: jobId, version });
+      if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+      toast.info('Order cancelled', { description: `${orderNumber} is cancelled and its pump is free.` });
       setIsDeleteDialogOpen(false);
       onOpenChange(false);
-    }
+    });
   };
 
   const isAssignLater = assignedPumpId === 'assign-later' || !assignedPumpId;
@@ -465,7 +414,18 @@ function NewOrderModalForm({
             <AppSelect
               value={customer}
               onChange={(val) => {
+                // Fill in the new customer's first saved site, unless the dispatcher typed their own address.
+                const previousSites = options.customers.find((c) => c.name === customer)?.sites ?? [];
+                const typedOwnAddress =
+                  address.trim() !== '' && !previousSites.some((site) => site.address === address);
                 setCustomer(val);
+                if (!typedOwnAddress) {
+                  const nextAddress = options.customers.find((c) => c.name === val)?.sites[0]?.address ?? '';
+                  setAddress(nextAddress);
+                  if (nextAddress && formErrors.address) {
+                    setFormErrors((prev) => ({ ...prev, address: undefined }));
+                  }
+                }
                 if (formErrors.customer) {
                   setFormErrors((prev) => ({
                     ...prev,
@@ -473,7 +433,7 @@ function NewOrderModalForm({
                   }));
                 }
               }}
-              options={SAMPLE_CUSTOMERS}
+              options={options.customers.map((c) => c.name)}
               placeholder="Select customer *"
               icon={User}
               error={Boolean(formErrors.customer)}
@@ -491,13 +451,12 @@ function NewOrderModalForm({
             <label className="text-xs font-semibold text-slate-700 block mb-1">
               Concrete supplier <span className="text-slate-400 font-normal">(optional)</span>
             </label>
-            <AppSelect
+            <input
+              type="text"
               value={supplier}
-              onChange={setSupplier}
-              options={supplierOptions}
-              placeholder="Select supplier (optional)..."
-              icon={Building2}
-              className="h-10"
+              onChange={(e) => setSupplier(e.target.value)}
+              placeholder="e.g. Auburn Concrete"
+              className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-900 outline-none focus:border-brand placeholder:text-slate-400 shadow-2xs"
             />
           </div>
         </div>
@@ -587,78 +546,17 @@ function NewOrderModalForm({
               Full address, street, or city/town
             </span>
           </div>
-          <div
-            className={cn(
-              'flex items-center gap-2 h-10 px-3 rounded-lg border transition-colors shadow-2xs',
-              formErrors.address
-                ? 'border-red-500 bg-red-50/20'
-                : 'border-slate-200 bg-white focus-within:border-brand',
-            )}
-          >
-            <MapPin
-              className={cn(
-                'h-4 w-4 shrink-0',
-                formErrors.address ? 'text-red-500' : 'text-slate-400',
-              )}
-            />
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => {
-                setAddress(e.target.value);
-                if (formErrors.address) {
-                  setFormErrors((prev) => ({
-                    ...prev,
-                    address: undefined,
-                  }));
-                }
-              }}
-              placeholder="e.g. 24 Bay View Street, Camden or Camden, ME *"
-              className="text-xs text-slate-900 bg-transparent placeholder:text-slate-400 outline-none w-full font-medium"
-            />
-            {address.trim() && (
-              <Check className="h-3.5 w-3.5 text-brand shrink-0" />
-            )}
-          </div>
-
-          {/* Quick Town Suggestions */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-[10px] text-slate-400 font-medium">
-              Quick select town:
-            </span>
-            {[
-              'Warren, ME',
-              'Camden, ME',
-              'Rockport, ME',
-              'Rockland, ME',
-            ].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => {
-                  if (address.trim() && !address.toLowerCase().includes(t.toLowerCase().split(',')[0])) {
-                    setAddress(`${address.trim()}, ${t}`);
-                  } else {
-                    setAddress(t);
-                  }
-                  if (formErrors.address) {
-                    setFormErrors((prev) => ({
-                      ...prev,
-                      address: undefined,
-                    }));
-                  }
-                }}
-                className={cn(
-                  'text-[10.5px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer',
-                  address.includes(t)
-                    ? 'bg-brand-light border-brand text-brand font-semibold'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900',
-                )}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          <SiteCombobox
+            value={address}
+            onChange={(value) => {
+              setAddress(value);
+              if (formErrors.address) setFormErrors((prev) => ({ ...prev, address: undefined }));
+            }}
+            sites={options.customers.find((c) => c.name === customer)?.sites ?? []}
+            error={Boolean(formErrors.address)}
+            placeholder="Town, cross streets, or street address"
+            className="h-10"
+          />
 
           {formErrors.address ? (
             <p className="text-[11px] text-red-500 font-semibold mt-1 px-0.5 flex items-center gap-1">
@@ -678,7 +576,8 @@ function NewOrderModalForm({
             <AppSelect
               value={minPumpSize}
               onChange={setMinPumpSize}
-              options={PUMP_SIZES}
+              options={pumpSizeOptions}
+              placeholder="Select minimum pump size"
               icon={Truck}
               className="h-10"
             />
@@ -721,7 +620,9 @@ function NewOrderModalForm({
       <div className="px-3.5 py-2.5 rounded-lg bg-brand-light border border-brand/20 flex items-center gap-2 text-xs text-brand-text">
         <Info className="h-4 w-4 text-brand shrink-0" />
         <span>
-          {isAssignLater ? (
+          {isEditMode ? (
+            <>Saves your changes to this order.</>
+          ) : isAssignLater ? (
             <>
               Creates a{' '}
               <strong className="font-semibold text-slate-900">Pending</strong>{' '}
@@ -757,7 +658,7 @@ function NewOrderModalForm({
             ...(pourType ? { pourType } : {}),
             ...(editingBooking?.dispatchStatus === 'dispatched' ? { status: 'Confirmed' } : {}),
             pourTime,
-            date: formattedDate,
+            date: isoDate,
             ...(assignedPumpId && assignedPumpId !== 'assign-later' ? { pumpId: assignedPumpId } : {}),
             ...(customer ? { customer } : {}),
             ...(address ? { address } : {}),
@@ -781,7 +682,7 @@ function NewOrderModalForm({
                 className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-sm font-medium gap-1.5 rounded-lg cursor-pointer"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                <span>Delete</span>
+                <span>Cancel order</span>
               </Button>
             )}
             <Button
@@ -795,9 +696,10 @@ function NewOrderModalForm({
             <Button
               type="button"
               onClick={handleCreateOrder}
+              disabled={isSaving}
               className="h-9 px-5 rounded-lg bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-2xs transition-all cursor-pointer active:scale-98"
             >
-              {isEditMode ? 'Save changes' : 'Create order'}
+              {isSaving ? 'Saving...' : isEditMode ? 'Save changes' : 'Create order'}
             </Button>
           </div>
           {Object.keys(formErrors).length > 0 ? (
@@ -828,13 +730,11 @@ export function NewOrderModal({
   isOpen,
   onOpenChange,
   pumps,
+  options,
   initialPumpId,
   initialHour = 7,
   editingBooking,
-  onAddBooking,
-  onAddUnassignedJob,
-  onUpdateBooking,
-  onDeleteBooking,
+  date,
 }: NewOrderModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -848,14 +748,12 @@ export function NewOrderModal({
             `new-${initialPumpId || 'none'}-${initialHour}`
           }
           pumps={pumps}
+          options={options}
           initialPumpId={initialPumpId}
           initialHour={initialHour}
           editingBooking={editingBooking}
+          date={date}
           onOpenChange={onOpenChange}
-          onAddBooking={onAddBooking}
-          onAddUnassignedJob={onAddUnassignedJob}
-          onUpdateBooking={onUpdateBooking}
-          onDeleteBooking={onDeleteBooking}
         />
       </DialogContent>
     </Dialog>

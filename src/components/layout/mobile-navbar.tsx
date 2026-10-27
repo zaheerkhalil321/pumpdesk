@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
+import type { NavCounts } from '@/features/orders/types';
 
 interface YardLocation {
   id: string;
@@ -84,7 +85,6 @@ const NAV_ITEMS: NavItem[] = [
     title: 'Schedule',
     href: '/schedule',
     icon: Calendar,
-    badge: '2 today',
     badgeType: 'schedule',
     matchPrefix: true,
   },
@@ -92,7 +92,6 @@ const NAV_ITEMS: NavItem[] = [
     title: 'Orders',
     href: '/orders',
     icon: FileText,
-    badge: '12',
     badgeType: 'count',
     matchPrefix: true,
   },
@@ -122,7 +121,14 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export function MobileNavbar() {
+/** Adds the live count to the Schedule and Orders links. */
+function withBadge(item: NavItem, counts: NavCounts): NavItem {
+  if (item.href === '/schedule') return { ...item, badge: counts.today > 0 ? `${counts.today} today` : undefined };
+  if (item.href === '/orders') return { ...item, badge: counts.orders > 0 ? String(counts.orders) : undefined };
+  return item;
+}
+
+export function MobileNavbar({ navCounts }: { navCounts: NavCounts }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -283,7 +289,8 @@ export function MobileNavbar() {
 
             {/* ── NAVIGATION (Matches Desktop Exactly) ── */}
             <div className="px-3 py-2 space-y-1">
-              {NAV_ITEMS.map((item) => {
+              {NAV_ITEMS.map((baseItem) => {
+                const item = withBadge(baseItem, navCounts);
                 const Icon = item.icon;
                 const isActive = item.matchPrefix
                   ? pathname.startsWith(item.href)

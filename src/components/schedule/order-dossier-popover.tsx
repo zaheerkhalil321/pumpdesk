@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { format, parse } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -23,34 +25,22 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScheduleBooking, PumpLane } from './schedule-types';
-import { addOrUpdateBooking } from '@/lib/orders-store';
+import { updateOrder } from '@/features/orders/server/actions';
+import { reportAction } from '@/lib/action-feedback';
+import type { OrderFormOperator } from '@/features/orders/types';
 import { toast } from 'sonner';
 import { AppSelect, SelectOption } from '@/components/ui/app-select';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CopyButton } from '@/components/ui/copy-button';
-
-const OPERATOR_ROSTER: { name: string; phone: string; cert: string }[] = [
-  { name: 'Rob Black', phone: '(207) 555-0168', cert: 'ACPA Certified • 34M Lead' },
-  { name: 'Dave Smith', phone: '(207) 555-0199', cert: '47M Heavy Boom Specialist' },
-  { name: 'Tony Perez', phone: '(207) 555-0144', cert: 'Line Pump & Trailer Specialist' },
-  { name: 'Marcus Brody', phone: '(207) 555-0112', cert: 'Commercial Pours • Relief Operator' },
-  { name: 'Sam Higgins', phone: '(207) 555-0177', cert: 'Boom Apprentice • Yard Lead' },
-];
-
-const OPERATOR_PHOTOS: Record<string, string> = {
-  'Rob Black': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-  'Dave Smith': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-  'Tony Perez': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-  'Marcus Brody': 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&auto=format&fit=crop&q=80',
-  'Sam Higgins': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
-};
 
 interface OrderDossierModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   booking: ScheduleBooking | null;
   pumps: PumpLane[];
+  /** Real operators the order can be assigned to. */
+  operators: OrderFormOperator[];
   onQuickEdit?: (booking: ScheduleBooking) => void;
 }
 
@@ -59,8 +49,11 @@ export function OrderDossierModal({
   onOpenChange,
   booking,
   pumps,
+  operators,
   onQuickEdit,
 }: OrderDossierModalProps) {
+  const router = useRouter();
+  const [isSaving, startSaving] = React.useTransition();
   const [isChangingOperator, setIsChangingOperator] = React.useState(false);
   const [selectedOpToAssign, setSelectedOpToAssign] = React.useState<string>('');
 
@@ -78,122 +71,97 @@ export function OrderDossierModal({
   const pumpCode = assignedPump?.code || 'Pump Rig';
   const isDispatched = booking.dispatchStatus === 'dispatched';
 
-  const matchedOperator = OPERATOR_ROSTER.find((op) => op.name === operatorDisplayName);
-  const operatorPhone = matchedOperator?.phone || '(207) 555-0168';
-  const operatorCert = matchedOperator?.cert || 'Certified Operator';
-  const operatorPhoto = operatorDisplayName ? OPERATOR_PHOTOS[operatorDisplayName] : undefined;
+  const matchedOperator = operators.find((op) => op.name === operatorDisplayName);
+  const operatorPhone = matchedOperator?.phone ?? '';
 
-  const operatorOptions: SelectOption[] = OPERATOR_ROSTER.map((op) => ({
+  const operatorOptions: SelectOption[] = operators.map((op) => ({
     value: op.name,
     label: op.name,
-    description: `${op.cert} • ${op.phone}`,
+    description: op.phone || undefined,
   }));
 
-  // Format Times based on booking start hour
-  const startHour = booking.startHour || 7.5;
-  const pourHour = Math.floor(startHour);
-  const pourMinutes = Math.round((startHour - pourHour) * 60);
-  const pourTimeStr = `${pourHour <= 12 ? pourHour : pourHour - 12}:${
-    pourMinutes === 0 ? '00' : pourMinutes
-  } ${pourHour >= 12 ? 'PM' : 'AM'}`;
+  // Contact details saved with the order.
+  const contactName = booking.contactName ?? '';
+  const contactPhone = booking.contactPhone ?? '';
+  const serviceDateLabel = booking.serviceDate
+    ? format(parse(booking.serviceDate, 'yyyy-MM-dd', new Date()), 'EEE, MMM d, yyyy')
+    : '';
 
-  // Arrive by: 30 minutes before pour time
-  const arriveHour = pourMinutes >= 30 ? pourHour : pourHour - 1;
-  const arriveMin = pourMinutes >= 30 ? pourMinutes - 30 : pourMinutes + 30;
-  const arriveTimeStr = `${arriveHour <= 12 ? arriveHour : arriveHour - 12}:${
-    arriveMin === 0 ? '00' : arriveMin
-  } ${arriveHour >= 12 ? 'PM' : 'AM'}`;
+  // Times saved with the order, shown in the order's own timezone.
+  const pourTimeStr = booking.pourTimeLabel ?? '';
+  const arriveTimeStr = booking.arriveByLabel ?? pourTimeStr;
 
-  // Status mapping
-  const isEnRoute = booking.status === 'travel';
-  const isOnSite = booking.status === 'onsite';
+  // Status shown in the banner, from the real dispatch state.
+  const statusText = isDispatched
+    ? 'Dispatched to operator'
+    : operatorDisplayName
+    ? 'Operator assigned • Not dispatched yet'
+    : 'Needs operator';
 
-  const statusText = isOnSite
-    ? 'On site • Pumping'
-    : isEnRoute
-    ? 'En route • On time'
-    : 'Scheduled • Confirmed';
-
-  const statusEta = isOnSite ? 'Finish ~11:30 AM' : 'ETA 6:52 AM';
-
-  const handleCall = (name: string, phone: string) => {
-    toast.info(`Calling ${name}`, { description: phone });
+  // Opens the phone's dialer or messages app (on a computer, whatever app handles phone links).
+  const handleCall = (_name: string, phone: string) => {
+    window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   };
 
-  const handleText = (name: string, phone: string) => {
-    toast.info(`Messaging ${name}`, { description: phone });
+  const handleText = (_name: string, phone: string) => {
+    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}`;
+  };
+
+  /** Saves an operator or dispatch change, then refreshes the schedule. */
+  const saveChange = (
+    change: { employeeId?: string | null; dispatch?: boolean },
+    success: { title: string; description: string },
+  ) => {
+    if (!booking.jobId || booking.version === undefined) return;
+    const { jobId, version } = booking;
+    startSaving(async () => {
+      const result = await updateOrder({ id: jobId, version, ...change });
+      if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+      setIsChangingOperator(false);
+      setSelectedOpToAssign('');
+      toast.success(success.title, { description: success.description });
+    });
   };
 
   const handleDispatch = () => {
-    const updated: ScheduleBooking = {
-      ...booking,
-      operator: operatorDisplayName,
-      dispatchStatus: 'dispatched',
-      dispatchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    addOrUpdateBooking(updated);
-    toast.success('Job Dispatched to Operator', {
-      description: `${operatorDisplayName} will now see this job in their mobile schedule.`,
-    });
+    saveChange(
+      { dispatch: true },
+      {
+        title: 'Job dispatched to operator',
+        description: `${operatorDisplayName} is told about this job.`,
+      },
+    );
   };
 
   const handleUnassignOperator = () => {
-    const updated: ScheduleBooking = {
-      ...booking,
-      operator: null,
-      dispatchStatus: 'unassigned',
-      dispatchedAt: undefined,
-    };
-    addOrUpdateBooking(updated);
-    setIsChangingOperator(false);
-    setSelectedOpToAssign('');
-    toast.success('Operator Unassigned', {
-      description: `${operatorDisplayName || 'Operator'} unassigned from this order.`,
-    });
+    saveChange(
+      { employeeId: null },
+      {
+        title: 'Operator unassigned',
+        description: `${operatorDisplayName || 'Operator'} unassigned from this order.`,
+      },
+    );
   };
 
   const handleAssignOperator = (operatorToAssign?: string) => {
     const targetOperator = operatorToAssign || selectedOpToAssign;
-    if (!targetOperator) return;
-
-    const updated: ScheduleBooking = {
-      ...booking,
-      operator: targetOperator,
-      dispatchStatus: 'draft',
-    };
-    addOrUpdateBooking(updated);
-    setIsChangingOperator(false);
-    setSelectedOpToAssign('');
-    toast.success('Operator Assigned', {
-      description: `${targetOperator} assigned as Draft. You can now dispatch.`,
-    });
+    const operator = operators.find((o) => o.name === targetOperator);
+    if (!operator) return;
+    saveChange(
+      { employeeId: operator.id },
+      {
+        title: 'Operator assigned',
+        description: `${operator.name} assigned. You can now dispatch.`,
+      },
+    );
   };
 
-  // ── Address Breakdown: Line 1 = Street, Line 2 = City, State, Zip ──
-  const rawJobSite = booking.jobSiteName || '24 Bay View Street';
-  const rawAddress = booking.address || 'Camden, ME 04864';
-
-  let displayStreet = rawJobSite;
-  let displayCityStateZip = rawAddress;
-
-  if (rawJobSite.includes(',')) {
-    const parts = rawJobSite.split(',').map((p) => p.trim());
-    displayStreet = parts[0];
-    const city = parts.slice(1).join(', ');
-    if (rawAddress === rawJobSite || !rawAddress) {
-      displayCityStateZip = city.toLowerCase().includes('camden')
-        ? 'Camden, ME 04864'
-        : `${city}, ME`;
-    }
-  }
-
-  if (
-    displayCityStateZip === '24 Bay View Street, Camden' ||
-    displayCityStateZip === 'Camden, ME 04843' ||
-    displayCityStateZip === 'Camden, ME'
-  ) {
-    displayCityStateZip = 'Camden, ME 04864';
-  }
+  // ── Address: first line as entered, second line only when there is one ──
+  const rawJobSite = booking.jobSiteName || '';
+  const rawAddress = booking.address || '';
+  const displayStreet = rawJobSite;
+  const displayCityStateZip = rawAddress && rawAddress !== rawJobSite ? rawAddress : '';
+  const directionsQuery = [displayStreet, displayCityStateZip].filter(Boolean).join(', ');
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -205,7 +173,7 @@ export function OrderDossierModal({
         <div className="flex items-center justify-between">
           <DialogHeader className="p-0">
             <DialogTitle className="text-lg font-bold tracking-tight text-slate-900">
-              {booking.orderNumber || 'ORD-1518'}
+              {booking.orderNumber}
             </DialogTitle>
           </DialogHeader>
 
@@ -219,21 +187,6 @@ export function OrderDossierModal({
               <span className="h-2 w-2 rounded-full bg-brand animate-pulse shrink-0" />
               <span className="truncate">{statusText}</span>
             </div>
-            <span className="font-bold text-brand text-xs sm:text-sm shrink-0 whitespace-nowrap">
-              {statusEta}
-            </span>
-          </div>
-
-          <div className="text-xs px-1 flex items-center justify-between text-slate-400 font-medium">
-            <span>Updated 1 min ago</span>
-            <button
-              type="button"
-              onClick={() => toast.info('Opening live map route tracking')}
-              className="inline-flex items-center gap-1 text-brand hover:underline font-semibold cursor-pointer"
-            >
-              <span>View map</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
           </div>
         </div>
 
@@ -243,7 +196,7 @@ export function OrderDossierModal({
             {booking.customerName || 'Turner Construction'}
           </h3>
           <p className="text-sm text-slate-500 font-medium">
-            {booking.pourType || 'Foundation'} • {booking.volumeYards ? `${booking.volumeYards} yd³ • ` : ''}Sat, Sep 12
+            {[booking.pourType, booking.volumeYards ? `${booking.volumeYards} yd³` : '', serviceDateLabel].filter(Boolean).join(' • ')}
           </p>
         </div>
 
@@ -255,18 +208,18 @@ export function OrderDossierModal({
               <p className="font-semibold text-slate-900">
                 {displayStreet}
               </p>
-              <p className="text-slate-500 mt-0.5 text-xs">
-                {displayCityStateZip}
-              </p>
+              {displayCityStateZip && (
+                <p className="text-slate-500 mt-0.5 text-xs">
+                  {displayCityStateZip}
+                </p>
+              )}
             </div>
           </div>
           <button
             type="button"
             onClick={() =>
               window.open(
-                `https://maps.google.com/?q=${encodeURIComponent(
-                  `${displayStreet}, ${displayCityStateZip}`
-                )}`,
+                `https://maps.google.com/?q=${encodeURIComponent(directionsQuery)}`,
                 '_blank'
               )
             }
@@ -293,50 +246,56 @@ export function OrderDossierModal({
           </div>
         </div>
 
-        {/* ── Customer Contact ── */}
-        <div className="space-y-1.5 pt-1">
-          <label className="text-xs font-semibold text-slate-500 block">
-            Customer contact
-          </label>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-slate-500">
-                <User className="h-4 w-4" />
+        {/* ── Customer Contact (only when the order has one) ── */}
+        {contactName && (
+          <div className="space-y-1.5 pt-1">
+            <label className="text-xs font-semibold text-slate-500 block">
+              Customer contact
+            </label>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-slate-500">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 truncate block">
+                    {contactName}
+                  </span>
+                  {contactPhone && (
+                    <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                      <span>{contactPhone}</span>
+                      <CopyButton value={contactPhone} label="Phone" />
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs sm:text-sm font-semibold text-slate-800 truncate block">
-                  Mike Vance
-                </span>
-                <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                  <span>(207) 555-0142</span>
-                  <CopyButton value="(207) 555-0142" label="Phone" />
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleCall('Mike Vance', '(207) 555-0142')}
-                className="h-8 px-2.5 sm:px-3 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 sm:gap-1.5 transition-colors cursor-pointer"
-              >
-                <Phone className="h-3.5 w-3.5 text-brand" />
-                <span>Call</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleText('Mike Vance', '(207) 555-0142')}
-                className="h-8 px-2.5 sm:px-3 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 sm:gap-1.5 transition-colors cursor-pointer"
-              >
-                <MessageSquare className="h-3.5 w-3.5 text-brand" />
-                <span>Text</span>
-              </Button>
+              {contactPhone && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCall(contactName, contactPhone)}
+                    className="h-8 px-2.5 sm:px-3 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 sm:gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Phone className="h-3.5 w-3.5 text-brand" />
+                    <span>Call</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleText(contactName, contactPhone)}
+                    className="h-8 px-2.5 sm:px-3 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 sm:gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 text-brand" />
+                    <span>Text</span>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* ── Operator Details & Dispatch Action ── */}
         <div className="space-y-2 pt-1 border-t border-slate-100">
@@ -360,13 +319,6 @@ export function OrderDossierModal({
               <div className="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                   <Avatar className="h-9 w-9 rounded-full border border-slate-200/80 shrink-0">
-                    {operatorPhoto && (
-                      <AvatarImage
-                        src={operatorPhoto}
-                        alt={operatorDisplayName}
-                        className="object-cover"
-                      />
-                    )}
                     <AvatarFallback className="bg-brand-light text-brand font-bold text-xs">
                       {operatorDisplayName
                         .split(' ')
@@ -378,11 +330,15 @@ export function OrderDossierModal({
                     <span className="text-xs sm:text-sm font-bold text-slate-900 truncate block">
                       {operatorDisplayName}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-medium block truncate">
-                      {operatorCert}
-                    </span>
+                    {operatorPhone && (
+                      <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                        <span>{operatorPhone}</span>
+                        <CopyButton value={operatorPhone} label="Phone" />
+                      </span>
+                    )}
                   </div>
                 </div>
+                {operatorPhone && (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Button
                     type="button"
@@ -405,6 +361,7 @@ export function OrderDossierModal({
                     <span>Text</span>
                   </Button>
                 </div>
+                )}
               </div>
 
               {/* Dispatch to Operator Action Box */}
@@ -430,6 +387,7 @@ export function OrderDossierModal({
                     type="button"
                     variant="brand"
                     onClick={handleDispatch}
+                    disabled={isSaving}
                     className="w-full h-10 rounded-xl font-semibold text-sm shadow-xs gap-2 cursor-pointer"
                   >
                     <Send className="h-4 w-4" />
@@ -506,7 +464,7 @@ export function OrderDossierModal({
                 <Button
                   type="button"
                   variant="brand"
-                  disabled={!selectedOpToAssign}
+                  disabled={!selectedOpToAssign || isSaving}
                   onClick={() => handleAssignOperator()}
                   className="w-full h-9 rounded-xl font-semibold text-xs shadow-xs gap-1.5 cursor-pointer bg-brand hover:bg-brand-hover text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
@@ -522,13 +480,13 @@ export function OrderDossierModal({
           )}
         </div>
 
-        {/* ── Special Washout & Gate Site Notes ── */}
-        <div className="p-3 rounded-xl bg-brand-light border border-brand/20 flex items-start gap-2.5 text-sm text-brand-text font-medium">
-          <FileText className="h-4.5 w-4.5 text-brand shrink-0 mt-0.5" />
-          <p className="leading-snug">
-            {booking.notes || 'Use north gate. Washout beside gravel pad.'}
-          </p>
-        </div>
+        {/* ── Site notes (only when the order has some) ── */}
+        {booking.notes && (
+          <div className="p-3 rounded-xl bg-brand-light border border-brand/20 flex items-start gap-2.5 text-sm text-brand-text font-medium">
+            <FileText className="h-4.5 w-4.5 text-brand shrink-0 mt-0.5" />
+            <p className="leading-snug">{booking.notes}</p>
+          </div>
+        )}
 
         {/* ── Bottom Action Buttons: Quick edit + Open order ── */}
         <div className="pt-1 flex items-center gap-2.5">

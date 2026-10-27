@@ -305,6 +305,114 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"job_contacts": {
+                  Row: {
+                    "company_id": string,"contact_id": string,"created_at": string,"id": string,"job_id": string,"role": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string,"contact_id": string,"created_at"?: string,"id"?: string,"job_id": string,"role"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"contact_id"?: string,"created_at"?: string,"id"?: string,"job_id"?: string,"role"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "job_contacts_company_id_contact_id_fkey"
+      columns: ["company_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "job_contacts_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_contacts_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"job_employee_assignments": {
+                  Row: {
+                    "acknowledged_at": string | null,"assigned_at": string,"assigned_by": string | null,"assignment_type": Database["public"]['Enums']["assignment_type"],"company_id": string,"employee_id": string,"id": string,"job_id": string,"released_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "acknowledged_at"?: string | null,"assigned_at"?: string,"assigned_by"?: string | null,"assignment_type"?: Database["public"]['Enums']["assignment_type"],"company_id"?: string,"employee_id": string,"id"?: string,"job_id": string,"released_at"?: string | null
+                  }
+                  Update: {
+                    "acknowledged_at"?: string | null,"assigned_at"?: string,"assigned_by"?: string | null,"assignment_type"?: Database["public"]['Enums']["assignment_type"],"company_id"?: string,"employee_id"?: string,"id"?: string,"job_id"?: string,"released_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "job_employee_assignments_assigned_by_fkey"
+      columns: ["assigned_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_employee_assignments_company_id_employee_id_fkey"
+      columns: ["company_id","employee_id"]
+isOneToOne: false
+      referencedRelation: "employees"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "job_employee_assignments_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_employee_assignments_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"job_equipment_assignments": {
+                  Row: {
+                    "assigned_at": string,"assigned_by": string | null,"company_id": string,"equipment_id": string,"id": string,"job_id": string,"released_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assigned_at"?: string,"assigned_by"?: string | null,"company_id"?: string,"equipment_id": string,"id"?: string,"job_id": string,"released_at"?: string | null
+                  }
+                  Update: {
+                    "assigned_at"?: string,"assigned_by"?: string | null,"company_id"?: string,"equipment_id"?: string,"id"?: string,"job_id"?: string,"released_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "job_equipment_assignments_assigned_by_fkey"
+      columns: ["assigned_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_equipment_assignments_company_id_equipment_id_fkey"
+      columns: ["company_id","equipment_id"]
+isOneToOne: false
+      referencedRelation: "equipment"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "job_equipment_assignments_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_equipment_assignments_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"job_sites": {
                   Row: {
                     "access_notes": string | null,"address_line_1": string | null,"address_line_2": string | null,"city": string,"company_id": string,"country_code": string,"created_at": string,"customer_id": string | null,"gate_code": string | null,"hazard_notes": string | null,"id": string,"is_active": boolean,"latitude": number | null,"longitude": number | null,"name": string | null,"postal_code": string | null,"setup_notes": string | null,"state": string,"timezone": string | null,"updated_at": string,"washout_notes": string | null
@@ -331,16 +439,100 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"job_status_history": {
+                  Row: {
+                    "changed_at": string,"changed_by": string | null,"company_id": string,"dimension": string,"id": string,"job_id": string,"new_value": string,"old_value": string | null,"reason": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "changed_at"?: string,"changed_by"?: string | null,"company_id"?: string,"dimension": string,"id"?: string,"job_id": string,"new_value": string,"old_value"?: string | null,"reason"?: string | null
+                  }
+                  Update: {
+                    "changed_at"?: string,"changed_by"?: string | null,"company_id"?: string,"dimension"?: string,"id"?: string,"job_id"?: string,"new_value"?: string,"old_value"?: string | null,"reason"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "job_status_history_changed_by_fkey"
+      columns: ["changed_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_status_history_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_status_history_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"jobs": {
+                  Row: {
+                    "arrive_by": string | null,"billing_service": string | null,"booking_status": Database["public"]['Enums']["booking_status"],"cancellation_reason": string | null,"cancelled_at": string | null,"cleanup_minutes": number,"collect_on_delivery": boolean,"company_id": string,"completed_at": string | null,"confirmed_at": string | null,"created_at": string,"created_by": string | null,"customer_id": string,"customer_notes": string | null,"dispatch_status": Database["public"]['Enums']["dispatch_status"],"dispatched_at": string | null,"estimated_yards": number,"extra_items": NonNullable<Json>,"field_status": Database["public"]['Enums']["field_status"],"id": string,"internal_note": string | null,"job_name": string | null,"job_number": string,"job_site_id": string | null,"lines_on_site": boolean,"max_pump_size": string | null,"min_pump_size": string | null,"pour_type": string | null,"prep_minutes": number,"priority": Database["public"]['Enums']["job_priority"],"pump_minutes": number,"purchase_order_number": string | null,"scheduled_end": string,"scheduled_start": string,"service_date": string,"site_instructions": string | null,"site_label": string,"supplier_name": string | null,"timezone": string,"travel_minutes": number,"updated_at": string,"updated_by": string | null,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "arrive_by"?: string | null,"billing_service"?: string | null,"booking_status"?: Database["public"]['Enums']["booking_status"],"cancellation_reason"?: string | null,"cancelled_at"?: string | null,"cleanup_minutes"?: number,"collect_on_delivery"?: boolean,"company_id"?: string,"completed_at"?: string | null,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_id": string,"customer_notes"?: string | null,"dispatch_status"?: Database["public"]['Enums']["dispatch_status"],"dispatched_at"?: string | null,"estimated_yards": number,"extra_items"?: NonNullable<Json>,"field_status"?: Database["public"]['Enums']["field_status"],"id"?: string,"internal_note"?: string | null,"job_name"?: string | null,"job_number": string,"job_site_id"?: string | null,"lines_on_site"?: boolean,"max_pump_size"?: string | null,"min_pump_size"?: string | null,"pour_type"?: string | null,"prep_minutes"?: number,"priority"?: Database["public"]['Enums']["job_priority"],"pump_minutes"?: number,"purchase_order_number"?: string | null,"scheduled_end": string,"scheduled_start": string,"service_date": string,"site_instructions"?: string | null,"site_label": string,"supplier_name"?: string | null,"timezone": string,"travel_minutes"?: number,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
+                  }
+                  Update: {
+                    "arrive_by"?: string | null,"billing_service"?: string | null,"booking_status"?: Database["public"]['Enums']["booking_status"],"cancellation_reason"?: string | null,"cancelled_at"?: string | null,"cleanup_minutes"?: number,"collect_on_delivery"?: boolean,"company_id"?: string,"completed_at"?: string | null,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_id"?: string,"customer_notes"?: string | null,"dispatch_status"?: Database["public"]['Enums']["dispatch_status"],"dispatched_at"?: string | null,"estimated_yards"?: number,"extra_items"?: NonNullable<Json>,"field_status"?: Database["public"]['Enums']["field_status"],"id"?: string,"internal_note"?: string | null,"job_name"?: string | null,"job_number"?: string,"job_site_id"?: string | null,"lines_on_site"?: boolean,"max_pump_size"?: string | null,"min_pump_size"?: string | null,"pour_type"?: string | null,"prep_minutes"?: number,"priority"?: Database["public"]['Enums']["job_priority"],"pump_minutes"?: number,"purchase_order_number"?: string | null,"scheduled_end"?: string,"scheduled_start"?: string,"service_date"?: string,"site_instructions"?: string | null,"site_label"?: string,"supplier_name"?: string | null,"timezone"?: string,"travel_minutes"?: number,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jobs_company_id_customer_id_fkey"
+      columns: ["company_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "jobs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "jobs_company_id_job_site_id_fkey"
+      columns: ["company_id","job_site_id"]
+isOneToOne: false
+      referencedRelation: "job_sites"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "jobs_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "jobs_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "book_job":
+{ Args: { "p": Json }; Returns: Json
+                           },
+"cancel_job":
+{ Args: { "p_job": string,"p_reason": string,"p_version": number }; Returns: Json
+                           },
+"update_job":
+{ Args: { "p": Json }; Returns: Json
+                           }
           }
           Enums: {
-            "customer_status": "lead"|"active"|"inactive"|"blocked","doc_type": "job"|"ticket"|"invoice"|"work_order","employee_status": "active"|"inactive"|"leave"|"terminated","equipment_status": "available"|"maintenance"|"out_of_service"|"retired","equipment_type": "boom_pump"|"line_pump"|"trailer_pump"|"placing_boom"|"service_truck"|"support_vehicle"|"other","membership_role": "owner"|"admin"|"dispatcher"|"office"|"operator"|"mechanic"|"accountant"|"read_only","membership_status": "invited"|"active"|"suspended"
+            "assignment_type": "primary_operator"|"second_operator"|"helper","booking_status": "pending"|"confirmed"|"cancelled"|"no_show","customer_status": "lead"|"active"|"inactive"|"blocked","dispatch_status": "unassigned"|"assigned"|"dispatched"|"acknowledged","doc_type": "job"|"ticket"|"invoice"|"work_order","employee_status": "active"|"inactive"|"leave"|"terminated","equipment_status": "available"|"maintenance"|"out_of_service"|"retired","equipment_type": "boom_pump"|"line_pump"|"trailer_pump"|"placing_boom"|"service_truck"|"support_vehicle"|"other","field_status": "scheduled"|"en_route"|"on_site"|"pumping"|"washout"|"returning"|"done","job_priority": "low"|"normal"|"high"|"urgent","membership_role": "owner"|"admin"|"dispatcher"|"office"|"operator"|"mechanic"|"accountant"|"read_only","membership_status": "invited"|"active"|"suspended"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -460,7 +652,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "customer_status": ["lead", "active", "inactive", "blocked"],"doc_type": ["job", "ticket", "invoice", "work_order"],"employee_status": ["active", "inactive", "leave", "terminated"],"equipment_status": ["available", "maintenance", "out_of_service", "retired"],"equipment_type": ["boom_pump", "line_pump", "trailer_pump", "placing_boom", "service_truck", "support_vehicle", "other"],"membership_role": ["owner", "admin", "dispatcher", "office", "operator", "mechanic", "accountant", "read_only"],"membership_status": ["invited", "active", "suspended"]
+            "assignment_type": ["primary_operator", "second_operator", "helper"],"booking_status": ["pending", "confirmed", "cancelled", "no_show"],"customer_status": ["lead", "active", "inactive", "blocked"],"dispatch_status": ["unassigned", "assigned", "dispatched", "acknowledged"],"doc_type": ["job", "ticket", "invoice", "work_order"],"employee_status": ["active", "inactive", "leave", "terminated"],"equipment_status": ["available", "maintenance", "out_of_service", "retired"],"equipment_type": ["boom_pump", "line_pump", "trailer_pump", "placing_boom", "service_truck", "support_vehicle", "other"],"field_status": ["scheduled", "en_route", "on_site", "pumping", "washout", "returning", "done"],"job_priority": ["low", "normal", "high", "urgent"],"membership_role": ["owner", "admin", "dispatcher", "office", "operator", "mechanic", "accountant", "read_only"],"membership_status": ["invited", "active", "suspended"]
           }
         }
 } as const

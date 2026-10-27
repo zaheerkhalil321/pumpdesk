@@ -23,6 +23,10 @@ interface NewContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerOptions: CustomerOption[];
+  /** Roles ticked when the form opens. Defaults to Primary contact. */
+  defaultRoles?: string[];
+  /** Called with the saved contact, e.g. so an order form can select it. */
+  onCreated?: (contact: { id: string; name: string; phone: string; role: string }) => void;
 }
 
 const PHONE_TYPE_OPTIONS = [
@@ -34,6 +38,8 @@ export function NewContactModal({
   open,
   onOpenChange,
   customerOptions,
+  defaultRoles = ['Primary contact'],
+  onCreated,
 }: NewContactModalProps) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
@@ -41,7 +47,7 @@ export function NewContactModal({
   const [lastName, setLastName] = useState('');
   const [title, setTitle] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState(customerOptions[0]?.value ?? '');
-  const [selectedRoles, setSelectedRoles] = useState<string[]>(['Primary contact']);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(defaultRoles);
   const [phone, setPhone] = useState('');
   const [phoneType, setPhoneType] = useState<'Mobile' | 'Office'>('Mobile');
   const [email, setEmail] = useState('');
@@ -67,7 +73,7 @@ export function NewContactModal({
     setLastName('');
     setTitle('');
     setSelectedCustomerId(customerOptions[0]?.value ?? '');
-    setSelectedRoles(['Primary contact']);
+    setSelectedRoles(defaultRoles);
     setPhone('');
     setPhoneType('Mobile');
     setEmail('');
@@ -134,6 +140,12 @@ export function NewContactModal({
       const result = await createContact(payload);
       if (!reportAction(result, { entity: 'contact', refresh: () => router.refresh() })) return;
 
+      onCreated?.({
+        id: result.data.id,
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        phone,
+        role: title.trim(),
+      });
       const customerName = customerOptions.find((c) => c.value === selectedCustomerId)?.label;
       toast.success(`Contact created: ${firstName.trim()} ${lastName.trim()}`, {
         description: [title.trim(), customerName].filter(Boolean).join(' · '),

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Clock,
   Box,
@@ -12,10 +13,8 @@ import {
   Truck,
   User,
   ChevronLeft,
-  FileText,
-  Plus,
-  Calendar as CalendarIcon,
   X,
+  Plus,
   Save,
   Info,
 } from 'lucide-react';
@@ -27,219 +26,139 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { AppSelect } from '@/components/ui/app-select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { format, parse } from 'date-fns';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Switch } from '@/components/ui/switch';
+import { SiteCombobox } from '@/components/orders/site-combobox';
 import { toast } from 'sonner';
-import { cn, formatUSPhone } from '@/lib/utils';
-import { getFullOrderDetail } from '@/lib/orders-store';
+import { cn } from '@/lib/utils';
 import { CopyButton } from '@/components/ui/copy-button';
+import { reportAction } from '@/lib/action-feedback';
+import { cancelOrder, updateOrder } from '@/features/orders/server/actions';
+import { POUR_TYPE_OPTIONS, STANDARD_TIMES } from '@/features/orders/constants';
+import type { FullOrderData, OrderFormOptions } from '@/features/orders/types';
 
 interface OrderDetailViewProps {
-  orderId: string;
+  order: FullOrderData;
+  options: OrderFormOptions;
 }
 
-interface OrderData {
-  id: string;
-  customer: string;
-  customerPhone: string;
-  customerContact: string;
-  jobName: string;
-  status: 'Pending' | 'Confirmed' | 'Turned In' | 'Completed' | 'Cancelled';
-  pourType: string;
-  locationCity: string;
-  serviceDate: string;
-  arriveBy: string;
-  pourTime: string;
-  estimatedEnd: string;
-  volumeYards: number;
-  jobSiteAddress: string;
-  jobSiteCityZip: string;
-  directionsUrl: string;
-  pumpRequested: string;
-  purchaseOrder: string;
-  siteInstructions: string;
-  assignedPumpCode: string;
-  assignedPumpType: string;
-  assignedOperator: string;
-  operatorPhone: string;
-  workTicketNumber: string;
-  workTicketStatus: string;
-  invoiceStatus: string;
-  collectOnDelivery: boolean;
-  notifyOperator: boolean;
-  adjustedYards: number;
-  adjustedTravel: number;
-  adjustedPrep: number;
-  adjustedPour: number;
-  adjustedCleanup: number;
-}
+const UNASSIGNED = 'unassigned';
+const NONE = 'none';
 
-const DEFAULT_ORDERS: Record<string, OrderData> = {
-  'ORD-1518': {
-    id: 'ORD-1518',
-    customer: 'Turner Construction',
-    customerContact: 'Mike Vance',
-    customerPhone: '(207) 555-0142',
-    jobName: 'Foundation',
-    status: 'Completed',
-    pourType: 'Foundation',
-    locationCity: 'Camden',
-    serviceDate: 'Sep 12, 2026',
-    arriveBy: '7:00 AM',
-    pourTime: '7:30 AM',
-    estimatedEnd: '11:00 AM',
-    volumeYards: 80,
-    jobSiteAddress: '24 Bay View Street',
-    jobSiteCityZip: 'Camden, ME 04843',
-    directionsUrl: 'https://maps.google.com/?q=24+Bay+View+Street+Camden+ME',
-    pumpRequested: '34M boom pump',
-    purchaseOrder: 'PO-2048',
-    siteInstructions: 'Use the north gate. Washout area beside the gravel pad.',
-    assignedPumpCode: '01 · 34M',
-    assignedPumpType: 'Boom pump',
-    assignedOperator: 'Rob Black',
-    operatorPhone: '(207) 555-0168',
-    workTicketNumber: 'TKT-4019',
-    workTicketStatus: 'Not submitted',
-    invoiceStatus: 'Not created',
-    collectOnDelivery: false,
-    notifyOperator: true,
-    adjustedYards: 85,
-    adjustedTravel: 1.25,
-    adjustedPrep: 0.5,
-    adjustedPour: 3.0,
-    adjustedCleanup: 0.5,
-  },
-  'ORD-1525': {
-    id: 'ORD-1525',
-    customer: 'Coastal Foundations',
-    customerContact: 'Dave Miller',
-    customerPhone: '(207) 555-0199',
-    jobName: 'Foundation Slab',
-    status: 'Pending',
-    pourType: 'Foundation',
-    locationCity: 'Rockland',
-    serviceDate: 'Sep 18, 2026',
-    arriveBy: '7:30 AM',
-    pourTime: '8:00 AM',
-    estimatedEnd: '12:00 PM',
-    volumeYards: 95,
-    jobSiteAddress: '18 Main Street',
-    jobSiteCityZip: 'Rockland, ME 04841',
-    directionsUrl: 'https://maps.google.com/?q=18+Main+Street+Rockland+ME',
-    pumpRequested: '34M boom pump',
-    purchaseOrder: 'PO-2055',
-    siteInstructions: 'Check overhead wires near front curb before unfolding.',
-    assignedPumpCode: 'Unassigned',
-    assignedPumpType: 'Operator needed',
-    assignedOperator: 'Unassigned',
-    operatorPhone: '',
-    workTicketNumber: 'TKT-4022',
-    workTicketStatus: 'Not submitted',
-    invoiceStatus: 'Not created',
-    collectOnDelivery: false,
-    notifyOperator: true,
-    adjustedYards: 95,
-    adjustedTravel: 1.0,
-    adjustedPrep: 0.5,
-    adjustedPour: 3.5,
-    adjustedCleanup: 0.5,
-  },
-};
+type ItemRow = { name: string; quantity: string };
+const toRows = (items: { name: string; quantity: number }[]): ItemRow[] =>
+  items.length ? items.map((i) => ({ name: i.name, quantity: String(i.quantity) })) : [{ name: '', quantity: '1' }];
 
-const STANDARD_TIMES = [
-  '5:00 AM', '5:30 AM', '6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM',
-  '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
-  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM',
-  '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM',
-  '5:00 PM', '5:30 PM', '6:00 PM',
-];
+/** Makes sure a saved value is still in a dropdown even if the standard list lacks it. */
+const withValue = (list: string[], value: string) =>
+  value && !list.includes(value) ? [value, ...list] : list;
 
-export function OrderDetailView({ orderId }: OrderDetailViewProps) {
-  const [order, setOrder] = useState<OrderData>(() => {
-    const stored = getFullOrderDetail(orderId);
-    const base = DEFAULT_ORDERS[orderId] || {
-      ...DEFAULT_ORDERS['ORD-1518'],
-      id: orderId,
-    };
-    return {
-      ...base,
-      ...(stored || {}),
-    } as OrderData;
-  });
-  const [activeTab, setActiveTab] = useState<'overview' | 'work_ticket'>('overview');
+export function OrderDetailView({ order, options }: OrderDetailViewProps) {
+  const router = useRouter();
+  const [isSaving, startSaving] = useTransition();
   const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [isAdjustmentsModalOpen, setIsAdjustmentsModalOpen] = useState(false);
-  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
-  // Contacts list
-  const [availableContacts, setAvailableContacts] = useState([
-    { name: 'Mike Vance', phone: '(207) 555-0142', role: 'Superintendent' },
-    { name: 'Dave Miller', phone: '(207) 555-0199', role: 'Project Manager' },
-    { name: 'Rob Black', phone: '(207) 555-0168', role: 'Foreman' },
-  ]);
+  const isCancelled = order.status === 'Cancelled';
 
-  // New Contact Dialog form state
-  const [newContactName, setNewContactName] = useState('');
-  const [newContactPhone, setNewContactPhone] = useState('');
-  const [newContactRole, setNewContactRole] = useState('Superintendent');
-
-  // ── Edit Order Screen Form State ──
+  // ── Edit Order Screen Form State (reset from the saved order each time it opens) ──
   const [editCustomer, setEditCustomer] = useState(order.customer);
-  const [editJobSite, setEditJobSite] = useState(order.jobSiteAddress + ', ' + order.jobSiteCityZip);
+  const [editJobSite, setEditJobSite] = useState(order.jobSiteAddress);
   const [editContact, setEditContact] = useState(order.customerContact);
-  const [editPhone, setEditPhone] = useState(order.customerPhone);
   const [editPO, setEditPO] = useState(order.purchaseOrder);
   const [editJobName, setEditJobName] = useState(order.jobName);
   const [editPourType, setEditPourType] = useState(order.pourType);
   const [editVolume, setEditVolume] = useState<number | string>(order.volumeYards);
   const [editPumpRequested, setEditPumpRequested] = useState(order.pumpRequested);
   const [editInstructions, setEditInstructions] = useState(order.siteInstructions);
-  const [editDate, setEditDate] = useState(order.serviceDate);
+  const [editDate, setEditDate] = useState(order.serviceDateIso);
   const [editArriveBy, setEditArriveBy] = useState(order.arriveBy);
   const [editPourTime, setEditPourTime] = useState(order.pourTime);
   const [editEstimatedEnd, setEditEstimatedEnd] = useState(order.estimatedEnd);
-  const [editPump, setEditPump] = useState(order.assignedPumpCode);
-  const [editOperator, setEditOperator] = useState(order.assignedOperator);
-  const [editStatus, setEditStatus] = useState(order.status);
-  const [editNotify, setEditNotify] = useState(order.notifyOperator);
+  const [editPumpId, setEditPumpId] = useState(order.pumpId ?? UNASSIGNED);
+  const [editOperatorId, setEditOperatorId] = useState(order.operatorId ?? UNASSIGNED);
+  const [editSupplier, setEditSupplier] = useState(order.supplierName);
+  const [editCustomerNotes, setEditCustomerNotes] = useState(order.customerNotes);
+  const [editInternalNote, setEditInternalNote] = useState(order.internalNote);
+  const [editLinesOnSite, setEditLinesOnSite] = useState(order.linesOnSite);
+  const [editCollect, setEditCollect] = useState(order.collectOnDelivery);
+  const [editMaxPumpSize, setEditMaxPumpSize] = useState(order.maxPumpSize || NONE);
+  const [editExtraItems, setEditExtraItems] = useState(toRows(order.extraItems));
+  const [editSecondOperatorId, setEditSecondOperatorId] = useState(order.secondOperatorId ?? UNASSIGNED);
+  const [editStatus, setEditStatus] = useState<'Pending' | 'Confirmed'>(
+    order.status === 'Confirmed' ? 'Confirmed' : 'Pending',
+  );
 
-  // Validation errors map
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearError = (field: string) => setErrors((prev) => ({ ...prev, [field]: '' }));
 
-  // Date picker popover state
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-  // Helper to parse date for Calendar
-  const getParsedDate = (dateStr: string): Date => {
-    try {
-      const parsed = parse(dateStr, 'MMM d, yyyy', new Date());
-      return isNaN(parsed.getTime()) ? new Date(2026, 8, 12) : parsed;
-    } catch {
-      return new Date(2026, 8, 12);
-    }
+  const openEditOrder = () => {
+    setEditCustomer(order.customer);
+    setEditJobSite(order.jobSiteAddress);
+    setEditContact(order.customerContact);
+    setEditPO(order.purchaseOrder);
+    setEditJobName(order.jobName);
+    setEditPourType(order.pourType);
+    setEditVolume(order.volumeYards);
+    setEditPumpRequested(order.pumpRequested);
+    setEditInstructions(order.siteInstructions);
+    setEditDate(order.serviceDateIso);
+    setEditArriveBy(order.arriveBy);
+    setEditPourTime(order.pourTime);
+    setEditEstimatedEnd(order.estimatedEnd);
+    setEditPumpId(order.pumpId ?? UNASSIGNED);
+    setEditOperatorId(order.operatorId ?? UNASSIGNED);
+    setEditSupplier(order.supplierName);
+    setEditCustomerNotes(order.customerNotes);
+    setEditInternalNote(order.internalNote);
+    setEditLinesOnSite(order.linesOnSite);
+    setEditCollect(order.collectOnDelivery);
+    setEditMaxPumpSize(order.maxPumpSize || NONE);
+    setEditExtraItems(toRows(order.extraItems));
+    setEditSecondOperatorId(order.secondOperatorId ?? UNASSIGNED);
+    setEditStatus(order.status === 'Confirmed' ? 'Confirmed' : 'Pending');
+    setErrors({});
+    setIsEditingOrder(true);
   };
 
-  // ── Edit Billing Adjustments Modal Form State ──
-  const [modalYards, setModalYards] = useState(order.adjustedYards);
-  const [modalTravel, setModalTravel] = useState(order.adjustedTravel);
-  const [modalPrep, setModalPrep] = useState(order.adjustedPrep);
-  const [modalPour, setModalPour] = useState(order.adjustedPour);
-  const [modalCleanup, setModalCleanup] = useState(order.adjustedCleanup);
-  const [modalReason, setModalReason] = useState('');
-
-  const modalTotalOnSite = (
-    Number(modalPrep || 0) +
-    Number(modalPour || 0) +
-    Number(modalCleanup || 0)
-  ).toFixed(1);
+  // Real records for the dropdowns, from the database.
+  const selectedCustomer = options.customers.find((c) => c.name === editCustomer);
+  const customerId = selectedCustomer?.id ?? order.customerId;
+  const contactChoices = selectedCustomer?.contacts ?? [];
+  const selectedContact = contactChoices.find((c) => c.name === editContact);
+  const contactPhone =
+    selectedContact?.phone ?? (editContact === order.customerContact ? order.customerPhone : '');
+  const pumpChoices = [
+    ...(order.pumpId && !options.pumps.some((p) => p.id === order.pumpId)
+      ? [{ value: order.pumpId, label: order.assignedPumpCode }]
+      : []),
+    ...options.pumps.map((p) => ({ value: p.id, label: p.label })),
+    { value: UNASSIGNED, label: 'Unassigned' },
+  ];
+  const operatorChoices = [
+    ...(order.operatorId && !options.operators.some((o) => o.id === order.operatorId)
+      ? [{ value: order.operatorId, label: order.assignedOperator }]
+      : []),
+    ...options.operators.map((o) => ({ value: o.id, label: o.name })),
+    { value: UNASSIGNED, label: 'Unassigned' },
+  ];
+  const secondOperatorChoices = [
+    ...(order.secondOperatorId && !options.operators.some((o) => o.id === order.secondOperatorId)
+      ? [{ value: order.secondOperatorId, label: order.secondOperatorName }]
+      : []),
+    ...options.operators.filter((o) => o.id !== editOperatorId).map((o) => ({ value: o.id, label: o.name })),
+    { value: UNASSIGNED, label: 'None' },
+  ];
+  const pumpSizeChoices = withValue(
+    [...new Set(options.pumps.map((p) => p.sizeLabel).filter(Boolean))],
+    editPumpRequested,
+  );
+  const pourTypeChoices = withValue(
+    POUR_TYPE_OPTIONS.map((o) => o.label),
+    editPourType,
+  );
 
   // Validate form fields
   const validateForm = () => {
@@ -248,13 +167,10 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
     if (!editCustomer.trim()) {
       errs.customer = 'Customer is required';
     }
-    if (!editJobSite.trim()) {
-      errs.jobSite = 'Job site address is required';
+    if (editJobSite.trim().length < 2) {
+      errs.jobSite = 'Town or site address is required';
     }
-    if (!editContact.trim()) {
-      errs.contact = 'Customer contact is required';
-    }
-    if (!editDate.trim()) {
+    if (!editDate) {
       errs.date = 'Service date is required';
     }
     if (!editPourTime.trim()) {
@@ -263,8 +179,9 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
     if (!editArriveBy.trim()) {
       errs.arriveBy = 'Arrive by time is required';
     }
-    if (!editVolume || Number(editVolume) <= 0) {
-      errs.volume = 'Planned volume must be greater than 0';
+    const volume = Number(editVolume);
+    if (!volume || volume < 1 || volume > 10000) {
+      errs.volume = 'Volume must be between 1 and 10,000 yd³';
     }
 
     setErrors(errs);
@@ -282,82 +199,65 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
       return;
     }
 
-    const formattedPhone = formatUSPhone(editPhone) || editPhone;
-    setOrder((prev) => ({
-      ...prev,
-      customer: editCustomer,
-      customerContact: editContact,
-      customerPhone: formattedPhone,
+    const savedSite = selectedCustomer?.sites.find((site) => site.address === editJobSite);
+    const payload = {
+      id: order.jobId,
+      version: order.version,
+      customerId,
+      jobSiteId: savedSite?.id ?? null,
+      siteLabel: editJobSite,
+      contactId:
+        selectedContact?.id ?? (editContact === order.customerContact ? order.contactId : null),
       purchaseOrder: editPO,
       jobName: editJobName,
       pourType: editPourType,
-      volumeYards: Number(editVolume),
-      pumpRequested: editPumpRequested,
+      estimatedYards: Number(editVolume),
+      minPumpSize: editPumpRequested,
       siteInstructions: editInstructions,
-      serviceDate: editDate,
-      arriveBy: editArriveBy,
+      date: editDate,
       pourTime: editPourTime,
-      estimatedEnd: editEstimatedEnd,
-      assignedPumpCode: editPump,
-      assignedOperator: editOperator,
-      status: editStatus,
-      notifyOperator: editNotify,
-    }));
-    setIsEditingOrder(false);
-    toast.success('Order changes saved', {
-      description: `${order.id} updated successfully.`,
-    });
-  };
-
-  // Save new contact from Modal
-  const handleCreateContact = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newContactName.trim() || !newContactPhone.trim()) {
-      toast.error('Name and phone are required');
-      return;
-    }
-
-    const formattedContactPhone = formatUSPhone(newContactPhone) || newContactPhone.trim();
-    const newContact = {
-      name: newContactName.trim(),
-      phone: formattedContactPhone,
-      role: newContactRole,
+      arriveBy: editArriveBy,
+      estimatedFinish: editEstimatedEnd,
+      equipmentId: editPumpId === UNASSIGNED ? null : editPumpId,
+      employeeId: editOperatorId === UNASSIGNED ? null : editOperatorId,
+      bookingStatus: editStatus === 'Confirmed' ? ('confirmed' as const) : ('pending' as const),
+      supplierName: editSupplier,
+      customerNotes: editCustomerNotes,
+      internalNote: editInternalNote,
+      linesOnSite: editLinesOnSite,
+      collectOnDelivery: editCollect,
+      maxPumpSize: editMaxPumpSize === NONE ? '' : editMaxPumpSize,
+      extraItems: editExtraItems
+        .filter((row) => row.name.trim())
+        .map((row) => ({ name: row.name.trim(), quantity: Number(row.quantity) || 1 })),
+      secondEmployeeId: editSecondOperatorId === UNASSIGNED ? null : editSecondOperatorId,
     };
 
-    setAvailableContacts((prev) => [newContact, ...prev]);
-    setEditContact(newContact.name);
-    setEditPhone(formattedContactPhone);
-    setIsAddContactModalOpen(false);
-    setNewContactName('');
-    setNewContactPhone('');
-    toast.success('Contact added and selected', {
-      description: `${newContact.name} (${formattedContactPhone})`,
+    startSaving(async () => {
+      const result = await updateOrder(payload);
+      if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+      setIsEditingOrder(false);
+      toast.success('Order changes saved', { description: `${order.id} updated successfully.` });
     });
   };
 
-  // Save billing adjustments from Modal
-  const handleSaveAdjustments = (e: React.FormEvent) => {
-    e.preventDefault();
-    setOrder((prev) => ({
-      ...prev,
-      adjustedYards: Number(modalYards),
-      adjustedTravel: Number(modalTravel),
-      adjustedPrep: Number(modalPrep),
-      adjustedPour: Number(modalPour),
-      adjustedCleanup: Number(modalCleanup),
-    }));
-    setIsAdjustmentsModalOpen(false);
-    toast.success('Billing adjustments saved', {
-      description: `Adjustments updated for ${order.id}.`,
+  const handleCancelOrder = () => {
+    startSaving(async () => {
+      const result = await cancelOrder({ id: order.jobId, version: order.version, reason: cancelReason });
+      if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+      setIsCancelOpen(false);
+      setCancelReason('');
+      toast.success('Order cancelled', { description: `${order.id} is cancelled and its pump and operator are free.` });
     });
   };
 
-  const handleCall = (name: string, phone: string) => {
-    toast.info(`Calling ${name}`, { description: phone });
+  // Opens the phone's dialer or messages app (on a computer, whatever app handles phone links).
+  const handleCall = (_name: string, phone: string) => {
+    window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   };
 
-  const handleText = (name: string, phone: string) => {
-    toast.info(`Opening SMS with ${name}`, { description: phone });
+  const handleText = (_name: string, phone: string) => {
+    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}`;
   };
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -403,10 +303,11 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
 
               <Button
                 type="submit"
+                disabled={isSaving}
                 className="h-9 px-3.5 sm:px-4 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-semibold shadow-xs gap-1.5 cursor-pointer active:scale-98"
               >
                 <Save className="h-4 w-4" />
-                <span>Save</span>
+                <span>{isSaving ? 'Saving...' : 'Save'}</span>
               </Button>
             </div>
           </div>
@@ -427,15 +328,13 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                       value={editCustomer}
                       onChange={(val) => {
                         setEditCustomer(val);
-                        if (errors.customer) setErrors((prev) => ({ ...prev, customer: '' }));
+                        const next = options.customers.find((c) => c.name === val);
+                        // A different customer means a different contact and site.
+                        setEditContact(next?.contacts[0]?.name ?? '');
+                        setEditJobSite(next?.sites[0]?.address ?? '');
+                        clearError('customer');
                       }}
-                      options={[
-                        "Turner Construction",
-                        "Coastal Foundations",
-                        "Pine Tree Concrete",
-                        "Harbor Builders",
-                        "Granite State Builders",
-                      ]}
+                      options={withValue(options.customers.map((c) => c.name), editCustomer)}
                       error={Boolean(errors.customer)}
                     />
                     {errors.customer && (
@@ -446,18 +345,15 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   {/* Job site Dropdown */}
                   <div className="space-y-1">
                     <label className="text-slate-600 font-medium">Job site</label>
-                    <AppSelect
+                    <SiteCombobox
                       value={editJobSite}
-                      onChange={(val) => {
-                        setEditJobSite(val);
-                        if (errors.jobSite) setErrors((prev) => ({ ...prev, jobSite: '' }));
+                      onChange={(value) => {
+                        setEditJobSite(value);
+                        clearError('jobSite');
                       }}
-                      options={[
-                        "24 Bay View Street, Camden, ME 04843",
-                        "18 Main Street, Rockland, ME 04841",
-                        "42 Union Street, Camden, ME 04843",
-                      ]}
+                      sites={selectedCustomer?.sites ?? []}
                       error={Boolean(errors.jobSite)}
+                      placeholder="Town, cross streets, or street address"
                     />
                     {errors.jobSite && (
                       <p className="text-[11px] text-red-500 font-medium">{errors.jobSite}</p>
@@ -469,47 +365,17 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                     <label className="text-slate-600 font-medium">Customer contact</label>
                     <AppSelect
                       value={editContact}
-                      onChange={(val) => {
-                        setEditContact(val);
-                        const matched = availableContacts.find((c) => c.name === val);
-                        if (matched) setEditPhone(matched.phone);
-                        if (errors.contact) setErrors((prev) => ({ ...prev, contact: '' }));
-                      }}
-                      options={availableContacts.map((c) => ({
+                      onChange={setEditContact}
+                      placeholder="No contact"
+                      options={contactChoices.map((c) => ({
                         value: c.name,
                         label: c.name,
-                        description: c.role,
+                        description: c.role || undefined,
                       }))}
-                      error={Boolean(errors.contact)}
                     />
-                    {errors.contact && (
-                      <p className="text-[11px] text-red-500 font-medium">{errors.contact}</p>
+                    {contactPhone && (
+                      <p className="text-[11px] text-slate-500 font-mono">{contactPhone}</p>
                     )}
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-1">
-                    <label className="text-slate-600 font-medium">Phone</label>
-                    <Input
-                      type="tel"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(formatUSPhone(e.target.value))}
-                      placeholder="(207) 555-0188"
-                      maxLength={14}
-                      className="h-9 text-xs font-medium text-slate-900 border-slate-200 focus-visible:border-brand"
-                    />
-                  </div>
-
-                  {/* Add another contact link (Opens In-Place Modal to avoid losing edits) */}
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddContactModalOpen(true)}
-                      className="text-brand hover:underline font-semibold text-xs inline-flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add another contact</span>
-                    </button>
                   </div>
 
                   {/* Purchase order */}
@@ -539,18 +405,26 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                     />
                   </div>
 
+                  {/* Concrete supplier */}
+                  <div className="space-y-1">
+                    <label className="text-slate-600 font-medium">
+                      Concrete supplier <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <Input
+                      value={editSupplier}
+                      onChange={(e) => setEditSupplier(e.target.value)}
+                      placeholder="e.g. Auburn Concrete"
+                      className="h-9 text-xs font-medium text-slate-900 border-slate-200 focus-visible:border-brand"
+                    />
+                  </div>
+
                   {/* Pour type Dropdown */}
                   <div className="space-y-1">
                     <label className="text-slate-600 font-medium">Pour type</label>
                     <AppSelect
                       value={editPourType}
                       onChange={setEditPourType}
-                      options={[
-                        "Foundation",
-                        "Slab on Grade",
-                        "Walls / Columns",
-                        "Commercial Deck",
-                      ]}
+                      options={pourTypeChoices}
                     />
                   </div>
 
@@ -585,13 +459,67 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                     <AppSelect
                       value={editPumpRequested}
                       onChange={setEditPumpRequested}
-                      options={[
-                        "34M boom pump",
-                        "28M boom pump",
-                        "47M boom pump",
-                        "Trailer Line pump",
-                      ]}
+                      options={pumpSizeChoices}
                     />
+                  </div>
+
+                  {/* Maximum pump size */}
+                  <div className="space-y-1">
+                    <label className="text-slate-600 font-medium">
+                      Maximum pump size <span className="text-slate-400 font-normal">(the site cannot take a bigger pump)</span>
+                    </label>
+                    <AppSelect
+                      value={editMaxPumpSize}
+                      onChange={setEditMaxPumpSize}
+                      options={[{ value: NONE, label: 'No restriction' }, ...withValue(pumpSizeChoices, order.maxPumpSize).map((v) => ({ value: v, label: v }))]}
+                    />
+                  </div>
+
+                  {/* Extra equipment and supplies */}
+                  <div className="space-y-1.5">
+                    <label className="text-slate-600 font-medium">Extra equipment &amp; supplies</label>
+                    {editExtraItems.map((row, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_5.5rem_auto] gap-2 items-center">
+                        <Input
+                          value={row.name}
+                          onChange={(e) =>
+                            setEditExtraItems((rows) => rows.map((r, i) => (i === index ? { ...r, name: e.target.value } : r)))
+                          }
+                          placeholder="e.g. Extra 10 ft hose"
+                          aria-label={`Item ${index + 1}`}
+                          className="h-9 text-xs border-slate-200 focus-visible:border-brand"
+                        />
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={row.quantity}
+                          onChange={(e) =>
+                            setEditExtraItems((rows) => rows.map((r, i) => (i === index ? { ...r, quantity: e.target.value } : r)))
+                          }
+                          aria-label={`Quantity ${index + 1}`}
+                          className="h-9 text-xs border-slate-200 focus-visible:border-brand"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Remove item ${index + 1}`}
+                          onClick={() =>
+                            setEditExtraItems((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== index) : [{ name: '', quantity: '1' }]))
+                          }
+                          className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setEditExtraItems((rows) => (rows.length >= 20 ? rows : [...rows, { name: '', quantity: '1' }]))}
+                      className="text-brand hover:underline font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add item</span>
+                    </button>
                   </div>
 
                   {/* Site instructions */}
@@ -603,6 +531,39 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                       rows={3}
                       className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 outline-none focus:border-brand leading-relaxed"
                     />
+                  </div>
+
+                  {/* Customer-visible details */}
+                  <div className="space-y-1">
+                    <label className="text-slate-600 font-medium">Customer-visible details</label>
+                    <textarea
+                      value={editCustomerNotes}
+                      onChange={(e) => setEditCustomerNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Details shared with the customer"
+                      className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 outline-none focus:border-brand leading-relaxed placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  {/* Internal note */}
+                  <div className="space-y-1">
+                    <label className="text-slate-600 font-medium">Internal note</label>
+                    <textarea
+                      value={editInternalNote}
+                      onChange={(e) => setEditInternalNote(e.target.value)}
+                      rows={2}
+                      placeholder="Visible to your team only"
+                      className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 outline-none focus:border-brand leading-relaxed placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <span className="text-slate-600 font-medium">Lines on site</span>
+                    <Switch aria-label="Lines on site" checked={editLinesOnSite} onCheckedChange={setEditLinesOnSite} />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-600 font-medium">Collect on delivery</span>
+                    <Switch aria-label="Collect on delivery" checked={editCollect} onCheckedChange={setEditCollect} />
                   </div>
                 </div>
               </div>
@@ -618,22 +579,15 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   {/* Service date: Interactive Popover Calendar */}
                   <div className="space-y-1">
                     <label className="text-slate-600 font-medium">Service date</label>
-                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                      <PopoverTrigger className="w-full h-9 px-3 bg-white rounded-lg border border-slate-200 flex items-center justify-between shadow-2xs hover:border-brand/40 cursor-pointer text-left outline-none group transition-colors">
-                        <span className="font-semibold text-slate-900 text-xs">{editDate}</span>
-                        <CalendarIcon className="h-4 w-4 text-slate-400 group-hover:text-brand transition-colors" />
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="p-0 border border-slate-200 shadow-xl rounded-2xl overflow-hidden">
-                        <Calendar
-                          selected={getParsedDate(editDate)}
-                          onSelect={(newDate) => {
-                            setEditDate(format(newDate, 'MMM d, yyyy'));
-                            setIsCalendarOpen(false);
-                            if (errors.date) setErrors((prev) => ({ ...prev, date: '' }));
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <DatePicker
+                      ariaLabel="Service date"
+                      size="sm"
+                      value={editDate}
+                      onChange={(value) => {
+                        setEditDate(value);
+                        clearError('date');
+                      }}
+                    />
                     {errors.date && (
                       <p className="text-[11px] text-red-500 font-medium">{errors.date}</p>
                     )}
@@ -648,10 +602,10 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                         value={editArriveBy}
                         onChange={(val) => {
                           setEditArriveBy(val);
-                          if (errors.arriveBy) setErrors((prev) => ({ ...prev, arriveBy: '' }));
+                          clearError('arriveBy');
                         }}
                         icon={Clock}
-                        options={STANDARD_TIMES}
+                        options={withValue(STANDARD_TIMES, editArriveBy)}
                         error={Boolean(errors.arriveBy)}
                       />
                       {errors.arriveBy && (
@@ -666,10 +620,10 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                         value={editPourTime}
                         onChange={(val) => {
                           setEditPourTime(val);
-                          if (errors.pourTime) setErrors((prev) => ({ ...prev, pourTime: '' }));
+                          clearError('pourTime');
                         }}
                         icon={Clock}
-                        options={STANDARD_TIMES}
+                        options={withValue(STANDARD_TIMES, editPourTime)}
                         error={Boolean(errors.pourTime)}
                       />
                       {errors.pourTime && (
@@ -685,7 +639,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                       value={editEstimatedEnd}
                       onChange={setEditEstimatedEnd}
                       icon={Clock}
-                      options={STANDARD_TIMES}
+                      options={withValue(STANDARD_TIMES, editEstimatedEnd)}
                     />
                   </div>
 
@@ -693,15 +647,9 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   <div className="space-y-1">
                     <label className="text-slate-600 font-medium">Assigned pump</label>
                     <AppSelect
-                      value={editPump}
-                      onChange={setEditPump}
-                      options={[
-                        "01 · 34M",
-                        "02 · 28M",
-                        "03 · 47M",
-                        "04 · Line pump",
-                        "Unassigned",
-                      ]}
+                      value={editPumpId}
+                      onChange={setEditPumpId}
+                      options={pumpChoices}
                     />
                   </div>
 
@@ -709,14 +657,19 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   <div className="space-y-1">
                     <label className="text-slate-600 font-medium">Operator</label>
                     <AppSelect
-                      value={editOperator}
-                      onChange={setEditOperator}
-                      options={[
-                        "Rob Black",
-                        "Dave Smith",
-                        "Tony Perez",
-                        "Unassigned",
-                      ]}
+                      value={editOperatorId}
+                      onChange={setEditOperatorId}
+                      options={operatorChoices}
+                    />
+                  </div>
+
+                  {/* Additional operator */}
+                  <div className="space-y-1">
+                    <label className="text-slate-600 font-medium">Additional operator</label>
+                    <AppSelect
+                      value={editSecondOperatorId}
+                      onChange={setEditSecondOperatorId}
+                      options={secondOperatorChoices}
                     />
                   </div>
 
@@ -725,117 +678,24 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                     <label className="text-slate-600 font-medium">Booking status</label>
                     <AppSelect
                       value={editStatus}
-                      onChange={(val) => setEditStatus(val as OrderData['status'])}
+                      onChange={(val) => setEditStatus(val as 'Pending' | 'Confirmed')}
                       options={[
                         { value: "Confirmed", label: "Confirmed" },
                         { value: "Pending", label: "Pending" },
-                        { value: "Turned In", label: "Turned In" },
-                        { value: "Completed", label: "Completed" },
-                        { value: "Cancelled", label: "Cancelled" },
                       ]}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Card 4: Update notification */}
-              <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-2">
-                <h2 className="text-sm font-bold text-slate-900">Update notification</h2>
-
-                <label className="flex items-start gap-2.5 cursor-pointer pt-1">
-                  <Checkbox
-                    checked={editNotify}
-                    onCheckedChange={setEditNotify}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900">
-                      Notify operator of these changes
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      A summary is prepared before sending.
-                    </div>
-                  </div>
-                </label>
-              </div>
-
               {/* Bottom Info Callout */}
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center gap-2 text-xs text-slate-500">
                 <Info className="h-4 w-4 text-slate-400 shrink-0" />
-                <span>Work ticket entries and billing charges are edited in their own tabs.</span>
+                <span>To cancel this order, use Cancel order on the order page.</span>
               </div>
             </div>
           </div>
         </form>
-
-        {/* ── Dialog: Add Another Contact (In-Place so edits are NOT lost) ── */}
-        <Dialog open={isAddContactModalOpen} onOpenChange={setIsAddContactModalOpen}>
-          <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
-            <DialogHeader>
-              <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
-                Add contact for {editCustomer}
-              </DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleCreateContact} className="space-y-4 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">Full name</label>
-                <Input
-                  value={newContactName}
-                  onChange={(e) => setNewContactName(e.target.value)}
-                  placeholder="e.g. Jim Morrison"
-                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">Phone number</label>
-                <Input
-                  type="tel"
-                  value={newContactPhone}
-                  onChange={(e) => setNewContactPhone(formatUSPhone(e.target.value))}
-                  placeholder="(207) 555-0188"
-                  maxLength={14}
-                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">Role / Title</label>
-                <AppSelect
-                  size="lg"
-                  value={newContactRole}
-                  onChange={setNewContactRole}
-                  options={[
-                    "Superintendent",
-                    "Project Manager",
-                    "Foreman",
-                    "Dispatcher",
-                  ]}
-                />
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddContactModalOpen(false)}
-                  className="h-9 px-4 text-xs font-semibold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg cursor-pointer shadow-2xs transition-colors focus-visible:outline-none"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="h-9 px-4.5 text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-lg cursor-pointer shadow-xs transition-colors focus-visible:outline-none"
-                >
-                  Add contact
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
@@ -847,13 +707,18 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-5">
       {/* ── 1. Top Link ── */}
       <div className="flex items-center justify-between text-xs">
-        <Link
-          href="/schedule"
-          className="text-brand hover:underline font-semibold inline-flex items-center gap-1 transition-colors"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          <span>View on schedule</span>
-        </Link>
+        {/* A cancelled order is no longer on the schedule. */}
+        {isCancelled ? (
+          <span />
+        ) : (
+          <Link
+            href={`/schedule?date=${order.serviceDateIso}`}
+            className="text-brand hover:underline font-semibold inline-flex items-center gap-1 transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            <span>View on schedule</span>
+          </Link>
+        )}
 
         <Link
           href="/orders"
@@ -903,270 +768,35 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
 
         {/* Top Right Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end self-start sm:self-center">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsEditingOrder(true)}
-            className="h-9 px-3 sm:px-3.5 rounded-lg border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
-          >
-            <Pencil className="h-4 w-4 text-slate-500" />
-            <span>Edit order</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* ── 3. Tabs: Overview / Work Ticket ── */}
-      <div className="flex items-center gap-6 border-b border-slate-200 text-xs font-semibold">
-        <button
-          type="button"
-          onClick={() => setActiveTab('overview')}
-          className={cn(
-            'pb-3 pt-1 transition-colors relative cursor-pointer',
-            activeTab === 'overview'
-              ? 'text-brand font-bold'
-              : 'text-slate-500 hover:text-slate-900 font-medium'
-          )}
-        >
-          <span>Overview</span>
-          {activeTab === 'overview' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('work_ticket')}
-          className={cn(
-            'pb-3 pt-1 transition-colors relative cursor-pointer',
-            activeTab === 'work_ticket'
-              ? 'text-brand font-bold'
-              : 'text-slate-500 hover:text-slate-900 font-medium'
-          )}
-        >
-          <span>Work Ticket</span>
-          {activeTab === 'work_ticket' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
-          )}
-        </button>
-      </div>
-
-      {/* ═════════════════════════════════════════════════════════════════════════ */}
-      {/* ── TAB 1: WORK TICKET (With Edit Adjustments Modal Connection) ── */}
-      {/* ═════════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'work_ticket' && (
-        <div className="space-y-5">
-          {/* Top Banner: Work Ticket Info */}
-          <div className="p-4 rounded-xl border border-slate-200/90 bg-white shadow-2xs flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-brand-light border border-brand/20 flex items-center justify-center shrink-0 text-brand">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="font-bold text-slate-900 text-sm">
-                  Work ticket #{order.workTicketNumber}
-                </div>
-                <div className="text-xs text-slate-500 font-medium mt-0.5">
-                  Operator: {order.assignedOperator} · Pump: {order.assignedPumpCode.replace(' · ', ' / ')}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 1: Quantities & time */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900">Quantities & time</h2>
-              <button
+          {!isCancelled && (
+            <>
+              <Button
                 type="button"
-                onClick={() => setIsAdjustmentsModalOpen(true)}
-                className="text-xs font-semibold text-brand hover:underline cursor-pointer inline-flex items-center gap-1"
+                variant="outline"
+                onClick={() => setIsCancelOpen(true)}
+                className="h-9 px-3 sm:px-3.5 rounded-lg border-slate-200 text-xs sm:text-sm font-semibold text-red-600 hover:bg-red-50 gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
               >
-                <Pencil className="h-3 w-3" />
-                <span>Edit adjustments</span>
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/60 text-slate-500 font-semibold select-none">
-                    <th className="py-3 px-4 w-1/4">Metric</th>
-                    <th className="py-3 px-4 w-1/4">Planned</th>
-                    <th className="py-3 px-4 w-1/4">Reported by operator</th>
-                    <th className="py-3 px-4 w-1/4">Adjusted for billing</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {/* Row 1: Cubic yards */}
-                  <tr>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
-                      Cubic yards
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-700 tabular-nums">
-                      {order.volumeYards} yd³
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-700 tabular-nums">
-                      85 yd³
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900 tabular-nums">
-                      {order.adjustedYards} yd³
-                    </td>
-                  </tr>
-
-                  {/* Row 2: Travel */}
-                  <tr>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900">Travel</div>
-                      <a
-                        href={order.directionsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-brand hover:underline font-semibold text-[11px] inline-flex items-center gap-0.5 mt-0.5"
-                      >
-                        <span>View route</span>
-                        <ArrowUpRight className="h-3 w-3" />
-                      </a>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">1.0 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        Out: 6:30 – 7:00 AM<br />
-                        Return: 11:00 – 11:30 AM
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">1.25 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        Out: 6:15 – 7:00 AM<br />
-                        Return: 11:00 – 11:30 AM
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{order.adjustedTravel} hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        No billing adjustment
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Row 3: On-site total */}
-                  <tr>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
-                      On-site total
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">4.0 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:00 – 11:00 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">4.0 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:00 – 11:00 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">4.0 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:00 – 11:00 AM</div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Card 2: On-site breakdown */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-900">On-site breakdown</h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/60 text-slate-500 font-semibold select-none">
-                    <th className="py-3 px-4 w-1/4">Metric</th>
-                    <th className="py-3 px-4 w-1/4">Planned</th>
-                    <th className="py-3 px-4 w-1/4">Reported by operator</th>
-                    <th className="py-3 px-4 w-1/4">Adjusted for billing</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {/* Prep */}
-                  <tr>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
-                      Prep
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">0.5 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:00 – 7:30 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">0.5 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:00 – 7:30 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{order.adjustedPrep} hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:00 – 7:30 AM</div>
-                    </td>
-                  </tr>
-
-                  {/* Pour */}
-                  <tr>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900">Pour</div>
-                      <div className="text-[11px] text-slate-500 font-medium">Foundation</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">3.0 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:30 – 10:30 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">3.0 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:30 – 10:30 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{order.adjustedPour} hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">7:30 – 10:30 AM</div>
-                    </td>
-                  </tr>
-
-                  {/* Cleanup */}
-                  <tr>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
-                      Cleanup
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">0.5 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">10:30 – 11:00 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-700">0.5 hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">10:30 – 11:00 AM</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{order.adjustedCleanup} hr</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">10:30 – 11:00 AM</div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Table Footer Helper Text */}
-            <div className="p-3.5 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Billing adjustments preserve original operator entries and recorded times.
-              </span>
-              <span className="text-xs text-slate-500 font-medium self-end sm:self-center">
-                No adjustments made.
-              </span>
-            </div>
-          </div>
+                <X className="h-4 w-4" />
+                <span>Cancel order</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openEditOrder}
+                className="h-9 px-3 sm:px-3.5 rounded-lg border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
+              >
+                <Pencil className="h-4 w-4 text-slate-500" />
+                <span>Edit order</span>
+              </Button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ═════════════════════════════════════════════════════════════════════════ */}
       {/* ── TAB 2: OVERVIEW ── */}
       {/* ═════════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'overview' && (
+      {(
         <div className="space-y-5">
           {/* 4 Summary Metric Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -1234,7 +864,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                 <div className="py-2.5 flex items-center justify-between gap-4">
                   <span className="text-slate-500 font-medium w-36 shrink-0">Customer</span>
                   <Link
-                    href="/customers"
+                    href={`/customers/${order.customerId}`}
                     className="font-bold text-brand hover:underline inline-flex items-center gap-1 text-right"
                   >
                     <span>{order.customer}</span>
@@ -1302,6 +932,14 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   </div>
                 </div>
 
+                {/* Job name */}
+                {order.jobName && (
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-slate-500 font-medium w-36 shrink-0">Job name</span>
+                    <span className="font-semibold text-slate-900 text-right">{order.jobName}</span>
+                  </div>
+                )}
+
                 {/* Pour type */}
                 <div className="py-2.5 flex items-center justify-between gap-4">
                   <span className="text-slate-500 font-medium w-36 shrink-0">Pour type</span>
@@ -1314,12 +952,63 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                   <span className="font-semibold text-slate-900 text-right">{order.pumpRequested}</span>
                 </div>
 
+                {/* Concrete supplier */}
+                {order.supplierName && (
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-slate-500 font-medium w-36 shrink-0">Concrete supplier</span>
+                    <span className="font-semibold text-slate-900 text-right">{order.supplierName}</span>
+                  </div>
+                )}
+
+                {/* Lines on site */}
+                <div className="py-2.5 flex items-center justify-between gap-4">
+                  <span className="text-slate-500 font-medium w-36 shrink-0">Lines on site</span>
+                  <span className="font-semibold text-slate-900 text-right">{order.linesOnSite ? 'Yes' : 'No'}</span>
+                </div>
+
+                {/* Maximum pump size */}
+                {order.maxPumpSize && (
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-slate-500 font-medium w-36 shrink-0">Maximum pump size</span>
+                    <span className="font-semibold text-slate-900 text-right">{order.maxPumpSize}</span>
+                  </div>
+                )}
+
                 {/* Purchase order */}
                 <div className="py-2.5 flex items-center justify-between gap-4">
                   <span className="text-slate-500 font-medium w-36 shrink-0">Purchase order</span>
                   <span className="font-semibold text-slate-900 text-right">{order.purchaseOrder}</span>
                 </div>
               </div>
+
+              {/* Extra equipment and supplies */}
+              {order.extraItems.length > 0 && (
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-800">Extra equipment &amp; supplies</div>
+                  <ul className="text-xs text-slate-600 font-medium space-y-0.5">
+                    {order.extraItems.map((item, index) => (
+                      <li key={index} className="flex items-center justify-between gap-3">
+                        <span>{item.name}</span>
+                        <span className="tabular-nums text-slate-500">× {item.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Customer-visible details and internal note */}
+              {order.customerNotes && (
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-1">
+                  <div className="text-[11px] font-bold text-slate-800">Customer-visible details</div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">{order.customerNotes}</p>
+                </div>
+              )}
+              {order.internalNote && (
+                <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/70 space-y-1">
+                  <div className="text-[11px] font-bold text-amber-900">Internal note (team only)</div>
+                  <p className="text-xs text-amber-950/80 font-medium leading-relaxed">{order.internalNote}</p>
+                </div>
+              )}
 
               {/* Site instructions box */}
               <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-1">
@@ -1350,6 +1039,13 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                       </div>
                     </div>
                   </div>
+
+                  {order.secondOperatorName && (
+                    <div className="py-2.5 flex items-center justify-between gap-4 text-xs border-b border-slate-100">
+                      <span className="text-slate-500 font-medium w-36 shrink-0">Additional operator</span>
+                      <span className="font-semibold text-slate-900 text-right">{order.secondOperatorName}</span>
+                    </div>
+                  )}
 
                   {/* Operator Highlight Box */}
                   <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1399,32 +1095,18 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                 </div>
               </div>
 
-              {/* Work ticket & billing */}
+              {/* Billing */}
               <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">
-                <h2 className="text-sm font-bold text-slate-900">Work ticket & billing</h2>
+                <h2 className="text-sm font-bold text-slate-900">Billing</h2>
 
                 <div className="divide-y divide-slate-100 text-xs">
-                  {/* Work ticket */}
-                  <div className="py-2.5 flex items-center justify-between gap-4">
-                    <span className="text-slate-500 font-medium w-36 shrink-0">Work ticket</span>
-                    <div className="flex items-center gap-2 text-right">
-                      <span className="text-slate-500 font-medium">{order.workTicketStatus}</span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('work_ticket')}
-                        className="text-brand font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer ml-1"
-                      >
-                        <span>Open work ticket</span>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </button>
+                  {/* Billing service */}
+                  {order.billingService && (
+                    <div className="py-2.5 flex items-center justify-between gap-4">
+                      <span className="text-slate-500 font-medium w-36 shrink-0">Billing service</span>
+                      <span className="font-semibold text-slate-900 text-right">{order.billingService}</span>
                     </div>
-                  </div>
-
-                  {/* Invoice */}
-                  <div className="py-2.5 flex items-center justify-between gap-4">
-                    <span className="text-slate-500 font-medium w-36 shrink-0">Invoice</span>
-                    <span className="font-semibold text-slate-600 text-right">{order.invoiceStatus}</span>
-                  </div>
+                  )}
 
                   {/* Collect on delivery */}
                   <div className="py-2.5 flex items-center justify-between gap-4">
@@ -1440,188 +1122,46 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
         </div>
       )}
 
-      {/* ═════════════════════════════════════════════════════════════════════════ */}
-      {/* ── MODAL: EDIT BILLING ADJUSTMENTS (Matching Screenshot 2 exactly) ── */}
-      {/* ═════════════════════════════════════════════════════════════════════════ */}
-      <Dialog open={isAdjustmentsModalOpen} onOpenChange={setIsAdjustmentsModalOpen}>
-        <DialogContent className="sm:max-w-lg p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
-          <DialogHeader className="space-y-0.5">
-            <DialogTitle className="text-lg font-bold text-slate-900">
-              Edit billing adjustments
+      {/* ── Dialog: Cancel order ── */}
+      <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+        <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
+              Cancel {order.id}?
             </DialogTitle>
-            <p className="text-xs text-slate-500 font-medium">
-              {order.id} · {order.customer}
-            </p>
           </DialogHeader>
-
-          {/* Theme Teal Info Callout */}
-          <div className="p-3 rounded-xl bg-brand-light border border-brand/20 flex items-center gap-2.5 text-xs text-[#084B4E]">
-            <Info className="h-4 w-4 text-brand shrink-0" />
-            <span className="font-medium">
-              Original operator entries and recorded times stay unchanged.
-            </span>
+          <p className="text-sm text-slate-600">
+            The order for {order.customer} stays on file as cancelled. Its pump and operator are freed up.
+          </p>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 block">
+              Reason <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <Input
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="e.g. Customer postponed the pour"
+              className="h-10 text-sm text-slate-900 border-slate-200"
+            />
           </div>
-
-          <form onSubmit={handleSaveAdjustments} className="space-y-4">
-            {/* Adjustments Table */}
-            <div className="rounded-xl border border-slate-200/90 overflow-hidden text-xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold select-none">
-                    <th className="py-2.5 px-3.5 w-1/3">Metric</th>
-                    <th className="py-2.5 px-3.5 w-1/3">Operator reported</th>
-                    <th className="py-2.5 px-3.5 w-1/3">Billable quantity</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {/* Cubic yards */}
-                  <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-slate-900">Cubic yards</td>
-                    <td className="py-2.5 px-3.5 text-slate-600 font-medium tabular-nums">85 yd³</td>
-                    <td className="py-2 px-3.5">
-                      <div className="relative flex items-center">
-                        <Input
-                          type="number"
-                          value={modalYards}
-                          onChange={(e) => setModalYards(Number(e.target.value))}
-                          className="h-8 pr-9 text-xs font-semibold"
-                        />
-                        <span className="absolute right-2.5 text-xs text-slate-400 font-medium pointer-events-none">
-                          yd³
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Travel */}
-                  <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-slate-900">Travel</td>
-                    <td className="py-2.5 px-3.5 text-slate-600 font-medium tabular-nums">1.25 hr</td>
-                    <td className="py-2 px-3.5">
-                      <div className="relative flex items-center">
-                        <Input
-                          type="number"
-                          step="0.05"
-                          value={modalTravel}
-                          onChange={(e) => setModalTravel(Number(e.target.value))}
-                          className="h-8 pr-8 text-xs font-semibold"
-                        />
-                        <span className="absolute right-2.5 text-xs text-slate-400 font-medium pointer-events-none">
-                          hr
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Prep */}
-                  <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-slate-900">Prep</td>
-                    <td className="py-2.5 px-3.5 text-slate-600 font-medium tabular-nums">0.5 hr</td>
-                    <td className="py-2 px-3.5">
-                      <div className="relative flex items-center">
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={modalPrep}
-                          onChange={(e) => setModalPrep(Number(e.target.value))}
-                          className="h-8 pr-8 text-xs font-semibold"
-                        />
-                        <span className="absolute right-2.5 text-xs text-slate-400 font-medium pointer-events-none">
-                          hr
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Pour */}
-                  <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-slate-900">Pour</td>
-                    <td className="py-2.5 px-3.5 text-slate-600 font-medium tabular-nums">3.0 hr</td>
-                    <td className="py-2 px-3.5">
-                      <div className="relative flex items-center">
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={modalPour}
-                          onChange={(e) => setModalPour(Number(e.target.value))}
-                          className="h-8 pr-8 text-xs font-semibold"
-                        />
-                        <span className="absolute right-2.5 text-xs text-slate-400 font-medium pointer-events-none">
-                          hr
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Cleanup */}
-                  <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-slate-900">Cleanup</td>
-                    <td className="py-2.5 px-3.5 text-slate-600 font-medium tabular-nums">0.5 hr</td>
-                    <td className="py-2 px-3.5">
-                      <div className="relative flex items-center">
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={modalCleanup}
-                          onChange={(e) => setModalCleanup(Number(e.target.value))}
-                          className="h-8 pr-8 text-xs font-semibold"
-                        />
-                        <span className="absolute right-2.5 text-xs text-slate-400 font-medium pointer-events-none">
-                          hr
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Total on-site hours highlight row */}
-                  <tr className="bg-slate-50/80 font-bold border-t border-slate-200">
-                    <td className="py-3 px-3.5 text-slate-900">Total on-site hours:</td>
-                    <td className="py-3 px-3.5 text-slate-500"></td>
-                    <td className="py-3 px-3.5 text-slate-900 font-extrabold text-xs tabular-nums">
-                      {modalTotalOnSite} hr
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Reason for adjustment */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-900">Reason for adjustment</label>
-              <textarea
-                value={modalReason}
-                onChange={(e) => setModalReason(e.target.value)}
-                placeholder="Explain any changes for the billing history..."
-                rows={3}
-                className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 outline-none focus:border-brand"
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Changes are recorded with your name and time.
-              </span>
-              <div className="flex items-center gap-2 self-end sm:self-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAdjustmentsModalOpen(false)}
-                  className="h-8 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="h-8 text-xs font-semibold bg-brand hover:bg-brand-hover text-white cursor-pointer"
-                >
-                  Save adjustments
-                </Button>
-              </div>
-            </div>
-          </form>
+          <div className="pt-1 flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCancelOpen(false)}
+              className="h-9 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Keep order
+            </Button>
+            <Button
+              type="button"
+              disabled={isSaving}
+              onClick={handleCancelOrder}
+              className="h-9 px-4 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+            >
+              {isSaving ? 'Cancelling...' : 'Cancel order'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

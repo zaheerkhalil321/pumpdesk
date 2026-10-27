@@ -6,10 +6,11 @@ import { MobileNavbar } from "@/components/layout/mobile-navbar";
 import { SettingsProvider, useSettings } from "@/components/providers/settings-provider";
 import { SettingsOverlay } from "@/components/settings/settings-overlay";
 import { cn } from "@/lib/utils";
+import type { NavCounts } from "@/features/orders/types";
 
 import { usePathname } from "next/navigation";
 
-function AppShellInner({ children }: { children: React.ReactNode }) {
+function AppShellInner({ children, navCounts }: { children: React.ReactNode; navCounts: NavCounts }) {
   const { isOpen } = useSettings();
   const pathname = usePathname();
   const isSettingsRoute = pathname?.startsWith('/settings');
@@ -17,10 +18,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-background">
       {/* Mobile top navigation & drawer (visible on mobile < md) */}
-      <MobileNavbar />
+      <MobileNavbar navCounts={navCounts} />
 
       {/* Desktop sidebar (visible on desktop md+) */}
-      <AppSidebar />
+      <AppSidebar navCounts={navCounts} />
 
       {/* Main workspace container */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0 relative">
@@ -44,12 +45,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
 export function AppShell({
   children,
+  navCounts,
 }: {
   children: React.ReactNode;
+  navCounts: NavCounts;
 }) {
   return (
     <SettingsProvider>
-      <AppShellInner>{children}</AppShellInner>
+      <AppShellInner navCounts={navCounts}>{children}</AppShellInner>
     </SettingsProvider>
   );
 }

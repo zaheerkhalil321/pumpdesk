@@ -142,13 +142,6 @@ export function TimelineGrid({
                             slot.hour < b.startHour + b.durationHours,
                         );
 
-                        // Match the 7 AM slot on pump 01 as featured in the reference spec
-                        const isSpecPromptSlot =
-                          pump.id === '01-34m' &&
-                          slot.hour === 7 &&
-                          !isBooked &&
-                          pumpBookings.length === 0;
-
                         const isDragOver =
                           dragOverTarget?.pumpId === pump.id &&
                           dragOverTarget?.hour === slot.hour;
@@ -208,18 +201,8 @@ export function TimelineGrid({
                               </div>
                             )}
 
-                            {/* Static prompt slot matching screenshot: "+ Add booking" with clean vertical layout */}
-                            {isSpecPromptSlot && !isDragOver && (
-                              <div className="w-full h-full rounded-lg border border-dashed border-brand/40 bg-brand-light/50 text-brand hover:bg-brand-light hover:border-brand flex flex-col items-center justify-center gap-1.5 text-center transition-all shadow-2xs p-1 select-none group">
-                                <Plus className="h-3.5 w-3.5 text-brand group-hover:scale-110 transition-transform shrink-0" />
-                                <span className="text-[10px] font-semibold text-brand-text leading-tight tracking-tight">
-                                  Add booking
-                                </span>
-                              </div>
-                            )}
-
                             {/* Interactive dynamic hover slot for other empty cells */}
-                            {!isBooked && !isSpecPromptSlot && !isDragOver && (
+                            {!isBooked && !isDragOver && (
                               <div className="w-full h-full rounded-lg border border-dashed border-slate-200 opacity-0 hover:opacity-100 hover:border-brand/40 hover:bg-brand-light/40 text-brand flex items-center justify-center gap-1 text-[11px] font-medium transition-all">
                                 <Plus className="h-3 w-3" />
                                 <span>Add</span>
@@ -267,7 +250,9 @@ export function TimelineGrid({
                             onDragStart={(e) => {
                               e.dataTransfer.setData('text/plain', booking.id);
                               e.dataTransfer.effectAllowed = 'move';
-                              setDraggedBookingId(booking.id);
+                              // Let the slots under every card receive the drop. Deferred so the browser
+                              // has already started the drag before the card stops catching pointer events.
+                              setTimeout(() => setDraggedBookingId(booking.id), 0);
                             }}
                             onDragEnd={() => {
                               setDraggedBookingId(null);
@@ -278,7 +263,8 @@ export function TimelineGrid({
                               onBookingClick(booking);
                             }}
                             className={cn(
-                              'pointer-events-auto h-full rounded-lg flex flex-col justify-between shadow-2xs border transition-all cursor-grab active:cursor-grabbing hover:shadow-md select-none overflow-hidden max-w-full min-w-0 border-l-[3.5px]',
+                              draggedBookingId ? 'pointer-events-none' : 'pointer-events-auto',
+                              'h-full rounded-lg flex flex-col justify-between shadow-2xs border transition-all cursor-grab active:cursor-grabbing hover:shadow-md select-none overflow-hidden max-w-full min-w-0 border-l-[3.5px]',
                               'row-start-1 row-end-2',
                               isNarrow ? 'p-1.5' : 'p-2.5',
                               startColClass,

@@ -15,6 +15,9 @@ export type DispatchStatus = "unassigned" | "draft" | "dispatched";
 
 export interface ScheduleBooking {
   id: string;
+  /** Database id and version of the order, used to save changes. */
+  jobId?: string;
+  version?: number;
   orderNumber: string;
   pumpId: string;
   customerName: string;
@@ -29,6 +32,20 @@ export interface ScheduleBooking {
   dispatchStatus?: DispatchStatus;
   dispatchedAt?: string;
   pourType?: string;
+  /** Pump label saved with the booking, e.g. "01 · 34M". Empty until a pump is assigned. */
+  pumpCode?: string;
+  /** Pump make and model, e.g. "Putzmeister 34Z". */
+  pumpModel?: string;
+  /** Pour date as yyyy-MM-dd. */
+  serviceDate?: string;
+  supplierName?: string;
+  minPumpSize?: string;
+  /** Real arrival and pour times, e.g. "6:00 AM". */
+  arriveByLabel?: string;
+  pourTimeLabel?: string;
+  /** The job contact saved with the order. */
+  contactName?: string;
+  contactPhone?: string;
 }
 
 export interface ScheduleFilters {

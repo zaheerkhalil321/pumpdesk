@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type OrderTab = 'all' | 'confirmed' | 'pending' | 'needs_assignment' | 'ready_to_invoice';
+export type OrderTab = 'all' | 'confirmed' | 'pending' | 'needs_assignment';
 
 interface OrdersFilterSheetProps {
   isOpen: boolean;
@@ -32,7 +32,6 @@ interface OrdersFilterSheetProps {
   confirmedCount: number;
   pendingCount: number;
   needsAssignmentCount: number;
-  readyToInvoiceCount: number;
   filteredCount: number;
   onResetFilters: () => void;
 }
@@ -50,7 +49,6 @@ export function OrdersFilterSheet({
   confirmedCount,
   pendingCount,
   needsAssignmentCount,
-  readyToInvoiceCount,
   filteredCount,
   onResetFilters,
 }: OrdersFilterSheetProps) {
@@ -61,7 +59,6 @@ export function OrdersFilterSheet({
     { id: 'confirmed', label: 'Confirmed', count: confirmedCount, dotColor: 'bg-brand' },
     { id: 'pending', label: 'Pending', count: pendingCount, dotColor: 'bg-amber-500' },
     { id: 'needs_assignment', label: 'Needs Assignment', count: needsAssignmentCount, dotColor: 'bg-rose-500' },
-    { id: 'ready_to_invoice', label: 'Ready to Invoice', count: readyToInvoiceCount, dotColor: 'bg-slate-500' },
   ];
 
   return (

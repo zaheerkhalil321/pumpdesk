@@ -90,7 +90,7 @@ test.describe("CRM: customers", () => {
   test("dispatcher adds, edits and deletes a job site", async ({ page }) => {
     const site = `E2E Site ${Date.now()}`;
     await login(page, "dispatcher@midcoast.test");
-    await openCustomer(page, "Harbor Builders");
+    await openCustomer(page, "Accurate Concrete");
 
     await page.getByRole("button", { name: "Add site" }).first().click();
     const add = page.getByRole("dialog");

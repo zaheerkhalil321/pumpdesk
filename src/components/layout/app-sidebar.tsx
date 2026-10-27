@@ -29,6 +29,7 @@ import {
 import { useSettings } from '@/components/providers/settings-provider';
 import { useIsTablet } from '@/hooks/use-mobile';
 import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
+import type { NavCounts } from '@/features/orders/types';
 
 interface YardLocation {
   id: string;
@@ -82,14 +83,12 @@ const navItems: NavItem[] = [
     title: 'Schedule',
     href: '/schedule',
     icon: Calendar,
-    badge: '2 today',
     matchPrefix: true,
   },
   {
     title: 'Orders',
     href: '/orders',
     icon: FileText,
-    badge: '12',
     matchPrefix: true,
   },
   {
@@ -118,7 +117,14 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function AppSidebar() {
+/** Adds the live count to the Schedule and Orders links. */
+function withBadge(item: NavItem, counts: NavCounts): NavItem {
+  if (item.href === '/schedule') return { ...item, badge: counts.today > 0 ? `${counts.today} today` : undefined };
+  if (item.href === '/orders') return { ...item, badge: counts.orders > 0 ? String(counts.orders) : undefined };
+  return item;
+}
+
+export function AppSidebar({ navCounts }: { navCounts: NavCounts }) {
   const pathname = usePathname();
   const isTablet = useIsTablet();
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState<boolean | null>(null);
@@ -351,7 +357,8 @@ export function AppSidebar() {
             isCollapsed ? 'px-2' : 'px-3',
           )}
         >
-          {navItems.map((item) => {
+          {navItems.map((baseItem) => {
+            const item = withBadge(baseItem, navCounts);
             const Icon = item.icon;
             const isActive = item.matchPrefix
               ? pathname.startsWith(item.href)
@@ -420,7 +427,7 @@ export function AppSidebar() {
                 <span className="truncate">{item.title}</span>
 
                 {/* Badges */}
-                {item.title === 'Schedule' ? (
+                {item.title === 'Schedule' && item.badge ? (
                   <span
                     className={cn(
                       'ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold transition-all shrink-0',
@@ -435,7 +442,7 @@ export function AppSidebar() {
                         isActive ? 'bg-emerald-300 animate-pulse' : 'bg-emerald-500 animate-pulse'
                       )}
                     />
-                    <span>2 today</span>
+                    <span>{item.badge}</span>
                   </span>
                 ) : item.badge ? (
                   <span

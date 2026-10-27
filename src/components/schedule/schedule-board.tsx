@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { format, parse } from "date-fns";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
 import { ScheduleToolbar } from "@/components/schedule/schedule-toolbar";
 import { TimelineGrid } from "@/components/schedule/timeline-grid";
@@ -16,63 +18,49 @@ import {
   ScheduleBooking,
   ScheduleViewMode,
 } from "@/components/schedule/schedule-types";
-import {
-  useBookings,
-  useUnassignedJobs,
-  addOrUpdateBooking,
-  addOrUpdateUnassignedJob,
-  deleteStoredBooking,
-} from "@/lib/orders-store";
+import { updateOrder } from "@/features/orders/server/actions";
+import { reportAction } from "@/lib/action-feedback";
 import { toast } from "sonner";
 import { CredentialAlertBanner } from "@/components/schedule/credential-alert-banner";
 import type { CredentialAlertItem } from "@/features/fleet/types";
+import type { OrderFormOptions } from "@/features/orders/types";
 import { AlertTriangle, X, Plus } from "lucide-react";
-
-// Midcoast Concrete Pumping Fleet Roster matching specification
-const INITIAL_PUMPS: PumpLane[] = [
-  {
-    id: "01-34m",
-    code: "01 · 34M",
-    name: "34M Putzmeister Boom",
-    boomLength: "100ft reach",
-    operator: "Rob Black",
-    status: "active",
-  },
-  {
-    id: "02-28m",
-    code: "02 · 28M",
-    name: "28M Putzmeister Boom",
-    boomLength: "28 Meter",
-    operator: null, // Displays 'No default operator'
-    status: "active",
-  },
-  {
-    id: "03-47m",
-    code: "03 · 47M",
-    name: "47M Schwing Boom",
-    boomLength: "47 Meter",
-    operator: "Dave Smith",
-    status: "active",
-  },
-  {
-    id: "04-line-pump",
-    code: "04 · Line pump",
-    name: "Trailer Line Pump",
-    boomLength: "2.5 Inch Line",
-    operator: "Tony Perez",
-    status: "active",
-  },
-];
 
 interface ScheduleBoardProps {
   credentialAlerts: CredentialAlertItem[];
+  /** Real pumps from the database, one lane each. */
+  pumps: PumpLane[];
+  /** Real customers, pumps and operators for the booking form. */
+  orderOptions: OrderFormOptions;
+  /** The day being shown (yyyy-MM-dd). */
+  date: string;
+  /** Pours on that day, each on a pump. */
+  bookings: ScheduleBooking[];
+  /** Upcoming orders that still need a pump. */
+  unassignedJobs: ScheduleBooking[];
 }
 
-export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
-  // Target initial date: Saturday, September 12, 2026 per spec
-  const [currentDate, setCurrentDate] = useState<Date>(
-    new Date(2026, 8, 12, 12, 0, 0)
+export function ScheduleBoard({
+  credentialAlerts,
+  pumps,
+  orderOptions,
+  date,
+  bookings: savedBookings,
+  unassignedJobs,
+}: ScheduleBoardProps) {
+  const router = useRouter();
+  const [, startSaving] = useTransition();
+  // A dragged card moves at once; the saved data replaces it when the server answers (or puts it back on failure).
+  const [bookings, moveBooking] = useOptimistic(
+    savedBookings,
+    (current, move: { id: string; pumpId: string; startHour: number }) =>
+      current.map((b) => (b.id === move.id ? { ...b, pumpId: move.pumpId, startHour: move.startHour } : b)),
   );
+
+  // The day is in the URL, so the server loads that day's pours.
+  // Noon, so formatting in another timezone never lands on the neighbouring day.
+  const currentDate = parse(`${date} 12:00`, "yyyy-MM-dd HH:mm", new Date());
+  const setCurrentDate = (next: Date) => router.push(`/schedule?date=${format(next, "yyyy-MM-dd")}`);
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
   const [userViewMode, setUserViewMode] = useState<ScheduleViewMode | null>(null);
@@ -80,21 +68,16 @@ export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
   const [selectedPumpId, setSelectedPumpId] = useState("all");
   const [selectedOperator, setSelectedOperator] = useState("all");
 
-  // Schedule Bookings State backed by persistent orders store (reactive, SSR safe)
-  const bookings = useBookings();
-
   // Quick Booking Drawer State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerInitialPump, setDrawerInitialPump] = useState<string | undefined>();
   const [drawerInitialHour, setDrawerInitialHour] = useState<number | undefined>();
   const [editingBooking, setEditingBooking] = useState<ScheduleBooking | null>(null);
 
-  // Unassigned jobs awaiting pump dispatch backed by persistent store (reactive, SSR safe)
-  const unassignedJobs = useUnassignedJobs();
   const [showAlertBanner, setShowAlertBanner] = useState(true);
 
   // Filtered pumps based on dropdown selections
-  const filteredPumps = INITIAL_PUMPS.filter((pump) => {
+  const filteredPumps = pumps.filter((pump) => {
     if (selectedPumpId !== "all" && pump.id !== selectedPumpId) return false;
     if (selectedOperator !== "all") {
       const hasOperatorJob = bookings.some(
@@ -129,32 +112,16 @@ export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
 
   const handleOpenNewBooking = (pumpId?: string, hour?: number) => {
     setEditingBooking(null);
-    setDrawerInitialPump(pumpId || INITIAL_PUMPS[0]?.id);
+    setDrawerInitialPump(pumpId || pumps[0]?.id);
     setDrawerInitialHour(hour || 14);
     setIsDrawerOpen(true);
   };
 
-  const handleAddBooking = (newBooking: ScheduleBooking) => {
-    addOrUpdateBooking(newBooking);
-  };
-
-  const handleAddUnassignedJob = (job: ScheduleBooking) => {
-    addOrUpdateUnassignedJob(job);
-  };
-
   const handleAssignJobFromDrawer = (job: ScheduleBooking) => {
     setEditingBooking(job);
-    setDrawerInitialPump(INITIAL_PUMPS[0]?.id);
+    setDrawerInitialPump(pumps[0]?.id);
     setDrawerInitialHour(job.startHour);
     setIsDrawerOpen(true);
-  };
-
-  const handleUpdateBooking = (updated: ScheduleBooking) => {
-    addOrUpdateBooking(updated);
-  };
-
-  const handleDeleteBooking = (bookingId: string) => {
-    deleteStoredBooking(bookingId);
   };
 
   const handleRescheduleBooking = (
@@ -162,24 +129,27 @@ export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
     targetPumpId: string,
     targetStartHour: number
   ) => {
-    const targetPump = INITIAL_PUMPS.find((p) => p.id === targetPumpId);
-    const hourLabel =
-      targetStartHour <= 12
-        ? `${targetStartHour}:00 AM`
-        : `${targetStartHour - 12}:00 PM`;
-
     const booking = bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking?.jobId || booking.version === undefined) return;
+    const targetPump = pumps.find((p) => p.id === targetPumpId);
+    const hour = Math.floor(targetStartHour);
+    const minute = Math.round((targetStartHour - hour) * 60);
+    const clock = `${hour % 12 === 0 ? 12 : hour % 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 
-    toast.success("Job Rescheduled (Drag & Drop)", {
-      description: `${booking.customerName} moved to ${targetPump?.code || "Pump"} at ${hourLabel}`,
+    startSaving(async () => {
+      moveBooking({ id: bookingId, pumpId: targetPumpId, startHour: targetStartHour });
+      const result = await updateOrder({
+        id: booking.jobId!,
+        version: booking.version!,
+        date,
+        pourTime: clock,
+        equipmentId: targetPumpId,
+      });
+      if (!reportAction(result, { entity: "order", refresh: () => router.refresh() })) return;
+      toast.success("Job rescheduled", {
+        description: `${booking.customerName} moved to ${targetPump?.code || "Pump"} at ${clock}`,
+      });
     });
-    const updatedBooking: ScheduleBooking = {
-      ...booking,
-      pumpId: targetPumpId,
-      startHour: targetStartHour,
-    };
-    addOrUpdateBooking(updatedBooking);
   };
 
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
@@ -218,7 +188,7 @@ export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
         needsOperatorCount={needsOperatorCount}
         viewMode={viewMode}
         onViewModeChange={setUserViewMode}
-        pumps={INITIAL_PUMPS}
+        pumps={pumps}
         selectedPumpId={selectedPumpId}
         onSelectPump={setSelectedPumpId}
         selectedOperator={selectedOperator}
@@ -297,14 +267,12 @@ export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
       <NewOrderModal
         isOpen={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
-        pumps={INITIAL_PUMPS}
+        pumps={pumps}
+        options={orderOptions}
         initialPumpId={drawerInitialPump}
         initialHour={drawerInitialHour}
         editingBooking={editingBooking}
-        onAddBooking={handleAddBooking}
-        onAddUnassignedJob={handleAddUnassignedJob}
-        onUpdateBooking={handleUpdateBooking}
-        onDeleteBooking={handleDeleteBooking}
+        date={date}
       />
 
       {/* ── 8. Order Dossier Popover (Screenshot 3) ── */}
@@ -312,7 +280,8 @@ export function ScheduleBoard({ credentialAlerts }: ScheduleBoardProps) {
         isOpen={isDossierOpen}
         onOpenChange={setIsDossierOpen}
         booking={selectedDossierBooking}
-        pumps={INITIAL_PUMPS}
+        pumps={pumps}
+        operators={orderOptions.operators}
         onQuickEdit={handleQuickEditFromDossier}
       />
 

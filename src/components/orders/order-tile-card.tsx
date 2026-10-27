@@ -9,29 +9,21 @@ import {
   ArrowRight,
   AlertCircle,
   Layers,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { OrderItem } from '@/lib/orders-store';
-import { toast } from 'sonner';
+import type { OrderItem } from '@/features/orders/types';
 
 interface OrderTileCardProps {
   order: OrderItem;
   onClick: () => void;
 }
 
-const OPERATOR_PHONES: Record<string, string> = {
-  'Rob Black': '(207) 555-0142',
-  'Dave Smith': '(207) 555-0188',
-  'Tony Perez': '(207) 555-0193',
-  'Marcus Brody': '(207) 555-0115',
-  'Sam Higgins': '(207) 555-0129',
-};
-
 export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
   const isUnassigned = order.isUnassigned || order.pump === 'Unassigned';
   const hasOperator = order.operator && order.operator !== 'Operator needed' && !isUnassigned;
-  const operatorPhone = hasOperator ? OPERATOR_PHONES[order.operator] || '(207) 555-0100' : null;
-  const volume = order.volumeYards || 85;
+  const operatorPhone = hasOperator ? order.operatorPhone : '';
+  const volume = order.volumeYards;
 
   // Extract clean boom label (e.g. "34M", "28M", "47M", "Line")
   const boomMatch = order.pump.match(/(\d+M|Line)/i);
@@ -133,21 +125,21 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
       {/* ── 3. Footer Action Dock ── */}
       <div className="border-t border-slate-100 bg-slate-50/70 px-3.5 py-2.5 flex items-center justify-between">
         {/* Left: Call Operator action */}
-        {hasOperator ? (
+        {hasOperator && operatorPhone ? (
           <a
-            href={`tel:${operatorPhone}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toast.info(`Calling ${order.operator}`, {
-                description: `${operatorPhone} • Assigned to ${order.pump}`,
-              });
-            }}
+            href={`tel:${operatorPhone.replace(/[^\d+]/g, '')}`}
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-brand hover:underline transition-colors group/call py-0.5"
             title={`Call operator ${order.operator}`}
           >
             <Phone className="h-3.5 w-3.5 text-slate-400 group-hover/call:text-brand transition-colors shrink-0" />
             <span>Call {order.operator}</span>
           </a>
+        ) : hasOperator ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 py-0.5">
+            <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <span>{order.operator}</span>
+          </span>
         ) : (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
             <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" />

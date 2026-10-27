@@ -51,7 +51,12 @@ export function mapError(error: unknown): ActionError {
     case '23P01':
       return actionError('RESOURCE_CONFLICT');
     case 'P0001':
+    case 'P0002':
+    case '23503':
+    case '23514':
       return actionError('INVALID');
+    case 'P0409':
+      return actionError('STALE');
     default:
       return actionError('UNKNOWN');
   }
