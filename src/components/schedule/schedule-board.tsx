@@ -124,6 +124,44 @@ export function ScheduleBoard({
     setIsDrawerOpen(true);
   };
 
+  /** Moves a card to a pump and start hour; the toast offers Undo, which moves it back. */
+  const moveOrder = (
+    booking: ScheduleBooking,
+    version: number,
+    targetPumpId: string,
+    targetStartHour: number,
+    isUndo = false,
+  ) => {
+    const targetPump = pumps.find((p) => p.id === targetPumpId);
+    const hour = Math.floor(targetStartHour);
+    const minute = Math.round((targetStartHour - hour) * 60);
+    const clock = `${hour % 12 === 0 ? 12 : hour % 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+
+    startSaving(async () => {
+      moveBooking({ id: booking.id, pumpId: targetPumpId, startHour: targetStartHour });
+      const result = await updateOrder({
+        id: booking.jobId!,
+        version,
+        date,
+        pourTime: clock,
+        equipmentId: targetPumpId,
+      });
+      if (!reportAction(result, { entity: "order", refresh: () => router.refresh() })) return;
+      const description = `${booking.customerName} on ${targetPump?.code || "Pump"} at ${clock}`;
+      if (isUndo) {
+        toast.success("Move undone", { description });
+        return;
+      }
+      toast.success("Job rescheduled", {
+        description,
+        action: {
+          label: "Undo",
+          onClick: () => moveOrder(booking, result.data.version, booking.pumpId, booking.startHour, true),
+        },
+      });
+    });
+  };
+
   const handleRescheduleBooking = (
     bookingId: string,
     targetPumpId: string,
@@ -131,25 +169,8 @@ export function ScheduleBoard({
   ) => {
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking?.jobId || booking.version === undefined) return;
-    const targetPump = pumps.find((p) => p.id === targetPumpId);
-    const hour = Math.floor(targetStartHour);
-    const minute = Math.round((targetStartHour - hour) * 60);
-    const clock = `${hour % 12 === 0 ? 12 : hour % 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
-
-    startSaving(async () => {
-      moveBooking({ id: bookingId, pumpId: targetPumpId, startHour: targetStartHour });
-      const result = await updateOrder({
-        id: booking.jobId!,
-        version: booking.version!,
-        date,
-        pourTime: clock,
-        equipmentId: targetPumpId,
-      });
-      if (!reportAction(result, { entity: "order", refresh: () => router.refresh() })) return;
-      toast.success("Job rescheduled", {
-        description: `${booking.customerName} moved to ${targetPump?.code || "Pump"} at ${clock}`,
-      });
-    });
+    if (booking.pumpId === targetPumpId && booking.startHour === targetStartHour) return;
+    moveOrder(booking, booking.version, targetPumpId, targetStartHour);
   };
 
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
