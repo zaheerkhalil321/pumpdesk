@@ -5,9 +5,19 @@ import { formatInTimeZone } from 'date-fns-tz';
 
 import { authedAction } from '@/server/action';
 import { NotFoundError } from '@/server/errors';
+import { parseUsAddress } from '@/features/orders/address';
 import { toInstant } from '@/features/orders/mappers';
-import { bookOrderSchema, cancelOrderSchema, updateOrderSchema } from '@/features/orders/schemas';
-import type { Json } from '@/types/database.types';
+import {
+  bookOrderSchema,
+  cancelOrderSchema,
+  dayBlocksSchema,
+  dayCountsSchema,
+  operatorJobsSchema,
+  updateOrderSchema,
+} from '@/features/orders/schemas';
+import { listDayBlocks, listDayCounts, listOperatorJobs } from '@/features/orders/server/queries';
+import type { Database, Json } from '@/types/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const ORDER_EDITORS = ['owner', 'admin', 'dispatcher', 'office'] as const;
 const DAY_MS = 86_400_000;
@@ -18,6 +28,70 @@ function revalidateOrders(jobNumber?: string) {
   revalidatePath('/orders');
   revalidatePath('/schedule');
   if (jobNumber) revalidatePath(`/orders/${jobNumber}`);
+}
+
+/** Makes typed text match literally in an ilike filter. */
+const escapeLike = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+/**
+ * A typed address becomes one of the customer's saved job sites once the order is confirmed,
+ * so it is offered next time. Pending orders stay as typed. Saving the site is a convenience:
+ * any problem here is ignored and the order itself is never affected.
+ * Returns the order's new version when it linked a site, otherwise the version it was given.
+ */
+async function saveSiteWhenConfirmed(
+  supabase: SupabaseClient<Database>,
+  result: OrderResult,
+  timezone: string,
+): Promise<number> {
+  try {
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('booking_status, job_site_id, site_label, customer_id, version')
+      .eq('id', result.id)
+      .maybeSingle();
+    if (!job || job.booking_status !== 'confirmed' || job.job_site_id || !job.site_label) return result.version;
+
+    const address = parseUsAddress(job.site_label);
+    if (!address) return result.version;
+
+    let existingQuery = supabase
+      .from('job_sites')
+      .select('id')
+      .eq('customer_id', job.customer_id)
+      .eq('is_active', true)
+      .ilike('city', escapeLike(address.city));
+    existingQuery = address.addressLine1
+      ? existingQuery.ilike('address_line_1', escapeLike(address.addressLine1))
+      : existingQuery.is('address_line_1', null);
+    const { data: existing } = await existingQuery.limit(1);
+    let siteId = existing?.[0]?.id;
+    if (!siteId) {
+      const { data: created, error } = await supabase
+        .from('job_sites')
+        .insert({
+          customer_id: job.customer_id,
+          address_line_1: address.addressLine1,
+          city: address.city,
+          state: address.state,
+          postal_code: address.postalCode,
+          timezone,
+        })
+        .select('id')
+        .single();
+      if (error) return result.version;
+      siteId = created.id;
+    }
+
+    const { data: linked, error: linkError } = await supabase.rpc('update_job', {
+      p: { id: result.id, version: job.version, job_site_id: siteId } as Json,
+    });
+    if (linkError) return result.version;
+    revalidatePath('/customers');
+    return (linked as OrderResult).version;
+  } catch {
+    return result.version;
+  }
 }
 
 /** Form field -> database field, for the fields that need no conversion. */
@@ -75,6 +149,7 @@ export const createOrder = authedAction({
     const { data, error } = await supabase.rpc('book_job', { p: payload as Json });
     if (error) throw error;
     const result = data as OrderResult;
+    result.version = await saveSiteWhenConfirmed(supabase, result, timezone);
     revalidateOrders(result.job_number);
     return result;
   },
@@ -83,7 +158,7 @@ export const createOrder = authedAction({
 export const updateOrder = authedAction({
   schema: updateOrderSchema,
   roles: ORDER_EDITORS,
-  run: async ({ input, supabase }) => {
+  run: async ({ input, supabase, session }) => {
     const { id, version, date, pourTime, arriveBy, estimatedFinish, durationMinutes, ...fields } = input;
     const payload: Record<string, unknown> = { id, version };
     for (const [field, column] of Object.entries(FIELD_COLUMNS)) {
@@ -132,6 +207,7 @@ export const updateOrder = authedAction({
     const { data, error } = await supabase.rpc('update_job', { p: payload as Json });
     if (error) throw error;
     const result = data as OrderResult;
+    result.version = await saveSiteWhenConfirmed(supabase, result, session.timezone);
     revalidateOrders(result.job_number);
     return result;
   },
@@ -151,4 +227,25 @@ export const cancelOrder = authedAction({
     revalidateOrders(result.job_number);
     return result;
   },
+});
+
+/** Day counts for the schedule calendar when it is moved to another month. Read only. */
+export const getDayCounts = authedAction({
+  schema: dayCountsSchema,
+  roles: ['owner', 'admin', 'dispatcher', 'office', 'operator', 'mechanic', 'accountant', 'read_only'],
+  run: async ({ input }) => listDayCounts(input.from, input.to),
+});
+
+/** The pours already on pumps that day, so the order form can warn about an overlap. Read only. */
+export const getDayBlocks = authedAction({
+  schema: dayBlocksSchema,
+  roles: ['owner', 'admin', 'dispatcher', 'office', 'operator', 'mechanic', 'accountant', 'read_only'],
+  run: async ({ input }) => listDayBlocks(input.date),
+});
+
+/** The open jobs an operator is on, shown in the delete confirmation. Read only. */
+export const getOperatorJobs = authedAction({
+  schema: operatorJobsSchema,
+  roles: ['owner', 'admin', 'dispatcher', 'office', 'operator', 'mechanic', 'accountant', 'read_only'],
+  run: async ({ input }) => listOperatorJobs(input.id),
 });

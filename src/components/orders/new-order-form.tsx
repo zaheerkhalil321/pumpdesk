@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/incompatible-library */
 
-import { useState, useMemo, useTransition } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -20,12 +20,15 @@ import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/app-select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { createOrder } from "@/features/orders/server/actions";
+import { createOrder, getDayBlocks } from "@/features/orders/server/actions";
+import { findOverlap } from "@/features/orders/conflicts";
 import { reportAction } from "@/lib/action-feedback";
 import { DatePicker } from "@/components/ui/date-picker";
-import type { OrderFormContact, OrderFormOptions, OrderFormSite } from "@/features/orders/types";
+import type { DayBlock, OrderFormContact, OrderFormOptions, OrderFormSite } from "@/features/orders/types";
 import { AddSiteModal } from "@/components/customers/add-site-modal";
 import { SiteCombobox } from "@/components/orders/site-combobox";
+import { SupplierCombobox } from "@/components/orders/supplier-combobox";
+import { ensureSupplier } from "@/features/suppliers/ensure";
 import { NewContactModal } from "@/components/contacts/new-contact-modal";
 
 // Common pour types. These move to Settings > Lists once that is saved in the database.
@@ -109,11 +112,11 @@ function formatMinutesToTime(totalMinutes: number): string {
   return `${hour12}:${minStr} ${period}`;
 }
 
-function generateTimeOptions(startHour = 4, endHour = 22, stepMinutes = 15): { value: string; label: string }[] {
+/** Every step from startHour up to, but not including, endHour. */
+function generateTimeOptions(startHour = 0, endHour = 24, stepMinutes = 15): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
-  for (let h = startHour; h <= endHour; h++) {
+  for (let h = startHour; h < endHour; h++) {
     for (let m = 0; m < 60; m += stepMinutes) {
-      if (h === endHour && m > 0) break;
       const period = h >= 12 ? 'PM' : 'AM';
       const displayHour = h % 12 === 0 ? 12 : h % 12;
       const displayMin = m < 10 ? `0${m}` : `${m}`;
@@ -124,7 +127,7 @@ function generateTimeOptions(startHour = 4, endHour = 22, stepMinutes = 15): { v
   return options;
 }
 
-const ALL_TIME_OPTIONS = generateTimeOptions(4, 22, 15);
+const ALL_TIME_OPTIONS = generateTimeOptions(0, 24, 15);
 
 type NewOrderFormValues = z.infer<typeof newOrderSchema>;
 
@@ -210,7 +213,11 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       minPumpSize: "",
       billingService: "",
       assignedPump: paramPump || "unassigned",
-      assignedOperator: options.operators.find((o) => o.name === paramOperator)?.id ?? "unassigned",
+      // A pump chosen before the form opened brings its default operator, unless one was named too.
+      assignedOperator:
+        options.operators.find((o) => o.name === paramOperator)?.id ??
+        options.operators.find((o) => o.id === options.pumps.find((p) => p.id === paramPump)?.defaultOperatorId)?.id ??
+        "unassigned",
       operatorInstructions: "",
       internalNote: "",
       purchaseOrder: "",
@@ -313,12 +320,38 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
 
   const [isSaving, startSaving] = useTransition();
 
+  // Pours already on pumps for the chosen day, fetched once per day, to warn about an overlap.
+  const [dayBlocks, setDayBlocks] = useState<Record<string, DayBlock[]>>({});
+  const chosenDate = watch("date");
+  useEffect(() => {
+    if (!chosenDate || dayBlocks[chosenDate]) return;
+    let cancelled = false;
+    getDayBlocks({ date: chosenDate }).then((result) => {
+      if (!cancelled && result.ok) setDayBlocks((prev) => ({ ...prev, [chosenDate]: result.data }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [chosenDate, dayBlocks]);
+
+  // Only a warning: a dispatcher can still save a time that overlaps another pour.
+  const chosenPump = watch("assignedPump");
+  const startMinutes = parseTimeToMinutes(watch("pourTime"));
+  let endMinutes = parseTimeToMinutes(watch("estimatedFinish") || "");
+  if (endMinutes <= startMinutes) endMinutes += 1440;
+  const clash =
+    chosenPump && chosenPump !== "unassigned"
+      ? findOverlap(dayBlocks[chosenDate] ?? [], {
+          pumpId: chosenPump,
+          startHour: startMinutes / 60,
+          durationHours: Math.max(0.25, (endMinutes - startMinutes) / 60),
+        })
+      : null;
+  const clashPump = options.pumps.find((p) => p.id === chosenPump);
+
   const handleCreateOrder = (data: NewOrderFormValues) => {
     const pumpId = data.assignedPump !== "unassigned" ? data.assignedPump : null;
-    const pump = options.pumps.find((p) => p.id === pumpId);
-    // No operator picked: use the pump's usual operator.
-    const operatorId =
-      data.assignedOperator !== "unassigned" ? data.assignedOperator : pump?.defaultOperatorId ?? null;
+    const operatorId = data.assignedOperator !== "unassigned" ? data.assignedOperator : null;
     const contact = contactChoices.find((c) => c.name === data.jobContact);
     const savedSite = siteChoices.find((site) => site.address === data.jobSite);
     const pourTypeLabel =
@@ -360,6 +393,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
     };
 
     startSaving(async () => {
+      await ensureSupplier(data.supplier ?? "", options.suppliers);
       const result = await createOrder(payload);
       if (!reportAction(result, { entity: "order", refresh: () => router.refresh() })) return;
       toast.success("Order created", {
@@ -582,11 +616,12 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                   <label className="text-xs font-semibold text-slate-700 block mb-1 whitespace-nowrap">
                     Concrete supplier
                   </label>
-                  <input
-                    type="text"
-                    {...register("supplier")}
-                    placeholder="Optional: e.g. Auburn Concrete"
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 outline-none focus:border-brand placeholder:text-slate-400"
+                  <SupplierCombobox
+                    value={watch("supplier") ?? ""}
+                    onChange={(value) => setValue("supplier", value)}
+                    suppliers={options.suppliers}
+                    placeholder="Search or type a supplier"
+                    className="h-9"
                   />
                   {errors.supplier && (
                     <p className="text-[11px] text-red-500 font-medium mt-1">
@@ -619,16 +654,10 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                       yd³
                     </span>
                   </div>
-                  {errors.estimatedVolume ? (
+                  {errors.estimatedVolume && (
                     <p className="text-[11px] text-red-500 font-medium mt-1">
                       {errors.estimatedVolume.message}
                     </p>
-                  ) : (
-                    Number(watch("estimatedVolume")) > 0 && (
-                      <p className="text-[10.5px] font-mono font-semibold text-brand mt-1">
-                        ~{(Number(watch("estimatedVolume")) / 35).toFixed(1)}h est. pour
-                      </p>
-                    )
                   )}
                 </div>
 
@@ -998,10 +1027,29 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                   </label>
                   <AppSelect
                     value={watch("assignedPump")}
-                    onChange={(val) => setValue("assignedPump", val)}
+                    onChange={(val) => {
+                      setValue("assignedPump", val);
+                      // Swap in the pump's default operator, or clear it when it has none.
+                      const defaultId = options.pumps.find((p) => p.id === val)?.defaultOperatorId;
+                      setValue(
+                        "assignedOperator",
+                        options.operators.find((o) => o.id === defaultId)?.id ?? "unassigned",
+                      );
+                    }}
                     options={[{ value: "unassigned", label: "Unassigned" }, ...options.pumps.map((p) => ({ value: p.id, label: p.label }))]}
                   />
                 </div>
+
+                {clash && (
+                  <p className="sm:col-span-2 flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
+                    <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      {clashPump?.code ?? "This pump"} already has {clash.customerName} ({clash.orderNumber}) from{" "}
+                      {formatMinutesToTime(clash.startHour * 60)} to{" "}
+                      {formatMinutesToTime((clash.startHour + clash.durationHours) * 60)}. You can still save this order.
+                    </span>
+                  </p>
+                )}
 
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">

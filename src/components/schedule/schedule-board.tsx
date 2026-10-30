@@ -8,11 +8,15 @@ import { ScheduleToolbar } from "@/components/schedule/schedule-toolbar";
 import { TimelineGrid } from "@/components/schedule/timeline-grid";
 import { MobileRigCardView } from "@/components/schedule/mobile-rig-card-view";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { findOverlap } from "@/features/orders/conflicts";
 import { ScheduleEmptyState } from "@/components/schedule/schedule-empty-state";
 import { UnassignedJobsDrawer } from "@/components/schedule/unassigned-jobs-drawer";
 import { ScheduleLegend } from "@/components/schedule/schedule-legend";
 import { NewOrderModal } from "@/components/schedule/new-order-modal";
 import { OrderDossierModal } from "@/components/schedule/order-dossier-popover";
+import { OperatorSwapDialog, type OperatorRef } from "@/components/schedule/operator-swap-dialog";
+import { MoveDetailsDialog, type MoveDetails } from "@/components/schedule/move-details-dialog";
+import { clockFromHour } from "@/features/orders/mappers";
 import {
   PumpLane,
   ScheduleBooking,
@@ -23,8 +27,13 @@ import { reportAction } from "@/lib/action-feedback";
 import { toast } from "sonner";
 import { CredentialAlertBanner } from "@/components/schedule/credential-alert-banner";
 import type { CredentialAlertItem } from "@/features/fleet/types";
-import type { OrderFormOptions } from "@/features/orders/types";
+import type { DayCounts, OrderFormOptions } from "@/features/orders/types";
 import { AlertTriangle, X, Plus } from "lucide-react";
+
+/** An operator's name picked out in a toast. */
+function Bold({ children }: { children: React.ReactNode }) {
+  return <strong className="font-semibold text-foreground">{children}</strong>;
+}
 
 interface ScheduleBoardProps {
   credentialAlerts: CredentialAlertItem[];
@@ -38,6 +47,8 @@ interface ScheduleBoardProps {
   bookings: ScheduleBooking[];
   /** Upcoming orders that still need a pump. */
   unassignedJobs: ScheduleBooking[];
+  /** Orders per day around the shown day, for the calendar. */
+  dayCounts: DayCounts;
 }
 
 export function ScheduleBoard({
@@ -47,14 +58,27 @@ export function ScheduleBoard({
   date,
   bookings: savedBookings,
   unassignedJobs,
+  dayCounts,
 }: ScheduleBoardProps) {
   const router = useRouter();
   const [, startSaving] = useTransition();
   // A dragged card moves at once; the saved data replaces it when the server answers (or puts it back on failure).
   const [bookings, moveBooking] = useOptimistic(
     savedBookings,
-    (current, move: { id: string; pumpId: string; startHour: number }) =>
-      current.map((b) => (b.id === move.id ? { ...b, pumpId: move.pumpId, startHour: move.startHour } : b)),
+    (current, move: { id: string; pumpId: string; startHour: number; operator?: string | null }) =>
+      current.map((b) =>
+        b.id === move.id
+          ? {
+              ...b,
+              pumpId: move.pumpId,
+              startHour: move.startHour,
+              // A new operator is not dispatched yet, so the card goes back to a draft.
+              ...("operator" in move
+                ? { operator: move.operator, dispatchStatus: move.operator ? ("draft" as const) : ("unassigned" as const) }
+                : {}),
+            }
+          : b,
+      ),
   );
 
   // The day is in the URL, so the server loads that day's pours.
@@ -112,39 +136,62 @@ export function ScheduleBoard({
 
   const handleOpenNewBooking = (pumpId?: string, hour?: number) => {
     setEditingBooking(null);
-    setDrawerInitialPump(pumpId || pumps[0]?.id);
+    setDrawerInitialPump(pumpId);
     setDrawerInitialHour(hour || 14);
     setIsDrawerOpen(true);
   };
 
   const handleAssignJobFromDrawer = (job: ScheduleBooking) => {
     setEditingBooking(job);
-    setDrawerInitialPump(pumps[0]?.id);
+    setDrawerInitialPump(undefined);
     setDrawerInitialHour(job.startHour);
     setIsDrawerOpen(true);
   };
 
-  /** Moves a card to a pump and start hour; the toast offers Undo, which moves it back. */
+  /** The operator on a card, with their id, or null when the card has none. */
+  const operatorOf = (booking: ScheduleBooking): OperatorRef | null => {
+    const found = orderOptions.operators.find((o) => o.name === booking.operator);
+    return found ? { id: found.id, name: found.name } : null;
+  };
+
+  /** The usual operator of a pump, or null when it has none. */
+  const usualOperatorOf = (pumpId: string): OperatorRef | null => {
+    const id = orderOptions.pumps.find((p) => p.id === pumpId)?.defaultOperatorId;
+    const found = orderOptions.operators.find((o) => o.id === id);
+    return found ? { id: found.id, name: found.name } : null;
+  };
+
+  /**
+   * Moves a card to a pump and start hour. With `operatorChange` the operator changes too.
+   * The toast offers Undo, which puts back the pump, the time and the operator.
+   */
   const moveOrder = (
     booking: ScheduleBooking,
     version: number,
     targetPumpId: string,
     targetStartHour: number,
-    isUndo = false,
+    options: { isUndo?: boolean; operatorChange?: { from: OperatorRef | null; to: OperatorRef | null } } = {},
   ) => {
+    const { isUndo = false, operatorChange } = options;
     const targetPump = pumps.find((p) => p.id === targetPumpId);
     const hour = Math.floor(targetStartHour);
     const minute = Math.round((targetStartHour - hour) * 60);
     const clock = `${hour % 12 === 0 ? 12 : hour % 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 
     startSaving(async () => {
-      moveBooking({ id: booking.id, pumpId: targetPumpId, startHour: targetStartHour });
+      moveBooking({
+        id: booking.id,
+        pumpId: targetPumpId,
+        startHour: targetStartHour,
+        ...(operatorChange ? { operator: operatorChange.to?.name ?? null } : {}),
+      });
       const result = await updateOrder({
         id: booking.jobId!,
         version,
         date,
         pourTime: clock,
         equipmentId: targetPumpId,
+        ...(operatorChange ? { employeeId: operatorChange.to?.id ?? null } : {}),
       });
       if (!reportAction(result, { entity: "order", refresh: () => router.refresh() })) return;
       const description = `${booking.customerName} on ${targetPump?.code || "Pump"} at ${clock}`;
@@ -152,15 +199,88 @@ export function ScheduleBoard({
         toast.success("Move undone", { description });
         return;
       }
-      toast.success("Job rescheduled", {
-        description,
-        action: {
-          label: "Undo",
-          onClick: () => moveOrder(booking, result.data.version, booking.pumpId, booking.startHour, true),
+      const clash = findOverlap(bookings, {
+        pumpId: targetPumpId,
+        startHour: targetStartHour,
+        durationHours: booking.durationHours,
+        ignoreId: booking.id,
+      });
+      const clashNote = clash ? ` Overlaps ${clash.customerName} on the same pump.` : "";
+      const undo = {
+        label: "Undo",
+        onClick: () =>
+          moveOrder(booking, result.data.version, booking.pumpId, booking.startHour, {
+            isUndo: true,
+            operatorChange: operatorChange ? { from: operatorChange.to, to: operatorChange.from } : undefined,
+          }),
+      };
+
+      const range = (start: number) => `${clockFromHour(start)} - ${clockFromHour(start + booking.durationHours)}`;
+      const notes: string[] = [];
+      if (operatorChange?.to && booking.dispatchStatus === "dispatched") {
+        notes.push(`${operatorChange.from?.name ?? "The previous operator"} was told about this job. ${operatorChange.to.name} needs it dispatched again.`);
+      }
+      if (operatorChange && !operatorChange.to) {
+        notes.push(`${operatorChange.from?.name ?? "The operator"} is no longer on this job. Pick an operator before dispatching.`);
+      }
+      if (clash) notes.push(`Overlaps ${clash.customerName} (${clash.orderNumber}) on the same pump.`);
+      const details: MoveDetails = {
+        title: operatorChange ? "Operator changed" : "Job rescheduled",
+        customerName: booking.customerName,
+        orderNumber: booking.orderNumber,
+        pump: {
+          from: pumps.find((p) => p.id === booking.pumpId)?.code ?? "Pump",
+          to: targetPump?.code ?? "Pump",
         },
+        time: { from: range(booking.startHour), to: range(targetStartHour) },
+        operator: operatorChange
+          ? { from: operatorChange.from?.name ?? "No operator", to: operatorChange.to?.name ?? "No operator" }
+          : undefined,
+        notes,
+        onUndo: undo.onClick,
+      };
+      const detailsButton = { label: "Details", onClick: () => setMoveDetails(details) };
+
+      if (operatorChange) {
+        // A warning-style toast, so a changed operator stands out from an ordinary move.
+        toast.warning("Operator changed", {
+          description: (
+            <span>
+              <Bold>{operatorChange.from?.name ?? "No operator"}</Bold> to <Bold>{operatorChange.to?.name ?? "no operator"}</Bold>.{" "}
+              {booking.customerName} on <span className="whitespace-nowrap">{targetPump?.code || "Pump"}</span> at{" "}
+              <span className="whitespace-nowrap">{clock}</span>.{clashNote}
+            </span>
+          ),
+          duration: 9000,
+          action: undo,
+          cancel: detailsButton,
+        });
+        return;
+      }
+      toast.success("Job rescheduled", {
+        description: (
+          <span>
+            {booking.customerName} on <span className="whitespace-nowrap">{targetPump?.code || "Pump"}</span> at{" "}
+            <span className="whitespace-nowrap">{clock}</span>.{clashNote}
+          </span>
+        ),
+        action: undo,
+        cancel: detailsButton,
       });
     });
   };
+
+  // What the last drag changed, opened from the toast's Details button.
+  const [moveDetails, setMoveDetails] = useState<MoveDetails | null>(null);
+
+  // A dispatched job dragged to a pump with a different usual operator waits here for an answer.
+  const [pendingSwap, setPendingSwap] = useState<{
+    booking: ScheduleBooking;
+    targetPumpId: string;
+    targetStartHour: number;
+    current: OperatorRef;
+    usual: OperatorRef;
+  } | null>(null);
 
   const handleRescheduleBooking = (
     bookingId: string,
@@ -170,7 +290,43 @@ export function ScheduleBoard({
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking?.jobId || booking.version === undefined) return;
     if (booking.pumpId === targetPumpId && booking.startHour === targetStartHour) return;
+
+    // Moving to another pump brings that pump's usual operator, like choosing it in a form.
+    if (booking.pumpId !== targetPumpId) {
+      const current = operatorOf(booking);
+      const usual = usualOperatorOf(targetPumpId);
+      const sameOperator = current?.id === usual?.id;
+
+      if (!sameOperator) {
+        if (booking.dispatchStatus === "dispatched") {
+          // Already sent to someone: ask, unless the new pump has no usual operator (then they stay).
+          if (current && usual) {
+            setPendingSwap({ booking, targetPumpId, targetStartHour, current, usual });
+            return;
+          }
+        } else {
+          moveOrder(booking, booking.version, targetPumpId, targetStartHour, {
+            operatorChange: { from: current, to: usual },
+          });
+          return;
+        }
+      }
+    }
     moveOrder(booking, booking.version, targetPumpId, targetStartHour);
+  };
+
+  const answerSwap = (switchOperator: boolean) => {
+    if (!pendingSwap) return;
+    const { booking, targetPumpId, targetStartHour, current, usual } = pendingSwap;
+    setPendingSwap(null);
+    if (booking.version === undefined) return;
+    moveOrder(
+      booking,
+      booking.version,
+      targetPumpId,
+      targetStartHour,
+      switchOperator ? { operatorChange: { from: current, to: usual } } : {},
+    );
   };
 
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
@@ -192,10 +348,11 @@ export function ScheduleBoard({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-4">
-      {/* ── 1. Top Header (Title, Global Search, + New booking) ── */}
+      {/* ── 1. Top Header (Title, the open day, + New booking) ── */}
       <ScheduleHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        currentDate={currentDate}
+        onDateChange={setCurrentDate}
+        dayCounts={dayCounts}
         onNewBookingClick={() => handleOpenNewBooking()}
       />
 
@@ -203,6 +360,7 @@ export function ScheduleBoard({
       <ScheduleToolbar
         currentDate={currentDate}
         onDateChange={setCurrentDate}
+        dayCounts={dayCounts}
         bookingCount={filteredBookings.length}
         dispatchedCount={dispatchedCount}
         draftCount={draftCount}
@@ -269,7 +427,7 @@ export function ScheduleBoard({
       )}
 
       {/* ── 4. Empty State Card (Visible when schedule is clear for the day in Grid view) ── */}
-      {filteredBookings.length === 0 && viewMode !== "list" && (
+      {filteredBookings.length === 0 && (
         <ScheduleEmptyState onNewBookingClick={() => handleOpenNewBooking()} />
       )}
 
@@ -293,7 +451,26 @@ export function ScheduleBoard({
         initialPumpId={drawerInitialPump}
         initialHour={drawerInitialHour}
         editingBooking={editingBooking}
+        bookings={bookings}
         date={date}
+      />
+
+      <MoveDetailsDialog details={moveDetails} onClose={() => setMoveDetails(null)} />
+
+      <OperatorSwapDialog
+        swap={
+          pendingSwap
+            ? {
+                customerName: pendingSwap.booking.customerName,
+                pumpCode: pumps.find((p) => p.id === pendingSwap.targetPumpId)?.code ?? "That pump",
+                current: pendingSwap.current,
+                usual: pendingSwap.usual,
+              }
+            : null
+        }
+        onKeep={() => answerSwap(false)}
+        onSwitch={() => answerSwap(true)}
+        onCancel={() => setPendingSwap(null)}
       />
 
       {/* ── 8. Order Dossier Popover (Screenshot 3) ── */}
@@ -304,6 +481,17 @@ export function ScheduleBoard({
         pumps={pumps}
         operators={orderOptions.operators}
         onQuickEdit={handleQuickEditFromDossier}
+        overlapWith={
+          selectedDossierBooking && selectedDossierBooking.pumpId
+            ? findOverlap(bookings, {
+                pumpId: selectedDossierBooking.pumpId,
+                startHour: selectedDossierBooking.startHour,
+                durationHours: selectedDossierBooking.durationHours,
+                ignoreId: selectedDossierBooking.id,
+              })
+            : null
+        }
+        onOpenOrder={(other) => setSelectedBookingId(other.id)}
       />
 
       {/* ── 9. Mobile Floating Action Button (FAB) for 1-Hand Booking ── */}

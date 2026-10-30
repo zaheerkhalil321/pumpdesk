@@ -124,7 +124,7 @@ function withBadge(item: NavItem, counts: NavCounts): NavItem {
   return item;
 }
 
-export function AppSidebar({ navCounts }: { navCounts: NavCounts }) {
+export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoUrl: string | null }) {
   const pathname = usePathname();
   const isTablet = useIsTablet();
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState<boolean | null>(null);
@@ -264,9 +264,14 @@ export function AppSidebar({ navCounts }: { navCounts: NavCounts }) {
                   isCollapsed ? 'justify-center' : 'gap-2.5',
                 )}
               >
-                {/* Monogram Badge */}
-                <div className="h-7.5 w-7.5 rounded-[8px] bg-brand-light text-brand font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs border border-brand/25 transition-colors">
-                  {selectedYard.code}
+                {/* Company logo, or a monogram until one is uploaded */}
+                <div className="h-7.5 w-7.5 rounded-[8px] bg-brand-light text-brand font-bold text-xs flex items-center justify-center shrink-0 tracking-wider shadow-2xs border border-brand/25 transition-colors overflow-hidden">
+                  {logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoUrl} alt="" className="h-full w-full object-contain bg-white" />
+                  ) : (
+                    selectedYard.code
+                  )}
                 </div>
 
                 {!isCollapsed && (

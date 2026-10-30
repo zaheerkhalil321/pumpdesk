@@ -11,23 +11,26 @@ import {
 import { cn } from '@/lib/utils';
 import { ModalCloseButton } from '@/components/ui/modal-close-button';
 import { AppSelect } from '@/components/ui/app-select';
+import { StatusSwitch } from '@/components/ui/status-switch';
 import {
   useSettingsStore,
   togglePourTypeFavorite,
-  addSupplier,
-  updateSupplier,
   addPourType,
   updatePourType,
   addTag,
   updateTag,
-  ConcreteSupplier,
   PourTypeSetting,
   TagSetting,
 } from '@/lib/settings-store';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { createSupplier, updateSupplier } from '@/features/suppliers/server/actions';
+import type { SupplierItem } from '@/features/suppliers/types';
+import { reportAction } from '@/lib/action-feedback';
 
-export function ListsSettingsTab() {
-  const { suppliers, pourTypes, tags } = useSettingsStore();
+export function ListsSettingsTab({ suppliers }: { suppliers: SupplierItem[] }) {
+  const router = useRouter();
+  const { pourTypes, tags } = useSettingsStore();
 
   const [activeSubTab, setActiveSubTab] = useState<'suppliers' | 'pourTypes' | 'tags' | 'inventory'>('suppliers');
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,10 +64,10 @@ export function ListsSettingsTab() {
 
   // Supplier Modals
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<ConcreteSupplier | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierItem | null>(null);
   const [supplierName, setSupplierName] = useState('');
   const [supplierPhone, setSupplierPhone] = useState('');
-  const [supplierEmail, setSupplierEmail] = useState('');
+  const [isSavingSupplier, setIsSavingSupplier] = useState(false);
 
   // Pour Type Modals
   const [isAddPourOpen, setIsAddPourOpen] = useState(false);
@@ -82,9 +85,9 @@ export function ListsSettingsTab() {
   const filteredSuppliers = suppliers.filter((s) => {
     const matchesSearch =
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchQuery.toLowerCase());
+      s.phone.includes(searchQuery);
     const matchesStatus =
-      statusFilter === 'All' ? true : s.status === statusFilter;
+      statusFilter === 'All' ? true : (s.isActive ? 'Active' : 'Inactive') === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -275,18 +278,18 @@ export function ListsSettingsTab() {
                     <span
                       className={cn(
                         'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0',
-                        supplier.status === 'Active'
+                        supplier.isActive
                           ? 'bg-brand text-white shadow-2xs'
                           : 'bg-slate-200 text-slate-700'
                       )}
                     >
-                      {supplier.status}
+                      {supplier.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
 
                   <div className="text-xs text-slate-600 space-y-0.5">
-                    <div><span className="text-slate-400">Phone:</span> {supplier.phone}</div>
-                    <div className="truncate"><span className="text-slate-400">Email:</span> {supplier.email}</div>
+                    <div><span className="text-slate-400">Phone:</span> {supplier.phone || '-'}</div>
+                    <div className="truncate"><span className="text-slate-400">Email:</span> {supplier.email || '-'}</div>
                   </div>
 
                   <div className="pt-1 flex items-center justify-end">
@@ -328,21 +331,21 @@ export function ListsSettingsTab() {
                         {supplier.name}
                       </td>
                       <td className="py-3.5 px-4 sm:px-6 text-slate-600">
-                        {supplier.phone}
+                        {supplier.phone || '-'}
                       </td>
                       <td className="py-3.5 px-4 sm:px-6 text-slate-600">
-                        {supplier.email}
+                        {supplier.email || '-'}
                       </td>
                       <td className="py-3.5 px-4 sm:px-6">
                         <span
                           className={cn(
                             'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                            supplier.status === 'Active'
+                            supplier.isActive
                               ? 'bg-brand text-white shadow-2xs'
                               : 'bg-slate-200 text-slate-700'
                           )}
                         >
-                          {supplier.status}
+                          {supplier.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 sm:px-6 text-right">
@@ -856,16 +859,6 @@ export function ListsSettingsTab() {
                   className="w-full h-9 px-3 rounded-lg border border-slate-300 text-xs text-slate-900"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  placeholder="dispatch@example.com"
-                  value={supplierEmail}
-                  onChange={(e) => setSupplierEmail(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-300 text-xs text-slate-900"
-                />
-              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
@@ -877,23 +870,24 @@ export function ListsSettingsTab() {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                disabled={isSavingSupplier}
+                onClick={async () => {
                   if (!supplierName.trim()) return;
-                  addSupplier({
+                  setIsSavingSupplier(true);
+                  const result = await createSupplier({
                     name: supplierName.trim(),
-                    phone: supplierPhone.trim() || '(207) 555-0100',
-                    email: supplierEmail.trim() || 'dispatch@example.com',
-                    status: 'Active',
+                    phone: supplierPhone.trim(),
                   });
-                  toast.success(`Supplier added: ${supplierName}`);
+                  setIsSavingSupplier(false);
+                  if (!reportAction(result, { entity: 'supplier', refresh: () => router.refresh() })) return;
+                  toast.success(`Supplier added: ${supplierName.trim()}`);
                   setIsAddSupplierOpen(false);
                   setSupplierName('');
                   setSupplierPhone('');
-                  setSupplierEmail('');
                 }}
-                className="px-4 py-1.5 rounded-lg bg-brand text-xs font-semibold text-white hover:bg-brand-hover cursor-pointer"
+                className="px-4 py-1.5 rounded-lg bg-brand text-xs font-semibold text-white hover:bg-brand-hover cursor-pointer disabled:opacity-60"
               >
-                Create Supplier
+                {isSavingSupplier ? 'Saving...' : 'Create supplier'}
               </button>
             </div>
           </div>
@@ -929,15 +923,15 @@ export function ListsSettingsTab() {
                   className="w-full h-9 px-3 rounded-lg border border-slate-300 text-xs text-slate-900"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editingSupplier.email}
-                  onChange={(e) => setEditingSupplier({ ...editingSupplier, email: e.target.value })}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-300 text-xs text-slate-900"
-                />
-              </div>
+              <StatusSwitch
+                title="Supplier status"
+                ariaLabel="Supplier is active"
+                checked={editingSupplier.isActive}
+                onCheckedChange={(isActive) => setEditingSupplier({ ...editingSupplier, isActive })}
+                description={(on) =>
+                  on ? 'Active: offered when booking an order.' : 'Inactive: kept on file, not offered for new orders.'
+                }
+              />
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
@@ -949,12 +943,22 @@ export function ListsSettingsTab() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  updateSupplier(editingSupplier.id, editingSupplier);
+                disabled={isSavingSupplier}
+                onClick={async () => {
+                  setIsSavingSupplier(true);
+                  const result = await updateSupplier({
+                    id: editingSupplier.id,
+                    name: editingSupplier.name,
+                    phone: editingSupplier.phone,
+                    email: editingSupplier.email,
+                    isActive: editingSupplier.isActive,
+                  });
+                  setIsSavingSupplier(false);
+                  if (!reportAction(result, { entity: 'supplier', refresh: () => router.refresh() })) return;
                   toast.success(`Updated ${editingSupplier.name}`);
                   setEditingSupplier(null);
                 }}
-                className="px-4 py-1.5 rounded-lg bg-brand text-xs font-semibold text-white hover:bg-brand-hover cursor-pointer"
+                className="px-4 py-1.5 rounded-lg bg-brand text-xs font-semibold text-white hover:bg-brand-hover cursor-pointer disabled:opacity-60"
               >
                 Save Changes
               </button>

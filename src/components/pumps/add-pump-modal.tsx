@@ -105,7 +105,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
       return;
     }
     if (isYearInvalid) {
-      setError('Model year must be between 1980 and 2030');
+      setError('Year must be between 1980 and 2030');
       return;
     }
 
@@ -233,18 +233,51 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
             </div>
           </div>
 
-          {/* Equipment Type */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Equipment Type</label>
-            <AppSelect
-              size="sm"
-              value={type}
-              onChange={(val) => setType(val as 'boom_pump' | 'line_pump')}
-              options={[
-                { value: 'boom_pump', label: 'Boom Pump' },
-                { value: 'line_pump', label: 'Line Pump' },
-              ]}
-            />
+          {/* Equipment Type & Year */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">Equipment Type</label>
+              <AppSelect
+                size="sm"
+                value={type}
+                onChange={(val) => setType(val as 'boom_pump' | 'line_pump')}
+                options={[
+                  { value: 'boom_pump', label: 'Boom Pump' },
+                  { value: 'line_pump', label: 'Line Pump' },
+                ]}
+              />
+            </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-1 h-5">
+                  <label className="text-xs font-semibold text-slate-700 truncate">Year</label>
+                  <span
+                    className={cn(
+                      'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
+                      isYearInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
+                    )}
+                  >
+                    1980–2030
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  min={1980}
+                  max={2030}
+                  value={year}
+                  onChange={(e) => {
+                    setYear(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="2024"
+                  className={cn(
+                    'h-9 text-xs',
+                    isYearInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
+                  )}
+                />
+                {isYearInvalid && (
+                  <p className="text-[10px] text-rose-500 font-medium">1980–2030</p>
+                )}
+              </div>
           </div>
 
           {/* Separate Boom Size (Meters) & Horizontal Reach (Feet) */}
@@ -339,8 +372,8 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
             />
           </div>
 
-          {/* Hourly Rate, Min Callout Hours & Model Year */}
-          <div className="grid grid-cols-3 gap-2.5">
+          {/* Hourly Rate & Min Callout Hours */}
+          <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-1 h-5">
                 <label className="text-xs font-semibold text-slate-700 truncate">Hourly Rate ($)</label>
@@ -403,37 +436,6 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
               />
               {isMinHoursInvalid && (
                 <p className="text-[10px] text-rose-500 font-medium">1–24 hrs</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-1 h-5">
-                <label className="text-xs font-semibold text-slate-700 truncate">Model Year</label>
-                <span
-                  className={cn(
-                    'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
-                    isYearInvalid ? 'text-rose-600 font-bold' : 'text-slate-400'
-                  )}
-                >
-                  1980–2030
-                </span>
-              </div>
-              <Input
-                type="number"
-                min={1980}
-                max={2030}
-                value={year}
-                onChange={(e) => {
-                  setYear(e.target.value);
-                  if (error) setError(null);
-                }}
-                placeholder="2024"
-                className={cn(
-                  'h-9 text-xs',
-                  isYearInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
-                )}
-              />
-              {isYearInvalid && (
-                <p className="text-[10px] text-rose-500 font-medium">1980–2030</p>
               )}
             </div>
           </div>

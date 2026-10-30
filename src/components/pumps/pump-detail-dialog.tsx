@@ -305,7 +305,7 @@ export function PumpDetailDialog({
                     {getPumpDisplayName(currentPump)}
                   </DialogTitle>
                   <span className="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700">
-                    {currentPump.make} {currentPump.model}
+                    {currentPump.typeLabel}
                   </span>
 
                   {/* Status Badge */}
@@ -327,7 +327,7 @@ export function PumpDetailDialog({
                   )}
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  {currentPump.typeLabel} &bull; Model Year {currentPump.year || '2024'}
+                  {[currentPump.year || '2024', currentPump.make, currentPump.model].filter(Boolean).join(' · ')}
                 </p>
               </div>
             </div>
@@ -442,30 +442,8 @@ export function PumpDetailDialog({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <div className="flex items-center h-5">
-                      <label className="text-xs font-semibold text-slate-700 block">Make</label>
-                    </div>
-                    <Input
-                      value={editMake}
-                      onChange={(e) => setEditMake(e.target.value)}
-                      placeholder="e.g. Putzmeister"
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center h-5">
-                      <label className="text-xs font-semibold text-slate-700 block">Model</label>
-                    </div>
-                    <Input
-                      value={editModel}
-                      onChange={(e) => setEditModel(e.target.value)}
-                      placeholder="e.g. BSF 36-4.16 H"
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
                     <div className="flex items-center justify-between gap-1 h-5">
-                      <label className="text-xs font-semibold text-slate-700 block truncate">Model Year</label>
+                      <label className="text-xs font-semibold text-slate-700 block truncate">Year</label>
                       <span
                         className={cn(
                           'text-[10px] font-mono transition-colors shrink-0 whitespace-nowrap',
@@ -490,6 +468,28 @@ export function PumpDetailDialog({
                     {isEditYearInvalid && (
                       <p className="text-[10px] text-rose-500 font-medium">1980–2030</p>
                     )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center h-5">
+                      <label className="text-xs font-semibold text-slate-700 block">Make</label>
+                    </div>
+                    <Input
+                      value={editMake}
+                      onChange={(e) => setEditMake(e.target.value)}
+                      placeholder="e.g. Putzmeister"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center h-5">
+                      <label className="text-xs font-semibold text-slate-700 block">Model</label>
+                    </div>
+                    <Input
+                      value={editModel}
+                      onChange={(e) => setEditModel(e.target.value)}
+                      placeholder="e.g. BSF 36-4.16 H"
+                      className="h-9 text-xs"
+                    />
                   </div>
                 </div>
 

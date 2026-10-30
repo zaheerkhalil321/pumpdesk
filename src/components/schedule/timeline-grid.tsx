@@ -1,59 +1,107 @@
 'use client';
 
-import { useState } from 'react';
-import { Truck, Plus, GripVertical, Clock, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Truck, Plus, GripVertical, Clock, Check, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PumpLane, ScheduleBooking } from './schedule-types';
+import { clockFromHour } from '@/features/orders/mappers';
+import { findOverlap } from '@/features/orders/conflicts';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const TIMELINE_HOURS = [
-  { hour: 5, label: '5 AM' },
-  { hour: 6, label: '6 AM' },
-  { hour: 7, label: '7 AM' },
-  { hour: 8, label: '8 AM' },
-  { hour: 9, label: '9 AM' },
-  { hour: 10, label: '10 AM' },
-  { hour: 11, label: '11 AM' },
-  { hour: 12, label: '12 PM' },
-  { hour: 13, label: '1 PM' },
-  { hour: 14, label: '2 PM' },
-  { hour: 15, label: '3 PM' },
-  { hour: 16, label: '4 PM' },
-  { hour: 17, label: '5 PM' },
+/** "7:00 - 10:00 AM": when a pour starts and ends, so the card never has to be read off the hour columns. */
+function timeRangeLabel(booking: ScheduleBooking): string {
+  const start = clockFromHour(booking.startHour);
+  const end = clockFromHour(booking.startHour + booking.durationHours);
+  // "7:00 AM - 10:00 AM" reads shorter as "7:00 - 10:00 AM" when both are in the same half of the day.
+  const samePeriod = start.slice(-2) === end.slice(-2);
+  return `${samePeriod ? start.slice(0, -3) : start} - ${end}`;
+}
+
+/** The board covers the full day; jobs can start as early as 12 AM or as late as 11 PM. */
+const TIMELINE_HOURS = Array.from({ length: 24 }, (_, hour) => ({
+  hour,
+  label: `${hour % 12 || 12} ${hour < 12 ? 'AM' : 'PM'}`,
+}));
+
+/** The screen opens scrolled to this hour, since most days run 5 AM to 5 PM. */
+const FIRST_VISIBLE_HOUR = 5;
+
+// Tailwind needs the full class names in the source, so the grid positions are spelled out.
+// Column 1 is 12 AM, column 24 is 11 PM.
+const COL_STARTS = [
+  'col-start-1',
+  'col-start-2',
+  'col-start-3',
+  'col-start-4',
+  'col-start-5',
+  'col-start-6',
+  'col-start-7',
+  'col-start-8',
+  'col-start-9',
+  'col-start-10',
+  'col-start-11',
+  'col-start-12',
+  'col-start-13',
+  'col-start-14',
+  'col-start-15',
+  'col-start-16',
+  'col-start-17',
+  'col-start-18',
+  'col-start-19',
+  'col-start-20',
+  'col-start-21',
+  'col-start-22',
+  'col-start-23',
+  'col-start-24',
 ];
 
-// Tailwind static mapping for CSS Grid column starts (5 AM = col 1)
-const COL_START_MAP: Record<number, string> = {
-  5: 'col-start-1',
-  6: 'col-start-2',
-  7: 'col-start-3',
-  8: 'col-start-4',
-  9: 'col-start-5',
-  10: 'col-start-6',
-  11: 'col-start-7',
-  12: 'col-start-8',
-  13: 'col-start-9',
-  14: 'col-start-10',
-  15: 'col-start-11',
-  16: 'col-start-12',
-  17: 'col-start-13',
-};
+// Column spans, 1 to 24 hours.
+const COL_SPANS = [
+  'col-span-1',
+  'col-span-2',
+  'col-span-3',
+  'col-span-4',
+  'col-span-5',
+  'col-span-6',
+  'col-span-7',
+  'col-span-8',
+  'col-span-9',
+  'col-span-10',
+  'col-span-11',
+  'col-span-12',
+  'col-span-13',
+  'col-span-14',
+  'col-span-15',
+  'col-span-16',
+  'col-span-17',
+  'col-span-18',
+  'col-span-19',
+  'col-span-20',
+  'col-span-21',
+  'col-span-22',
+  'col-span-23',
+  'col-span-24',
+];
 
-// Tailwind static mapping for CSS Grid column spans (duration in hours)
-const COL_SPAN_MAP: Record<number, string> = {
-  1: 'col-span-1',
-  2: 'col-span-2',
-  3: 'col-span-3',
-  4: 'col-span-4',
-  5: 'col-span-5',
-  6: 'col-span-6',
-  7: 'col-span-7',
-  8: 'col-span-8',
-  9: 'col-span-9',
-  10: 'col-span-10',
-  11: 'col-span-11',
-  12: 'col-span-12',
-  13: 'col-span-12',
-};
+// Pours that overlap on one pump are stacked in tracks so none is hidden. Three tracks is the cap.
+const MAX_TRACKS = 3;
+const LANE_MIN_HEIGHT = ['min-h-[82px]', 'min-h-[164px]', 'min-h-[246px]'];
+const OVERLAY_ROWS = ['grid-rows-1', 'grid-rows-2', 'grid-rows-3'];
+const ROW_STARTS = ['row-start-1 row-end-2', 'row-start-2 row-end-3', 'row-start-3 row-end-4'];
+
+/** Gives each booking a track (0, 1, 2) so bookings that overlap in time sit on different tracks. */
+function assignTracks(bookings: ScheduleBooking[]): { ordered: ScheduleBooking[]; trackOf: Map<string, number>; tracks: number } {
+  const ordered = [...bookings].sort((a, b) => a.startHour - b.startHour);
+  const trackEnds: number[] = [];
+  const trackOf = new Map<string, number>();
+  for (const booking of ordered) {
+    let track = trackEnds.findIndex((end) => end <= booking.startHour);
+    if (track === -1) track = Math.min(trackEnds.length, MAX_TRACKS - 1);
+    trackEnds[track] = Math.max(trackEnds[track] ?? 0, booking.startHour + booking.durationHours);
+    trackOf.set(booking.id, track);
+  }
+  return { ordered, trackOf, tracks: Math.max(1, Math.min(trackEnds.length, MAX_TRACKS)) };
+}
 
 interface TimelineGridProps {
   pumps: PumpLane[];
@@ -74,6 +122,16 @@ export function TimelineGrid({
   onBookingClick,
   onRescheduleBooking,
 }: TimelineGridProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Open on the working day (5 AM) instead of midnight; the rest is one scroll away.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const labelWidth = el.querySelector<HTMLElement>('[data-lane-label]')?.offsetWidth ?? 0;
+    el.scrollLeft = ((el.scrollWidth - labelWidth) / TIMELINE_HOURS.length) * FIRST_VISIBLE_HOUR;
+  }, []);
+
   const [draggedBookingId, setDraggedBookingId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<{
     pumpId: string;
@@ -81,18 +139,19 @@ export function TimelineGrid({
   } | null>(null);
 
   return (
+    <TooltipProvider>
     <div className="w-full rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
-      <div className="overflow-x-auto min-w-full">
-        <div className="min-w-[1100px]">
+      <div ref={scrollRef} className="overflow-x-auto min-w-full">
+        <div className="min-w-[2200px]">
           {/* ── 1. HEADER ROW ── */}
           <div className="flex border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold text-xs sticky top-0 z-30">
             {/* Frozen Left Header */}
-            <div className="w-[110px] sm:w-[180px] shrink-0 px-2.5 sm:px-3 py-2.5 border-r border-slate-200 bg-slate-50 sticky left-0 z-40 flex items-center gap-2">
+            <div data-lane-label className="w-[110px] sm:w-[180px] shrink-0 px-2.5 sm:px-3 py-2.5 border-r border-slate-200 bg-slate-50 sticky left-0 z-40 flex items-center gap-2">
               <span className="text-slate-700">Pumps</span>
             </div>
 
-            {/* 13 Time Header Slots */}
-            <div className="flex-1 grid grid-cols-[repeat(13,minmax(0,1fr))] min-w-[880px]">
+            {/* 24 Time Header Slots */}
+            <div className="flex-1 grid grid-cols-[repeat(24,minmax(0,1fr))] min-w-[2000px]">
               {TIMELINE_HOURS.map((slot) => (
                 <div
                   key={slot.hour}
@@ -108,11 +167,15 @@ export function TimelineGrid({
           <div className="divide-y divide-slate-200/80">
             {pumps.map((pump) => {
               const pumpBookings = bookings.filter((b) => b.pumpId === pump.id);
+              const { ordered, trackOf, tracks } = assignTracks(pumpBookings);
 
               return (
                 <div
                   key={pump.id}
-                  className="flex min-h-[82px] group hover:bg-slate-50/30 transition-colors relative"
+                  className={cn(
+                    'flex group hover:bg-slate-50/30 transition-colors relative',
+                    LANE_MIN_HEIGHT[tracks - 1],
+                  )}
                 >
                   {/* Left Column: Pump Specs (Frozen Left) */}
                   <div className="w-[110px] sm:w-[180px] shrink-0 px-2 sm:px-3 py-3 border-r border-slate-200 bg-white group-hover:bg-slate-50/60 sticky left-0 z-20 flex items-center gap-1.5 sm:gap-2.5 transition-colors shadow-[2px_0_4px_-2px_rgba(0,0,0,0.03)]">
@@ -131,10 +194,10 @@ export function TimelineGrid({
                     </div>
                   </div>
 
-                  {/* Right Timeline Area: 13-Column Grid */}
-                  <div className="flex-1 relative min-w-[880px]">
-                    {/* Layer A: 13 Interactive Hourly Cells (Drop Targets & Add Slots) */}
-                    <div className="grid grid-cols-[repeat(13,minmax(0,1fr))] h-full">
+                  {/* Right Timeline Area: 24-Column Grid */}
+                  <div className="flex-1 relative min-w-[2000px]">
+                    {/* Layer A: 24 Interactive Hourly Cells (Drop Targets & Add Slots) */}
+                    <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] h-full">
                       {TIMELINE_HOURS.map((slot) => {
                         const isBooked = pumpBookings.some(
                           (b) =>
@@ -214,34 +277,40 @@ export function TimelineGrid({
                     </div>
 
                     {/* Layer B: Bookings Overlay Grid (Spans across all booked hours) */}
-                    <div className="grid grid-cols-[repeat(13,minmax(0,1fr))] grid-rows-1 h-full absolute inset-0 p-1.5 pointer-events-none z-10">
-                      {[...pumpBookings].sort((a, b) => a.startHour - b.startHour).map((booking) => {
+                    <div className={cn('grid grid-cols-[repeat(24,minmax(0,1fr))] h-full absolute inset-0 p-1.5 gap-y-1.5 pointer-events-none z-10', OVERLAY_ROWS[tracks - 1])}>
+                      {ordered.map((booking) => {
                         const startHourClamped = Math.max(
-                          5,
-                          Math.min(17, Math.floor(booking.startHour)),
+                          0,
+                          Math.min(23, Math.floor(booking.startHour)),
                         );
-                        const colStartIdx = startHourClamped - 4; // 5 AM -> 1, 6 AM -> 2, etc.
-                        const startColClass =
-                          COL_START_MAP[startHourClamped] || 'col-start-1';
+                        const colStartIdx = startHourClamped + 1; // 12 AM -> 1, 1 AM -> 2, etc.
+                        const startColClass = COL_STARTS[startHourClamped];
 
-                        // Calculate and clamp span so it spans the full duration across the 13 columns
-                        const maxAllowedSpan = 14 - colStartIdx;
+                        // A card that runs past midnight stops at the end of the day.
+                        const maxAllowedSpan = 25 - colStartIdx;
                         const durationInt = Math.max(
                           1,
-                          Math.min(12, Math.round(booking.durationHours)),
+                          Math.min(24, Math.round(booking.durationHours)),
                         );
                         const actualSpan = Math.min(
                           durationInt,
                           maxAllowedSpan,
                         );
-                        const spanColClass =
-                          COL_SPAN_MAP[actualSpan] || 'col-span-1';
+                        const spanColClass = COL_SPANS[actualSpan - 1];
                         const isNarrow = actualSpan <= 1;
 
                         const isBeingDragged = draggedBookingId === booking.id;
 
+                        // Another pour on this pump at the same time. Allowed, but worth a second look.
+                        const overlap = findOverlap(pumpBookings, {
+                          pumpId: pump.id,
+                          startHour: booking.startHour,
+                          durationHours: booking.durationHours,
+                          ignoreId: booking.id,
+                        });
+
                         // Descriptive tooltip with full un-truncated details
-                        const cardTooltip = `${booking.customerName} • ${booking.volumeYards} yd³\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${booking.startHour}:00 (${booking.durationHours}h)\nDrag to reschedule • Click to view details`;
+                        const cardTooltip = `${booking.customerName} • ${booking.volumeYards} yd³\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${timeRangeLabel(booking)} (${booking.durationHours}h)${overlap ? `\nOverlaps ${overlap.customerName} (${overlap.orderNumber}) at ${timeRangeLabel(overlap)}` : ""}\nDrag to reschedule • Click to view details`;
 
                         return (
                           <div
@@ -265,7 +334,7 @@ export function TimelineGrid({
                             className={cn(
                               draggedBookingId ? 'pointer-events-none' : 'pointer-events-auto',
                               'h-full rounded-lg flex flex-col justify-between shadow-2xs border transition-all cursor-grab active:cursor-grabbing hover:shadow-md select-none overflow-hidden max-w-full min-w-0 border-l-[3.5px]',
-                              'row-start-1 row-end-2',
+                              ROW_STARTS[trackOf.get(booking.id) ?? 0],
                               isNarrow ? 'p-1.5' : 'p-2.5',
                               startColClass,
                               spanColClass,
@@ -299,6 +368,18 @@ export function TimelineGrid({
                                   {booking.customerName}
                                 </span>
                               </div>
+                              {overlap && (
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={<span aria-label={`Overlaps ${overlap.customerName}`} className="shrink-0" />}
+                                  >
+                                    <TriangleAlert className="h-3.5 w-3.5 text-amber-600" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    Overlaps {overlap.customerName} ({overlap.orderNumber}) at {timeRangeLabel(overlap)}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                               <span
                                 className={cn(
                                   'font-bold uppercase tracking-wider rounded bg-white/90 shrink-0 shadow-2xs text-slate-800',
@@ -367,7 +448,7 @@ export function TimelineGrid({
 
                                 <span className="shrink-0 flex items-center gap-0.5 text-[9.5px] font-semibold text-slate-600 bg-white/70 px-1 rounded">
                                   <Clock className="h-2.5 w-2.5 inline" />
-                                  {booking.durationHours}h
+                                  {timeRangeLabel(booking)}
                                 </span>
                               </div>
                             )}
@@ -383,5 +464,6 @@ export function TimelineGrid({
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

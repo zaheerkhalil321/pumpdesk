@@ -10,7 +10,15 @@ import type { NavCounts } from "@/features/orders/types";
 
 import { usePathname } from "next/navigation";
 
-function AppShellInner({ children, navCounts }: { children: React.ReactNode; navCounts: NavCounts }) {
+function AppShellInner({
+  children,
+  navCounts,
+  logoUrl,
+}: {
+  children: React.ReactNode;
+  navCounts: NavCounts;
+  logoUrl: string | null;
+}) {
   const { isOpen } = useSettings();
   const pathname = usePathname();
   const isSettingsRoute = pathname?.startsWith('/settings');
@@ -21,7 +29,7 @@ function AppShellInner({ children, navCounts }: { children: React.ReactNode; nav
       <MobileNavbar navCounts={navCounts} />
 
       {/* Desktop sidebar (visible on desktop md+) */}
-      <AppSidebar navCounts={navCounts} />
+      <AppSidebar navCounts={navCounts} logoUrl={logoUrl} />
 
       {/* Main workspace container */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0 relative">
@@ -46,13 +54,15 @@ function AppShellInner({ children, navCounts }: { children: React.ReactNode; nav
 export function AppShell({
   children,
   navCounts,
+  logoUrl,
 }: {
   children: React.ReactNode;
   navCounts: NavCounts;
+  logoUrl: string | null;
 }) {
   return (
     <SettingsProvider>
-      <AppShellInner navCounts={navCounts}>{children}</AppShellInner>
+      <AppShellInner navCounts={navCounts} logoUrl={logoUrl}>{children}</AppShellInner>
     </SettingsProvider>
   );
 }

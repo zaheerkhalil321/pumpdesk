@@ -9,6 +9,7 @@ import {
   assignPumpOperatorSchema,
   createOperatorSchema,
   createPumpSchema,
+  deleteOperatorSchema,
   updateOperatorSchema,
   updatePumpSchema,
 } from '@/features/fleet/schemas';
@@ -195,6 +196,20 @@ export const updateOperator = authedAction({
     }
 
     revalidateFleet();
+    return { id: input.id };
+  },
+});
+
+/** Soft delete: the operator leaves the roster and their open jobs show "needs operator". */
+export const deleteOperator = authedAction({
+  schema: deleteOperatorSchema,
+  roles: CREW_EDITORS,
+  run: async ({ input, supabase }) => {
+    const { error } = await supabase.rpc('delete_operator', { p_id: input.id });
+    if (error) throw error;
+    revalidateFleet();
+    revalidatePath('/schedule');
+    revalidatePath('/orders');
     return { id: input.id };
   },
 });

@@ -1,51 +1,47 @@
 "use client";
 
-import { Search, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { Heading, Paragraph } from "@/components/ui/typography";
+import { ScheduleDateHeader } from "@/components/schedule/schedule-date-header";
+import type { DayCounts } from "@/features/orders/types";
 
 interface ScheduleHeaderProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
+  currentDate: Date;
+  onDateChange: (date: Date) => void;
+  dayCounts: DayCounts;
   onNewBookingClick: () => void;
 }
 
-export function ScheduleHeader({
-  searchQuery,
-  onSearchChange,
-  onNewBookingClick,
-}: ScheduleHeaderProps) {
+/** Title on the left, the open day in the middle (wide screens), New booking on the right. */
+export function ScheduleHeader({ currentDate, onDateChange, dayCounts, onNewBookingClick }: ScheduleHeaderProps) {
   return (
-    <PageHeader
-      title="Schedule"
-      description="Plan crews, pumps, and jobs"
-      borderBottom
-      actions={
-        <>
-          {/* Search Input - Desktop & Tablet */}
-          <div className="relative hidden sm:block w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search orders, customers, job sites..."
-              className="h-9 pl-9 pr-3 text-xs"
-            />
-          </div>
+    <div className="flex items-start justify-between gap-3 border-b border-border pb-4 sm:items-center min-[1400px]:grid min-[1400px]:grid-cols-[auto_1fr_auto] min-[1400px]:gap-6">
+      <div className="min-w-0">
+        <Heading level={2} className="tracking-tight">
+          Schedule
+        </Heading>
+        <Paragraph size="sm" variant="muted" className="mt-0.5">
+          Plan crews, pumps, and jobs
+        </Paragraph>
+      </div>
 
-          {/* Primary New Booking Action - Desktop & Tablet */}
-          <Button
-            variant="brand"
-            onClick={onNewBookingClick}
-            className="hidden sm:inline-flex font-semibold gap-1.5 text-sm h-9 px-3.5"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New booking</span>
-          </Button>
-        </>
-      }
-    />
+      {/* Narrower screens have it in the toolbar below, phones their own */}
+      <ScheduleDateHeader
+        currentDate={currentDate}
+        onDateChange={onDateChange}
+        dayCounts={dayCounts}
+        className="hidden min-[1400px]:flex min-[1400px]:justify-self-center"
+      />
+
+      <Button
+        variant="brand"
+        onClick={onNewBookingClick}
+        className="hidden sm:inline-flex justify-self-end font-semibold gap-1.5 text-sm h-9 px-3.5"
+      >
+        <Plus className="h-4 w-4" />
+        <span>New booking</span>
+      </Button>
+    </div>
   );
 }

@@ -149,6 +149,26 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"concrete_suppliers": {
+                  Row: {
+                    "address_line_1": string | null,"city": string | null,"company_id": string,"created_at": string,"dispatch_phone": string | null,"email": string | null,"id": string,"is_active": boolean,"name": string,"notes": string | null,"phone": string | null,"postal_code": string | null,"state": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address_line_1"?: string | null,"city"?: string | null,"company_id"?: string,"created_at"?: string,"dispatch_phone"?: string | null,"email"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"notes"?: string | null,"phone"?: string | null,"postal_code"?: string | null,"state"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "address_line_1"?: string | null,"city"?: string | null,"company_id"?: string,"created_at"?: string,"dispatch_phone"?: string | null,"email"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"notes"?: string | null,"phone"?: string | null,"postal_code"?: string | null,"state"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "concrete_suppliers_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"contacts": {
                   Row: {
                     "company_id": string,"created_at": string,"email": string | null,"first_name": string,"id": string,"is_active": boolean,"job_title": string | null,"last_name": string | null,"notes": string | null,"phone": string | null,"phone_type": string | null,"updated_at": string
@@ -526,6 +546,9 @@ isOneToOne: false
                            },
 "cancel_job":
 { Args: { "p_job": string,"p_reason": string,"p_version": number }; Returns: Json
+                           },
+"delete_operator":
+{ Args: { "p_id": string }; Returns: undefined
                            },
 "update_job":
 { Args: { "p": Json }; Returns: Json

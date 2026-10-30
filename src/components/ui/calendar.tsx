@@ -9,21 +9,27 @@ import {
   eachDayOfInterval,
   isSameMonth,
   isSameDay,
-  isToday,
   addMonths,
   subMonths,
+  addYears,
+  subYears,
   format,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { formatInTimeZone } from "date-fns-tz";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CalendarProps {
   selected?: Date;
   onSelect?: (date: Date) => void;
   className?: string;
+  /** A number to show under each day (keyed by yyyy-MM-dd), such as how many jobs it has. */
+  dayCounts?: Record<string, number>;
+  /** Called with the first day of the month whenever another month is shown. */
+  onViewChange?: (month: Date) => void;
 }
 
-export function Calendar({ selected, onSelect, className }: CalendarProps) {
+export function Calendar({ selected, onSelect, className, dayCounts, onViewChange }: CalendarProps) {
   // View month tracks which month the user is currently viewing in the calendar
   const [viewDate, setViewDate] = useState<Date>(selected || new Date());
 
@@ -35,8 +41,17 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
 
   const weekDayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-  const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
-  const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
+  // Today in the company's timezone, so the highlight matches the rest of the app.
+  const todayKey = formatInTimeZone(new Date(), "America/Chicago", "yyyy-MM-dd");
+
+  const showMonth = (date: Date) => {
+    setViewDate(date);
+    onViewChange?.(startOfMonth(date));
+  };
+  const handlePrevMonth = () => showMonth(subMonths(viewDate, 1));
+  const handleNextMonth = () => showMonth(addMonths(viewDate, 1));
+  const handlePrevYear = () => showMonth(subYears(viewDate, 1));
+  const handleNextYear = () => showMonth(addYears(viewDate, 1));
 
   return (
     <div className={cn("p-3 bg-white select-none w-[280px]", className)}>
@@ -48,6 +63,15 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
 
         {/* Stepper Controls (< >) Grouped Cleanly in Header */}
         <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 shadow-2xs">
+          <button
+            type="button"
+            onClick={handlePrevYear}
+            className="h-6.5 w-6.5 rounded-md flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Previous year"
+            aria-label="Previous year"
+          >
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={handlePrevMonth}
@@ -66,6 +90,15 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
+          <button
+            type="button"
+            onClick={handleNextYear}
+            className="h-6.5 w-6.5 rounded-md flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Next year"
+            aria-label="Next year"
+          >
+            <ChevronsRight className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
@@ -74,7 +107,7 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
         {weekDayLabels.map((day) => (
           <span
             key={day}
-            className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider"
+            className="text-[11px] font-semibold text-slate-400"
           >
             {day}
           </span>
@@ -86,7 +119,8 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
         {days.map((day) => {
           const isCurrentMonth = isSameMonth(day, viewDate);
           const isSelectedDay = selected ? isSameDay(day, selected) : false;
-          const isCurrentDay = isToday(day);
+          const isCurrentDay = format(day, "yyyy-MM-dd") === todayKey;
+          const count = dayCounts?.[format(day, "yyyy-MM-dd")] ?? 0;
 
           return (
             <button
@@ -96,11 +130,11 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
                 onSelect?.(day);
                 // Also align viewDate if clicked outside month
                 if (!isCurrentMonth) {
-                  setViewDate(day);
+                  showMonth(day);
                 }
               }}
               className={cn(
-                "h-8.5 w-8.5 mx-auto rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer select-none",
+                "relative h-8.5 w-8.5 mx-auto rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer select-none",
                 // Current Month vs Outside Month
                 isCurrentMonth
                   ? "text-slate-800 hover:bg-slate-100 font-medium"
@@ -114,7 +148,18 @@ export function Calendar({ selected, onSelect, className }: CalendarProps) {
                   "!bg-brand !text-white font-bold shadow-xs hover:!bg-brand-hover"
               )}
             >
-              {format(day, "d")}
+              {/* A day with jobs lifts its number a little to fit the count under it, in the same size cell. */}
+              <span className={cn("leading-none", count > 0 && "-translate-y-1")}>{format(day, "d")}</span>
+              {count > 0 && (
+                <span
+                  className={cn(
+                    "absolute bottom-1 text-[9px] font-bold leading-none",
+                    isSelectedDay ? "text-white/90" : isCurrentMonth ? "text-brand" : "text-slate-300"
+                  )}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}

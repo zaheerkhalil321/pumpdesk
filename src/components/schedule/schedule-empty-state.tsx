@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Plus } from "lucide-react";
+import { Plus, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ScheduleEmptyStateProps {
@@ -10,9 +10,9 @@ interface ScheduleEmptyStateProps {
 export function ScheduleEmptyState({ onNewBookingClick }: ScheduleEmptyStateProps) {
   return (
     <div className="w-full rounded-xl border border-slate-200 bg-white p-8 sm:p-10 flex flex-col items-center justify-center text-center shadow-2xs">
-      {/* Calendar Vector Illustration */}
+      {/* Pump Icon */}
       <div className="h-13 w-13 rounded-2xl bg-brand-light border border-brand/20 flex items-center justify-center text-brand shadow-2xs mb-3">
-        <Calendar className="h-6 w-6 stroke-[1.8]" />
+        <Truck className="h-6 w-6 stroke-[1.8]" />
       </div>
 
       {/* Primary Message */}
@@ -20,7 +20,7 @@ export function ScheduleEmptyState({ onNewBookingClick }: ScheduleEmptyStateProp
         Your schedule is clear
       </h3>
       <p className="text-xs sm:text-[13px] text-slate-500 mt-1 max-w-sm">
-        Click a time slot or choose <span className="font-semibold text-slate-700">New booking</span> to schedule a job.
+        Choose <span className="font-semibold text-slate-700">New booking</span> to schedule a job.
       </p>
 
       {/* Action Button */}

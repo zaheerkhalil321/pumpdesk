@@ -22,10 +22,12 @@ import {
   UserCheck,
   Send,
   Check,
+  TriangleAlert,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScheduleBooking, PumpLane } from './schedule-types';
 import { updateOrder } from '@/features/orders/server/actions';
+import { QUARTER_HOUR_CLOCKS, clockFromHour } from '@/features/orders/mappers';
 import { reportAction } from '@/lib/action-feedback';
 import type { OrderFormOperator } from '@/features/orders/types';
 import { toast } from 'sonner';
@@ -42,6 +44,10 @@ interface OrderDossierModalProps {
   /** Real operators the order can be assigned to. */
   operators: OrderFormOperator[];
   onQuickEdit?: (booking: ScheduleBooking) => void;
+  /** Another pour on the same pump at the same time, if there is one. */
+  overlapWith?: ScheduleBooking | null;
+  /** Opens that other order's popup. */
+  onOpenOrder?: (booking: ScheduleBooking) => void;
 }
 
 export function OrderDossierModal({
@@ -51,6 +57,8 @@ export function OrderDossierModal({
   pumps,
   operators,
   onQuickEdit,
+  overlapWith,
+  onOpenOrder,
 }: OrderDossierModalProps) {
   const router = useRouter();
   const [isSaving, startSaving] = React.useTransition();
@@ -91,6 +99,13 @@ export function OrderDossierModal({
   const pourTimeStr = booking.pourTimeLabel ?? '';
   const arriveTimeStr = booking.arriveByLabel ?? pourTimeStr;
 
+  // Every 15 minutes; an order saved at an odd time keeps showing it.
+  const pourTimeOptions: SelectOption[] = (
+    QUARTER_HOUR_CLOCKS.includes(pourTimeStr) || !pourTimeStr
+      ? QUARTER_HOUR_CLOCKS
+      : [pourTimeStr, ...QUARTER_HOUR_CLOCKS]
+  ).map((clock) => ({ value: clock, label: clock }));
+
   // Status shown in the banner, from the real dispatch state.
   const statusText = isDispatched
     ? 'Dispatched to operator'
@@ -120,6 +135,19 @@ export function OrderDossierModal({
       setIsChangingOperator(false);
       setSelectedOpToAssign('');
       toast.success(success.title, { description: success.description });
+    });
+  };
+
+  /** Moves the pour to a new time on the same day. Length and arrival lead time stay the same. */
+  const handlePourTimeChange = (clock: string) => {
+    if (!booking.jobId || booking.version === undefined || clock === pourTimeStr) return;
+    const { jobId, version } = booking;
+    startSaving(async () => {
+      const result = await updateOrder({ id: jobId, version, pourTime: clock });
+      if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
+      toast.success('Pour time changed', {
+        description: `${booking.customerName} now pours at ${clock}.`,
+      });
     });
   };
 
@@ -190,6 +218,29 @@ export function OrderDossierModal({
           </div>
         </div>
 
+        {/* ── Overlap warning: allowed, but worth a second look ── */}
+        {overlapWith && (
+          <div className="flex items-start justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <div className="flex min-w-0 items-start gap-2">
+              <TriangleAlert className="mt-px h-4 w-4 shrink-0 text-amber-600" />
+              <span>
+                <span className="font-semibold">Overlaps another pour on this pump.</span>{' '}
+                {overlapWith.customerName} ({overlapWith.orderNumber}) is on it from{' '}
+                {clockFromHour(overlapWith.startHour)} to {clockFromHour(overlapWith.startHour + overlapWith.durationHours)}.
+              </span>
+            </div>
+            {onOpenOrder && (
+              <button
+                type="button"
+                onClick={() => onOpenOrder(overlapWith)}
+                className="shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 font-semibold text-amber-800 underline-offset-2 hover:underline"
+              >
+                View {overlapWith.orderNumber}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ── Customer & Pour Information ── */}
         <div className="space-y-1">
           <h3 className="text-xl font-bold text-[#0B1B3D] tracking-tight leading-snug">
@@ -240,9 +291,15 @@ export function OrderDossierModal({
           </div>
           <div className="border-l border-slate-200/90 pl-4">
             <span className="text-xs text-slate-500 block font-medium">Pour</span>
-            <span className="text-base font-bold text-slate-900 block mt-0.5">
-              {pourTimeStr}
-            </span>
+            <AppSelect
+              size="sm"
+              value={pourTimeStr}
+              onChange={handlePourTimeChange}
+              options={pourTimeOptions}
+              disabled={isSaving}
+              className="mt-0.5 h-9 text-sm font-bold"
+              contentClassName="max-h-64"
+            />
           </div>
         </div>
 

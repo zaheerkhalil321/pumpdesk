@@ -52,7 +52,7 @@ const pumpFields = {
   unitNumber: requiredText('Unit number', 15),
   make: optionalText(60),
   model: optionalText(60),
-  year: boundedNumber('Model year', 1980, 2030),
+  year: boundedNumber('Year', 1980, 2030),
   type: z.enum(['boom_pump', 'line_pump']),
   boomSize: boundedNumber('Boom size', 1, 100),
   horizontalReach: boundedNumber('Horizontal reach', 0, 500),
@@ -75,6 +75,8 @@ export const updatePumpSchema = z.object({ id: uuid, ...pumpFields }).refine(
 );
 
 export const deletePumpSchema = z.object({ id: uuid });
+
+export const deleteOperatorSchema = z.object({ id: uuid });
 
 export const assignPumpOperatorSchema = z.object({ id: uuid, operatorId: uuid.nullable() });
 

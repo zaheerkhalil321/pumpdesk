@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 import { getOperator, listBranchOptions, listPumps } from '@/features/fleet/server/queries';
 import { OperatorDetailView } from './operator-detail-view';
@@ -14,6 +14,7 @@ export default async function OperatorDetailPage({ params }: PageProps) {
     listPumps(),
     listBranchOptions(),
   ]);
-  if (!operator) notFound();
+  // A deleted or unknown operator has no page: send people to the list rather than an empty screen.
+  if (!operator) redirect('/operators');
   return <OperatorDetailView operator={operator} pumps={pumps} branchOptions={branchOptions} />;
 }

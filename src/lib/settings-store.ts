@@ -55,14 +55,6 @@ export interface OfficeAlertRule {
   enabled: boolean;
 }
 
-export interface ConcreteSupplier {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  status: 'Active' | 'Inactive';
-}
-
 export interface PourTypeSetting {
   id: string;
   name: string;
@@ -109,7 +101,6 @@ export interface SettingsState {
   charges: AdditionalCharge[];
   customerNotifications: CustomerNotificationRule[];
   officeAlerts: OfficeAlertRule[];
-  suppliers: ConcreteSupplier[];
   pourTypes: PourTypeSetting[];
   tags: TagSetting[];
   invoiceSettings: InvoiceSettings;
@@ -341,29 +332,6 @@ export const INITIAL_SETTINGS: SettingsState = {
       enabled: true,
     },
   ],
-  suppliers: [
-    {
-      id: 'sup-1',
-      name: 'Auburn Concrete',
-      phone: '(207) 555-0120',
-      email: 'dispatch@auburn.example',
-      status: 'Active',
-    },
-    {
-      id: 'sup-2',
-      name: 'Coastal Ready Mix',
-      phone: '(207) 555-0121',
-      email: 'dispatch@coastal.example',
-      status: 'Active',
-    },
-    {
-      id: 'sup-3',
-      name: 'Pine Tree Concrete Supply',
-      phone: '(207) 555-0122',
-      email: 'office@pinetree.example',
-      status: 'Inactive',
-    },
-  ],
   pourTypes: [
     { id: 'pt-1', name: 'Footings', favorite: true, status: 'Active' },
     { id: 'pt-2', name: 'House slab', favorite: true, status: 'Active' },
@@ -568,28 +536,6 @@ export function updateAdditionalCharge(id: string, updates: Partial<AdditionalCh
     ...currentSettings,
     charges: currentSettings.charges.map((c) =>
       c.id === id ? { ...c, ...updates } : c
-    ),
-  };
-  notify();
-}
-
-export function addSupplier(supplier: Omit<ConcreteSupplier, 'id'>) {
-  const newSupplier: ConcreteSupplier = {
-    ...supplier,
-    id: `sup-${Date.now()}`,
-  };
-  currentSettings = {
-    ...currentSettings,
-    suppliers: [newSupplier, ...currentSettings.suppliers],
-  };
-  notify();
-}
-
-export function updateSupplier(id: string, updates: Partial<ConcreteSupplier>) {
-  currentSettings = {
-    ...currentSettings,
-    suppliers: currentSettings.suppliers.map((s) =>
-      s.id === id ? { ...s, ...updates } : s
     ),
   };
   notify();

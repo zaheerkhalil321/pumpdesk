@@ -1,11 +1,15 @@
 import 'server-only';
 
+import { format, parseISO } from 'date-fns';
+
 import { createClient } from '@/server/supabase';
 import { requireSession } from '@/server/session';
 import { formatAddress } from '@/features/crm/mappers';
 import { getPumpDisplayName } from '@/features/fleet/format';
 import { todayIn } from '@/features/fleet/mappers';
 import { listOperators, listPumps } from '@/features/fleet/server/queries';
+import { listSuppliers } from '@/features/suppliers/server/queries';
+import type { OrderFormSupplier } from '@/features/suppliers/types';
 import { formatE164 } from '@/lib/phone';
 import {
   JOB_COLUMNS,
@@ -17,6 +21,9 @@ import {
 } from '@/features/orders/mappers';
 import type { ScheduleBooking } from '@/components/schedule/schedule-types';
 import type {
+  DayBlock,
+  DayCounts,
+  OperatorJob,
   FullOrderData,
   NavCounts,
   OrderFormCustomer,
@@ -92,10 +99,11 @@ async function loadCustomers(): Promise<OrderFormCustomer[]> {
 /** Everything the order forms need to offer real customers, contacts, sites, pumps and operators. */
 export async function getOrderFormOptions(): Promise<OrderFormOptions> {
   await requireSession();
-  const [customers, allPumps, allOperators] = await Promise.all([
+  const [customers, allPumps, allOperators, allSuppliers] = await Promise.all([
     loadCustomers(),
     listPumps(),
     listOperators(),
+    listSuppliers(),
   ]);
 
   const pumps: OrderFormPump[] = allPumps
@@ -119,7 +127,11 @@ export async function getOrderFormOptions(): Promise<OrderFormOptions> {
     .filter((o) => o.status === 'Active')
     .map((o) => ({ id: o.id, name: o.name, phone: o.phone }));
 
-  return { customers, pumps, operators };
+  const suppliers: OrderFormSupplier[] = allSuppliers
+    .filter((s) => s.isActive)
+    .map((s) => ({ id: s.id, name: s.name, phone: s.phone }));
+
+  return { customers, pumps, operators, suppliers };
 }
 
 // ── Orders ───────────────────────────────────────────────────────
@@ -278,6 +290,94 @@ export async function listSchedule(
     bookings: dayJobs.filter((h) => h.pump).map(toBooking),
     unassigned: upcomingJobs.filter((h) => !h.pump).map(toBooking),
   };
+}
+
+/** The pours on pumps on one day (yyyy-MM-dd), for the overlap warning in the order form. */
+export async function listDayBlocks(date: string): Promise<DayBlock[]> {
+  await requireSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(JOB_COLUMNS)
+    .eq('service_date', date)
+    .neq('booking_status', 'cancelled')
+    .order('scheduled_start');
+  if (error) throw error;
+  const jobs = await hydrate((data ?? []) as JobRow[]);
+  return jobs
+    .filter((h) => h.pump)
+    .map(toBooking)
+    .map((b) => ({
+      id: b.id,
+      pumpId: b.pumpId,
+      startHour: b.startHour,
+      durationHours: b.durationHours,
+      customerName: b.customerName,
+      orderNumber: b.orderNumber,
+    }));
+}
+
+/**
+ * The jobs an operator is on that deleting them would change: not cancelled and not finished.
+ * Soonest first. Matches what the delete itself takes them off.
+ */
+export async function listOperatorJobs(employeeId: string): Promise<OperatorJob[]> {
+  await requireSession();
+  const supabase = await createClient();
+
+  const { data: assignments, error: assignmentError } = await supabase
+    .from('job_employee_assignments')
+    .select('job_id, assignment_type')
+    .eq('employee_id', employeeId)
+    .is('released_at', null);
+  if (assignmentError) throw assignmentError;
+  if (!assignments?.length) return [];
+
+  const { data: jobs, error } = await supabase
+    .from('jobs')
+    .select(JOB_COLUMNS)
+    .in('id', assignments.map((a) => a.job_id))
+    .neq('booking_status', 'cancelled')
+    .neq('field_status', 'done')
+    .order('scheduled_start');
+  if (error) throw error;
+
+  const role = new Map(assignments.map((a) => [a.job_id, a.assignment_type]));
+  const hydrated = await hydrate((jobs ?? []) as JobRow[]);
+  return hydrated.map((h) => {
+    const booking = toBooking(h);
+    return {
+      id: h.job.id,
+      jobNumber: h.job.job_number,
+      customerName: booking.customerName,
+      dateLabel: format(parseISO(booking.serviceDate ?? h.job.service_date), 'EEE, MMM d'),
+      timeLabel: booking.pourTimeLabel ?? '',
+      pumpCode: booking.pumpCode ?? '',
+      dispatched: h.job.dispatch_status === 'dispatched' || h.job.dispatch_status === 'acknowledged',
+      isAdditionalOperator: role.get(h.job.id) !== 'primary_operator',
+    };
+  });
+}
+
+/** Orders on each day from `from` to `to` (yyyy-MM-dd, both included), cancelled ones left out. */
+export async function listDayCounts(from: string, to: string): Promise<DayCounts> {
+  await requireSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('service_date, booking_status')
+    .gte('service_date', from)
+    .lte('service_date', to)
+    .neq('booking_status', 'cancelled');
+  if (error) throw error;
+
+  const counts: DayCounts = {};
+  for (const job of data ?? []) {
+    const day = (counts[job.service_date] ??= { total: 0, pending: 0 });
+    day.total += 1;
+    if (job.booking_status === 'pending') day.pending += 1;
+  }
+  return counts;
 }
 
 /** The counts shown next to Schedule and Orders in the sidebar. */

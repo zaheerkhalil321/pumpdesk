@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,8 @@ interface OperatorFormProps {
   /** Pump to pre-select when creating an operator from a pump form. */
   initialPumpId?: string;
   onClose: () => void;
+  /** Shows a Delete button on the left of the footer (edit mode). */
+  onDelete?: () => void;
   onSaved?: (id: string) => void;
 }
 
@@ -50,6 +53,7 @@ export function OperatorForm({
   branchOptions,
   initialPumpId,
   onClose,
+  onDelete,
   onSaved,
 }: OperatorFormProps) {
   const router = useRouter();
@@ -242,6 +246,18 @@ export function OperatorForm({
       </p>
 
       <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+        {onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onDelete}
+            className="mr-auto h-9 px-3 text-xs font-semibold cursor-pointer text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete operator</span>
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"

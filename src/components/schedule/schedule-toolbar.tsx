@@ -5,23 +5,29 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  ChevronDown,
   SlidersHorizontal,
+  Search,
+  X,
 } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { addDays, subDays } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { AppSelect } from "@/components/ui/app-select";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PumpLane, ScheduleViewMode } from "./schedule-types";
 import { MobileFilterSheet } from "./mobile-filter-sheet";
+import { ScheduleDateHeader } from "./schedule-date-header";
+import type { DayCounts } from "@/features/orders/types";
 
 const TIMEZONE = "America/Chicago";
 
 interface ScheduleToolbarProps {
   currentDate: Date;
   onDateChange: (date: Date) => void;
+  /** Orders per day around the shown day, for the calendar. */
+  dayCounts: DayCounts;
   bookingCount: number;
   dispatchedCount?: number;
   draftCount?: number;
@@ -40,6 +46,7 @@ interface ScheduleToolbarProps {
 export function ScheduleToolbar({
   currentDate,
   onDateChange,
+  dayCounts,
   bookingCount,
   dispatchedCount = 0,
   draftCount = 0,
@@ -54,15 +61,8 @@ export function ScheduleToolbar({
   searchQuery = "",
   onSearchChange,
 }: ScheduleToolbarProps) {
-  const [isDesktopCalendarOpen, setIsDesktopCalendarOpen] = useState(false);
   const [isMobileCalendarOpen, setIsMobileCalendarOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-
-  const formattedDate = formatInTimeZone(
-    currentDate,
-    TIMEZONE,
-    "EEEE, MMMM d, yyyy"
-  );
 
   const compactMobileDate = formatInTimeZone(
     currentDate,
@@ -72,7 +72,6 @@ export function ScheduleToolbar({
 
   const handlePrevDay = () => onDateChange(subDays(currentDate, 1));
   const handleNextDay = () => onDateChange(addDays(currentDate, 1));
-  const handleToday = () => onDateChange(new Date());
 
   // Distinct operators list from active company roster
   const operators = Array.from(
@@ -129,6 +128,7 @@ export function ScheduleToolbar({
               >
                 <Calendar
                   selected={currentDate}
+                  dayCounts={Object.fromEntries(Object.entries(dayCounts).map(([iso, c]) => [iso, c.total]))}
                   onSelect={(newDate) => {
                     onDateChange(newDate);
                     setIsMobileCalendarOpen(false);
@@ -213,6 +213,8 @@ export function ScheduleToolbar({
           </div>
         </div>
 
+        <ScheduleDateHeader currentDate={currentDate} onDateChange={onDateChange} dayCounts={dayCounts} className="w-full" />
+
         {/* Row 2: Horizontal Scrolling Status Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
           <span className="shrink-0 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-700 font-semibold text-[11px]">
@@ -245,88 +247,16 @@ export function ScheduleToolbar({
       {/* ══════════════════════════════════════════════════════════════
           B. DESKTOP FULL TOOLBAR (Screens md and above)
          ══════════════════════════════════════════════════════════════ */}
-      <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-3 pb-2">
-      {/* ── Left Side: Date Controls & Subtext ── */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-3">
-          {/* 1. Original Segmented Stepper Control (< Today >) */}
-          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 shadow-2xs">
-            <button
-              type="button"
-              onClick={handlePrevDay}
-              className="h-8 w-8 rounded-md flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Previous day"
-              aria-label="Previous day"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleToday}
-              className="h-8 px-2.5 rounded-md text-xs font-semibold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={handleNextDay}
-              className="h-8 w-8 rounded-md flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Next day"
-              aria-label="Next day"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+      <div className="hidden md:flex flex-col gap-3 pt-3 pb-2">
+        <ScheduleDateHeader
+          currentDate={currentDate}
+          onDateChange={onDateChange}
+          dayCounts={dayCounts}
+          className="self-start min-[1400px]:hidden"
+        />
 
-          {/* 2. Interactive Date Popover Trigger with Bespoke Calendar */}
-          <Popover open={isDesktopCalendarOpen} onOpenChange={setIsDesktopCalendarOpen}>
-            <PopoverTrigger className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer shadow-2xs group outline-none">
-              <CalendarIcon className="h-4 w-4 text-slate-500 group-hover:text-brand transition-colors shrink-0" />
-              <span className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
-                {formattedDate}
-              </span>
-              <ChevronDown
-                className={cn(
-                  "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200",
-                  isDesktopCalendarOpen && "rotate-180"
-                )}
-              />
-            </PopoverTrigger>
 
-            <PopoverContent
-              align="start"
-              className="p-2 shadow-2xl rounded-2xl border-slate-200 bg-white w-auto"
-            >
-              {/* Bespoke Crisp Calendar */}
-              <Calendar
-                selected={currentDate}
-                onSelect={(newDate) => {
-                  onDateChange(newDate);
-                  setIsDesktopCalendarOpen(false);
-                }}
-              />
-
-              {/* Quick Jump Shortcuts at Bottom */}
-              <div className="flex items-center justify-between border-t border-slate-100 pt-2 px-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDateChange(new Date());
-                    setIsDesktopCalendarOpen(false);
-                  }}
-                  className="font-semibold text-brand hover:underline cursor-pointer"
-                >
-                  Jump to Today
-                </button>
-                <span className="text-slate-400 text-[11px] font-mono">
-                  America/Chicago
-                </span>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* Dynamic Booking Count Subtitle + Live Dispatch Health Badges */}
+        {/* Booking count and dispatch health */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-normal pl-0.5">
           <span>
             {bookingCount === 0
@@ -358,71 +288,92 @@ export function ScheduleToolbar({
             </>
           )}
         </div>
-      </div>
 
-      {/* ── Right Side: View Mode, Filters & V2 Expand ── */}
-      <div className="flex flex-wrap items-center gap-2.5">
-        {/* View Mode Toggle: Day / Week / List */}
-        <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/70 p-0.5 shadow-2xs">
-          {(["day", "week", "list"] as ScheduleViewMode[]).map((mode) => {
-            const isActive = viewMode === mode;
-            return (
+        {/* Search, view and filters in one bar, like Orders and Customers */}
+        <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px] group">
+            <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-brand transition-colors" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              placeholder="Search orders, customers, or job sites"
+              className="pl-9.5 pr-9 h-10 text-xs sm:text-sm bg-slate-50/50 border-slate-200 focus-visible:bg-white focus-visible:border-brand outline-none rounded-lg shadow-none transition-all placeholder:text-slate-400"
+            />
+            {searchQuery && (
               <button
-                key={mode}
                 type="button"
-                onClick={() => onViewModeChange(mode)}
-                className={cn(
-                  "px-3 py-1 text-xs font-semibold rounded-md capitalize transition-all cursor-pointer",
-                  isActive
-                    ? "bg-brand text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-950 hover:bg-white/60"
-                )}
+                onClick={() => onSearchChange?.("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                title="Clear search"
               >
-                {mode}
+                <X className="h-3.5 w-3.5" />
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
 
-        {/* Filter: All pumps */}
-        <div className="w-36 sm:w-44">
-          <AppSelect
-            size="sm"
-            align="end"
-            value={selectedPumpId}
-            onChange={onSelectPump}
-            options={[
-              { value: "all", label: "All pumps" },
-              ...pumps.map((p) => ({
-                value: p.id,
-                label: `${p.code} • ${p.name}`,
-              })),
-            ]}
-            className="h-8 text-xs font-medium"
-            contentClassName="w-56"
-          />
-        </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+          {/* View Mode Toggle: Day / Week / List */}
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/70 p-0.5 shadow-2xs">
+            {(["day", "week", "list"] as ScheduleViewMode[]).map((mode) => {
+              const isActive = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => onViewModeChange(mode)}
+                  className={cn(
+                    "px-3 py-1 text-xs font-semibold rounded-md capitalize transition-all cursor-pointer",
+                    isActive
+                      ? "bg-brand text-white shadow-2xs"
+                      : "text-slate-600 hover:text-slate-950 hover:bg-white/60"
+                  )}
+                >
+                  {mode}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Filter: All operators */}
-        <div className="w-36 sm:w-40">
-          <AppSelect
-            size="sm"
-            align="end"
-            value={selectedOperator}
-            onChange={onSelectOperator}
-            options={[
-              { value: "all", label: "All operators" },
-              ...operators.map((op) => ({
-                value: op,
-                label: op,
-              })),
-            ]}
-            className="h-8 text-xs font-medium"
-            contentClassName="w-48"
-          />
+          {/* Filter: All pumps */}
+          <div className="w-36 sm:w-44">
+            <AppSelect
+              size="sm"
+              align="end"
+              value={selectedPumpId}
+              onChange={onSelectPump}
+              options={[
+                { value: "all", label: "All pumps" },
+                ...pumps.map((p) => ({
+                  value: p.id,
+                  label: `${p.code} • ${p.name}`,
+                })),
+              ]}
+              className="h-8 text-xs font-medium"
+              contentClassName="w-56"
+            />
+          </div>
+
+          {/* Filter: All operators */}
+          <div className="w-36 sm:w-40">
+            <AppSelect
+              size="sm"
+              align="end"
+              value={selectedOperator}
+              onChange={onSelectOperator}
+              options={[
+                { value: "all", label: "All operators" },
+                ...operators.map((op) => ({
+                  value: op,
+                  label: op,
+                })),
+              ]}
+              className="h-8 text-xs font-medium"
+              contentClassName="w-48"
+            />
+          </div>
+          </div>
         </div>
       </div>
-    </div>
 
     {/* Mobile Filter Sheet */}
     <MobileFilterSheet

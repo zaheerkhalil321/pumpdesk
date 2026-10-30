@@ -28,7 +28,12 @@ async function loadFleet() {
   const supabase = await createClient();
   const [equipment, employees, branches] = await Promise.all([
     supabase.from('equipment').select(EQUIPMENT_COLUMNS).eq('is_active', true).order('equipment_number'),
-    supabase.from('employees').select(EMPLOYEE_COLUMNS).eq('is_operator', true).order('first_name'),
+    supabase
+      .from('employees')
+      .select(EMPLOYEE_COLUMNS)
+      .eq('is_operator', true)
+      .neq('status', 'terminated')
+      .order('first_name'),
     supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
   ]);
   if (equipment.error) throw equipment.error;

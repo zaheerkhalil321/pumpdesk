@@ -144,6 +144,12 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
     ...options.operators.map((o) => ({ value: o.id, label: o.name })),
     { value: UNASSIGNED, label: 'Unassigned' },
   ];
+  // Choosing a pump swaps in its default operator, or clears the operator when it has none.
+  const handlePumpChange = (pumpId: string) => {
+    setEditPumpId(pumpId);
+    const defaultId = options.pumps.find((p) => p.id === pumpId)?.defaultOperatorId;
+    setEditOperatorId(options.operators.find((o) => o.id === defaultId)?.id ?? UNASSIGNED);
+  };
   const secondOperatorChoices = [
     ...(order.secondOperatorId && !options.operators.some((o) => o.id === order.secondOperatorId)
       ? [{ value: order.secondOperatorId, label: order.secondOperatorName }]
@@ -648,7 +654,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                     <label className="text-slate-600 font-medium">Assigned pump</label>
                     <AppSelect
                       value={editPumpId}
-                      onChange={setEditPumpId}
+                      onChange={handlePumpChange}
                       options={pumpChoices}
                     />
                   </div>

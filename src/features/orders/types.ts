@@ -1,3 +1,5 @@
+import type { OrderFormSupplier } from '@/features/suppliers/types';
+
 /** Real records the New order and quick-booking forms offer in their dropdowns. */
 
 export interface OrderFormContact {
@@ -49,6 +51,37 @@ export interface OrderFormOptions {
   customers: OrderFormCustomer[];
   pumps: OrderFormPump[];
   operators: OrderFormOperator[];
+  suppliers: OrderFormSupplier[];
+}
+
+/** Orders on each day, keyed by yyyy-MM-dd. Days with no orders are left out. */
+export type DayCounts = Record<string, { total: number; pending: number }>;
+
+/** One pour on a pump, just enough to tell whether a new pour would overlap it. */
+export interface DayBlock {
+  id: string;
+  pumpId: string;
+  /** Hours from midnight, e.g. 7.5 for 7:30 AM. */
+  startHour: number;
+  durationHours: number;
+  customerName: string;
+  orderNumber: string;
+}
+
+/** An open job an operator is on, listed before they are deleted. */
+export interface OperatorJob {
+  id: string;
+  jobNumber: string;
+  customerName: string;
+  /** "Thu, Oct 29" */
+  dateLabel: string;
+  /** "7:00 AM" */
+  timeLabel: string;
+  /** Empty until a pump is assigned. */
+  pumpCode: string;
+  /** Already sent to the operator, so they will need telling again. */
+  dispatched: boolean;
+  isAdditionalOperator: boolean;
 }
 
 /** Numbers shown on the sidebar links. */

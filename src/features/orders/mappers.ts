@@ -42,6 +42,9 @@ export function clockFromHour(hours: number): string {
   return shiftClock('12:00 AM', Math.round(hours * 60));
 }
 
+/** Clock times every 15 minutes across the whole day, "12:00 AM" to "11:45 PM". */
+export const QUARTER_HOUR_CLOCKS: string[] = Array.from({ length: 96 }, (_, i) => clockFromHour(i / 4));
+
 /** The instant for a local date (yyyy-MM-dd) and clock time ("7:30 AM") in a timezone. */
 export function toInstant(isoDate: string, clock: string, timezone: string): Date {
   const { hour, minute } = parseClock(clock);

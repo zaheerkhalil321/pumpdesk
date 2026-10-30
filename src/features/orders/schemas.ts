@@ -96,3 +96,15 @@ export const cancelOrderSchema = z.object({
 
 export type BookOrderInput = z.input<typeof bookOrderSchema>;
 export type UpdateOrderInput = z.input<typeof updateOrderSchema>;
+
+/** A date range for the schedule calendar's day counts, at most about two months long. */
+export const dayCountsSchema = z
+  .object({ from: isoDate, to: isoDate })
+  .refine((r) => r.from <= r.to, { message: 'The range ends before it starts' })
+  .refine((r) => (Date.parse(r.to) - Date.parse(r.from)) / 86_400_000 <= 62, { message: 'Pick a shorter range' });
+
+/** One day, for the order form's overlap check. */
+export const dayBlocksSchema = z.object({ date: isoDate });
+
+/** One operator, to list the jobs they are on. */
+export const operatorJobsSchema = z.object({ id: uuid });

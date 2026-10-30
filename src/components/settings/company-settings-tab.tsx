@@ -20,8 +20,18 @@ import {
 } from '@/lib/settings-store';
 import { useBrandTheme } from '@/components/providers/brand-theme-provider';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { reportAction } from '@/lib/action-feedback';
+import { removeCompanyLogo, uploadCompanyLogo } from '@/features/company/server/actions';
+import { LOGO_ACCEPT, LOGO_MAX_BYTES } from '@/features/company/logo';
+import { LOGO_SOURCE_MAX_BYTES, readImage } from '@/features/company/crop-logo';
+import { LogoCropDialog } from '@/components/settings/logo-crop-dialog';
 
-export function CompanySettingsTab() {
+export function CompanySettingsTab({ logoUrl }: { logoUrl: string | null }) {
+  const router = useRouter();
+  const [isLogoBusy, setIsLogoBusy] = useState(false);
+  // The picture just chosen, waiting in the crop box.
+  const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const settings = useSettingsStore();
   const { company, branches } = settings;
   const { brandTheme, setBrandTheme, themes } = useBrandTheme();
@@ -49,26 +59,61 @@ export function CompanySettingsTab() {
     }, 350);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const fakeUrl = URL.createObjectURL(file);
-      updateCompanyDetails({ logoUrl: fakeUrl });
-      toast.success('Company logo uploaded', {
-        description: `${file.name} is now used on dispatch sheets and invoices.`,
-      });
+  const handleLogoChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!LOGO_ACCEPT.split(',').includes(file.type)) {
+      toast.error('The logo must be a PNG, JPG or WebP image.');
+      return;
     }
+    if (file.size > LOGO_SOURCE_MAX_BYTES) {
+      toast.error('That picture is too big. Choose one under 15 MB.');
+      return;
+    }
+    const picture = await readImage(file);
+    if (!picture) {
+      toast.error("That file can't be opened as a picture.");
+      return;
+    }
+    setPendingLogo(picture);
   };
 
-  const handleRemoveLogo = () => {
-    updateCompanyDetails({ logoUrl: undefined });
+  /** Saves the cropped square. The server checks the file again before keeping it. */
+  const handleLogoCropped = async (cropped: Blob) => {
+    setPendingLogo(null);
+    if (cropped.size > LOGO_MAX_BYTES) {
+      toast.error('The logo must be 2 MB or smaller.');
+      return;
+    }
+    setIsLogoBusy(true);
+    const formData = new FormData();
+    formData.append('logo', new File([cropped], 'logo.png', { type: 'image/png' }));
+    const result = await uploadCompanyLogo(formData);
+    setIsLogoBusy(false);
+    if (!reportAction(result, { entity: 'logo', refresh: () => router.refresh() })) return;
+    router.refresh();
+    toast.success('Company logo saved', {
+      description: 'It now shows in the side menu.',
+    });
+  };
+
+  const handleRemoveLogo = async () => {
+    setIsLogoBusy(true);
+    const result = await removeCompanyLogo();
+    setIsLogoBusy(false);
+    if (!reportAction(result, { entity: 'logo', refresh: () => router.refresh() })) return;
+    router.refresh();
     toast.info('Logo removed', {
-      description: 'Reverted to default brand monogram (MC).',
+      description: 'Back to the default monogram.',
     });
   };
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <LogoCropDialog src={pendingLogo} onCancel={() => setPendingLogo(null)} onConfirm={handleLogoCropped} />
+
       {/* ── Sub-tabs Header (Profile, Branches, Preferences) ── */}
       <div className="border-b border-slate-200">
         <div className="flex items-center justify-between gap-4">
@@ -133,12 +178,12 @@ export function CompanySettingsTab() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
               {/* Logo Box */}
               <div className="h-20 w-20 rounded-xl bg-brand text-white flex items-center justify-center font-extrabold text-2xl tracking-wider shadow-xs overflow-hidden shrink-0 border border-brand/20">
-                {company.logoUrl ? (
+                {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={company.logoUrl}
+                    src={logoUrl}
                     alt="Company logo"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain bg-white"
                   />
                 ) : (
                   company.logoText || 'MC'
@@ -150,15 +195,16 @@ export function CompanySettingsTab() {
                 <div className="flex items-center gap-3">
                   <label className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95">
                     <Upload className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Upload logo</span>
+                    <span>{isLogoBusy ? 'Saving...' : 'Upload logo'}</span>
                     <input
                       type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
+                      accept={LOGO_ACCEPT}
+                      disabled={isLogoBusy}
+                      onChange={handleLogoChosen}
                       className="hidden"
                     />
                   </label>
-                  {company.logoUrl && (
+                  {logoUrl && (
                     <button
                       type="button"
                       onClick={handleRemoveLogo}
@@ -169,7 +215,7 @@ export function CompanySettingsTab() {
                   )}
                 </div>
                 <p className="text-xs text-slate-500">
-                  Shown on invoices and work tickets. Recommended: PNG or SVG, min 400x400px.
+                  Shown in the side menu. PNG, JPG or WebP. You can crop and zoom it after choosing.
                 </p>
               </div>
             </div>

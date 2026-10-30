@@ -35,9 +35,12 @@ import type { OrderFormOptions } from '@/features/orders/types';
 import { cn } from '@/lib/utils';
 import { DeleteOrderDialog } from './delete-order-dialog';
 import { cancelOrder, createOrder, updateOrder } from '@/features/orders/server/actions';
-import { clockFromHour, shiftClock } from '@/features/orders/mappers';
+import { clockFromHour, parseClock, shiftClock } from '@/features/orders/mappers';
+import { findOverlap } from '@/features/orders/conflicts';
 import { reportAction } from '@/lib/action-feedback';
 import { SiteCombobox } from '@/components/orders/site-combobox';
+import { SupplierCombobox } from '@/components/orders/supplier-combobox';
+import { ensureSupplier } from '@/features/suppliers/ensure';
 
 interface NewOrderModalProps {
   isOpen: boolean;
@@ -48,6 +51,8 @@ interface NewOrderModalProps {
   initialPumpId?: string;
   initialHour?: number;
   editingBooking?: ScheduleBooking | null;
+  /** Orders already on the board for `date`, used to warn about a busy pump. */
+  bookings: ScheduleBooking[];
   /** The day the schedule is showing (yyyy-MM-dd): the default pour date. */
   date: string;
 }
@@ -58,6 +63,7 @@ interface FormContentProps {
   initialPumpId?: string;
   initialHour?: number;
   editingBooking?: ScheduleBooking | null;
+  bookings: ScheduleBooking[];
   date: string;
   onOpenChange: (open: boolean) => void;
 }
@@ -68,6 +74,7 @@ function NewOrderModalForm({
   initialPumpId,
   initialHour = 7,
   editingBooking,
+  bookings,
   date,
   onOpenChange,
 }: FormContentProps) {
@@ -120,9 +127,23 @@ function NewOrderModalForm({
   const [assignedPumpId, setAssignedPumpId] = useState<string>(
     () => editingBooking?.pumpId || initialPumpId || 'assign-later',
   );
-  const [assignedOperator, setAssignedOperator] = useState<string>(
-    () => editingBooking?.operator || 'unassigned',
+  const operatorNameForPump = (pumpId: string): string =>
+    options.operators.find(
+      (o) => o.id === options.pumps.find((p) => p.id === pumpId)?.defaultOperatorId,
+    )?.name ?? 'unassigned';
+  const [assignedOperator, setAssignedOperator] = useState<string>(() =>
+    editingBooking
+      ? editingBooking.operator || 'unassigned'
+      : initialPumpId
+        ? operatorNameForPump(initialPumpId)
+        : 'unassigned',
   );
+
+  // Choosing a pump swaps in its default operator, or clears the operator when it has none.
+  const handlePumpChange = (pumpId: string) => {
+    setAssignedPumpId(pumpId);
+    setAssignedOperator(operatorNameForPump(pumpId));
+  };
 
   const [formErrors, setFormErrors] = useState<{
     customer?: string;
@@ -131,7 +152,7 @@ function NewOrderModalForm({
   }>({});
 
   const pourTimeOptions = useMemo(() => {
-    const labels = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((h) => clockFromHour(h));
+    const labels = Array.from({ length: 24 }, (_, h) => clockFromHour(h));
     // An order saved at 7:30 keeps showing 7:30.
     if (!labels.includes(pourTime)) labels.push(pourTime);
     return labels.map((label) => ({ value: label, label }));
@@ -235,12 +256,7 @@ function NewOrderModalForm({
     }
     const siteText = address.trim();
     const savedSite = customerRecord.sites.find((site) => site.address === siteText);
-    // A new order with no operator picked gets the pump's usual operator. Editing never
-    // assigns someone the dispatcher left unassigned.
-    const pumpDefault = options.pumps.find((p) => p.id === pumpId)?.defaultOperatorId ?? null;
-    const operatorId =
-      options.operators.find((o) => o.name === assignedOperator)?.id ??
-      (assignedOperator === 'unassigned' && !editingBooking ? pumpDefault : null);
+    const operatorId = options.operators.find((o) => o.name === assignedOperator)?.id ?? null;
 
     const base = {
       customerId: customerRecord.id,
@@ -255,6 +271,7 @@ function NewOrderModalForm({
     };
 
     startSaving(async () => {
+      await ensureSupplier(supplier, options.suppliers);
       if (editingBooking) {
         if (!editingBooking.jobId || editingBooking.version === undefined) return;
         const result = await updateOrder({
@@ -263,6 +280,8 @@ function NewOrderModalForm({
           version: editingBooking.version,
           date: isoDate,
           pourTime,
+          // Giving a pump to an order that had none confirms it, like a new order with a pump.
+          ...(!editingBooking.pumpId && !isAssignLater ? { bookingStatus: 'confirmed' as const } : {}),
         });
         if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
         toast.success('Order updated', {
@@ -316,6 +335,18 @@ function NewOrderModalForm({
 
   const isAssignLater = assignedPumpId === 'assign-later' || !assignedPumpId;
   const assignedPump = pumps.find((p) => p.id === assignedPumpId);
+
+  // Only a warning: the dispatcher can still save a time that overlaps another pour.
+  const { hour: pourHour, minute: pourMinute } = parseClock(pourTime);
+  const clash =
+    !isAssignLater && format(selectedDate, 'yyyy-MM-dd') === date
+      ? findOverlap(bookings, {
+          pumpId: assignedPumpId,
+          startHour: pourHour + pourMinute / 60,
+          durationHours: editingBooking?.durationHours ?? 1,
+          ignoreId: editingBooking?.id,
+        })
+      : null;
 
   return (
     <>
@@ -451,12 +482,11 @@ function NewOrderModalForm({
             <label className="text-xs font-semibold text-slate-700 block mb-1">
               Concrete supplier <span className="text-slate-400 font-normal">(optional)</span>
             </label>
-            <input
-              type="text"
+            <SupplierCombobox
               value={supplier}
-              onChange={(e) => setSupplier(e.target.value)}
-              placeholder="e.g. Auburn Concrete"
-              className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-900 outline-none focus:border-brand placeholder:text-slate-400 shadow-2xs"
+              onChange={setSupplier}
+              suppliers={options.suppliers}
+              placeholder="Search or type a supplier"
             />
           </div>
         </div>
@@ -481,19 +511,7 @@ function NewOrderModalForm({
               <label className="text-xs font-semibold text-slate-700">
                 Estimated volume
               </label>
-              {Number(volumeYards) > 0 ? (
-                <span
-                  className={cn(
-                    'text-[10.5px] font-mono transition-colors',
-                    formErrors.volume || Number(volumeYards) > 10000
-                      ? 'text-rose-600 font-bold'
-                      : 'text-brand font-semibold'
-                  )}
-                >
-                  ~{(Number(volumeYards) / 35).toFixed(1)}h est. pour
-                </span>
-              ) : (
-                <span
+                              <span
                   className={cn(
                     'text-[10.5px] font-mono transition-colors',
                     formErrors.volume ? 'text-rose-600 font-bold' : 'text-slate-400'
@@ -501,7 +519,6 @@ function NewOrderModalForm({
                 >
                   1–10,000 yd³
                 </span>
-              )}
             </div>
             <div
               className={cn(
@@ -593,12 +610,22 @@ function NewOrderModalForm({
             </label>
             <AppSelect
               value={assignedPumpId}
-              onChange={setAssignedPumpId}
+              onChange={handlePumpChange}
               options={pumpOptions}
               icon={Truck}
               className="h-10"
             />
           </div>
+
+          {clash && (
+            <p className="sm:col-span-2 flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
+              <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+              <span>
+                {assignedPump?.code ?? 'This pump'} already has {clash.customerName} at{' '}
+                {clockFromHour(clash.startHour)}. You can still save this booking.
+              </span>
+            </p>
+          )}
 
           {/* Assigned Operator Selector */}
           <div className="sm:col-span-2">
@@ -734,6 +761,7 @@ export function NewOrderModal({
   initialPumpId,
   initialHour = 7,
   editingBooking,
+  bookings,
   date,
 }: NewOrderModalProps) {
   return (
@@ -752,6 +780,7 @@ export function NewOrderModal({
           initialPumpId={initialPumpId}
           initialHour={initialHour}
           editingBooking={editingBooking}
+          bookings={bookings}
           date={date}
           onOpenChange={onOpenChange}
         />
