@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { DndContext, DragOverlay, pointerWithin, type DragEndEvent, type DragMoveEvent } from '@dnd-kit/core';
 import { Truck, Plus, GripVertical, Clock, Check, TriangleAlert } from 'lucide-react';
+import { DraggableCard, DroppableLane, useTimelineSensors } from './timeline-dnd';
 import { cn } from '@/lib/utils';
 import { PumpLane, ScheduleBooking } from './schedule-types';
 import { clockFromHour } from '@/features/orders/mappers';
@@ -132,16 +134,87 @@ export function TimelineGrid({
     el.scrollLeft = ((el.scrollWidth - labelWidth) / TIMELINE_HOURS.length) * FIRST_VISIBLE_HOUR;
   }, []);
 
+  // ── Dragging a card (mouse, or hold-then-drag on a tablet) ──
+  const dndId = useId();
+  const sensors = useTimelineSensors();
   const [draggedBookingId, setDraggedBookingId] = useState<string | null>(null);
-  const [dragOverTarget, setDragOverTarget] = useState<{
-    pumpId: string;
-    hour: number;
-  } | null>(null);
+  // Where the card would land: shown as a dashed box on that pump's row.
+  const [dropTarget, setDropTarget] = useState<{ pumpId: string; startHour: number } | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const lastOverPumpId = useRef<string | null>(null);
+  // A drag that ends with the mouse over a card should not also open it.
+  const justDragged = useRef(false);
+  const draggedBooking = bookings.find((b) => b.id === draggedBookingId) ?? null;
+
+  /**
+   * The pump under the pointer, and a start time moved by whole hours from the card's own,
+   * so a 7:30 pour stays on the half hour. Measured from the screen, so it is right after the board scrolls.
+   */
+  const measureTarget = (bookingId: string, pumpId: string | null, fallbackDeltaX = 0) => {
+    const scroller = scrollRef.current;
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!scroller || !booking || !pumpId) return null;
+    const card = scroller.querySelector<HTMLElement>(`[data-booking-id="${bookingId}"]`);
+    const lane = scroller.querySelector<HTMLElement>(`[data-lane-id="${pumpId}"]`);
+    if (!card || !lane) return null;
+    const hourWidth = lane.getBoundingClientRect().width / TIMELINE_HOURS.length;
+    const overlay = overlayRef.current;
+    const deltaX = overlay
+      ? overlay.getBoundingClientRect().left - card.getBoundingClientRect().left
+      : fallbackDeltaX;
+    const minutes = booking.startHour % 1;
+    const startHour = Math.min(23 + minutes, Math.max(minutes, booking.startHour + Math.round(deltaX / hourWidth)));
+    return { pumpId, startHour };
+  };
+
+  const showTarget = (target: { pumpId: string; startHour: number } | null) =>
+    setDropTarget((prev) =>
+      prev?.pumpId === target?.pumpId && prev?.startHour === target?.startHour ? prev : target,
+    );
+
+  const handleDragMove = ({ active, over }: DragMoveEvent) => {
+    lastOverPumpId.current = over ? String(over.id) : null;
+    showTarget(measureTarget(String(active.id), lastOverPumpId.current));
+  };
+
+  const endDrag = () => {
+    setDraggedBookingId(null);
+    setDropTarget(null);
+    lastOverPumpId.current = null;
+    justDragged.current = true;
+    setTimeout(() => {
+      justDragged.current = false;
+    }, 0);
+  };
+
+  const handleDragEnd = ({ active, over, delta }: DragEndEvent) => {
+    const target = measureTarget(String(active.id), over ? String(over.id) : null, delta.x);
+    endDrag();
+    if (target) onRescheduleBooking(String(active.id), target.pumpId, target.startHour);
+  };
 
   return (
     <TooltipProvider>
+    <DndContext
+      id={dndId}
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      // Scroll the board only when the pointer is right at its edge, so a short drag stays put.
+      autoScroll={{ threshold: { x: 0.08, y: 0.1 } }}
+      onDragStart={({ active }) => setDraggedBookingId(String(active.id))}
+      onDragMove={handleDragMove}
+      onDragEnd={handleDragEnd}
+      onDragCancel={endDrag}
+    >
     <div className="w-full rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
-      <div ref={scrollRef} className="overflow-x-auto min-w-full">
+      <div
+        ref={scrollRef}
+        // The board scrolls itself near the edges while dragging; keep the landing box in step.
+        onScroll={() => {
+          if (draggedBookingId) showTarget(measureTarget(draggedBookingId, lastOverPumpId.current));
+        }}
+        className="overflow-x-auto min-w-full"
+      >
         <div className="min-w-[2200px]">
           {/* ── 1. HEADER ROW ── */}
           <div className="flex border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold text-xs sticky top-0 z-30">
@@ -195,8 +268,8 @@ export function TimelineGrid({
                   </div>
 
                   {/* Right Timeline Area: 24-Column Grid */}
-                  <div className="flex-1 relative min-w-[2000px]">
-                    {/* Layer A: 24 Interactive Hourly Cells (Drop Targets & Add Slots) */}
+                  <DroppableLane pumpId={pump.id} className="flex-1 relative min-w-[2000px]">
+                    {/* Layer A: 24 hourly cells; an empty one starts a booking */}
                     <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] h-full">
                       {TIMELINE_HOURS.map((slot) => {
                         const isBooked = pumpBookings.some(
@@ -205,67 +278,19 @@ export function TimelineGrid({
                             slot.hour < b.startHour + b.durationHours,
                         );
 
-                        const isDragOver =
-                          dragOverTarget?.pumpId === pump.id &&
-                          dragOverTarget?.hour === slot.hour;
-
                         return (
                           <div
                             key={slot.hour}
                             onClick={() =>
-                              !isBooked && onSlotClick(pump.id, slot.hour)
+                              !isBooked && !justDragged.current && onSlotClick(pump.id, slot.hour)
                             }
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = 'move';
-                              if (
-                                dragOverTarget?.pumpId !== pump.id ||
-                                dragOverTarget?.hour !== slot.hour
-                              ) {
-                                setDragOverTarget({
-                                  pumpId: pump.id,
-                                  hour: slot.hour,
-                                });
-                              }
-                            }}
-                            onDragLeave={() => {
-                              if (
-                                dragOverTarget?.pumpId === pump.id &&
-                                dragOverTarget?.hour === slot.hour
-                              ) {
-                                setDragOverTarget(null);
-                              }
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const bookingId =
-                                e.dataTransfer.getData('text/plain');
-                              if (bookingId) {
-                                onRescheduleBooking(
-                                  bookingId,
-                                  pump.id,
-                                  slot.hour,
-                                );
-                              }
-                              setDraggedBookingId(null);
-                              setDragOverTarget(null);
-                            }}
                             className={cn(
                               'border-r border-slate-100 last:border-r-0 relative flex items-center justify-center p-1.5 transition-all cursor-pointer select-none',
                               !isBooked && 'hover:bg-slate-100/50',
-                              isDragOver &&
-                                'bg-brand-light border-2 border-dashed border-brand z-20',
                             )}
                           >
-                            {/* Drag-over hover state indicator */}
-                            {isDragOver && (
-                              <div className="text-[10px] font-bold text-brand animate-pulse">
-                                Drop here
-                              </div>
-                            )}
-
                             {/* Interactive dynamic hover slot for other empty cells */}
-                            {!isBooked && !isDragOver && (
+                            {!isBooked && !draggedBookingId && (
                               <div className="w-full h-full rounded-lg border border-dashed border-slate-200 opacity-0 hover:opacity-100 hover:border-brand/40 hover:bg-brand-light/40 text-brand flex items-center justify-center gap-1 text-[11px] font-medium transition-all">
                                 <Plus className="h-3 w-3" />
                                 <span>Add</span>
@@ -310,29 +335,17 @@ export function TimelineGrid({
                         });
 
                         // Descriptive tooltip with full un-truncated details
-                        const cardTooltip = `${booking.customerName} • ${booking.volumeYards} yd³\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${timeRangeLabel(booking)} (${booking.durationHours}h)${overlap ? `\nOverlaps ${overlap.customerName} (${overlap.orderNumber}) at ${timeRangeLabel(overlap)}` : ""}\nDrag to reschedule • Click to view details`;
+                        const cardTooltip = `${booking.customerName} • ${booking.volumeYards} yd³\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${timeRangeLabel(booking)} (${booking.durationHours}h)${overlap ? `\nOverlaps ${overlap.customerName} (${overlap.orderNumber}) at ${timeRangeLabel(overlap)}` : ""}\nDrag to reschedule (on a tablet, hold then drag) • Click to view details`;
 
                         return (
-                          <div
+                          <DraggableCard
                             key={booking.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('text/plain', booking.id);
-                              e.dataTransfer.effectAllowed = 'move';
-                              // Let the slots under every card receive the drop. Deferred so the browser
-                              // has already started the drag before the card stops catching pointer events.
-                              setTimeout(() => setDraggedBookingId(booking.id), 0);
-                            }}
-                            onDragEnd={() => {
-                              setDraggedBookingId(null);
-                              setDragOverTarget(null);
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onBookingClick(booking);
+                            bookingId={booking.id}
+                            onClick={() => {
+                              if (!justDragged.current) onBookingClick(booking);
                             }}
                             className={cn(
-                              draggedBookingId ? 'pointer-events-none' : 'pointer-events-auto',
+                              'pointer-events-auto',
                               'h-full rounded-lg flex flex-col justify-between shadow-2xs border transition-all cursor-grab active:cursor-grabbing hover:shadow-md select-none overflow-hidden max-w-full min-w-0 border-l-[3.5px]',
                               ROW_STARTS[trackOf.get(booking.id) ?? 0],
                               isNarrow ? 'p-1.5' : 'p-2.5',
@@ -452,11 +465,33 @@ export function TimelineGrid({
                                 </span>
                               </div>
                             )}
-                          </div>
+                          </DraggableCard>
                         );
                       })}
                     </div>
-                  </div>
+
+                    {/* Layer C: where the dragged card would land, over everything on this row */}
+                    {draggedBooking && dropTarget?.pumpId === pump.id && (
+                      <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] absolute inset-0 p-1.5 pointer-events-none z-20">
+                        <div
+                          className={cn(
+                            'flex items-end rounded-lg border-2 border-dashed border-brand bg-brand-light/60 p-1.5',
+                            COL_STARTS[Math.max(0, Math.min(23, Math.floor(dropTarget.startHour)))],
+                            COL_SPANS[
+                              Math.min(
+                                Math.max(1, Math.round(draggedBooking.durationHours)),
+                                24 - Math.max(0, Math.min(23, Math.floor(dropTarget.startHour))),
+                              ) - 1
+                            ],
+                          )}
+                        >
+                          <span className="truncate rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-brand shadow-2xs">
+                            {clockFromHour(dropTarget.startHour)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </DroppableLane>
                 </div>
               );
             })}
@@ -464,6 +499,22 @@ export function TimelineGrid({
         </div>
       </div>
     </div>
+
+    {/* The card that follows the pointer or finger. No fly-back: the card is moved at once on drop. */}
+    <DragOverlay dropAnimation={null}>
+      {draggedBooking && (
+        <div
+          ref={overlayRef}
+          className="flex h-full cursor-grabbing flex-col justify-between overflow-hidden rounded-lg border border-brand/50 border-l-[3.5px] border-l-brand bg-white p-2 shadow-xl ring-2 ring-brand/20"
+        >
+          <span className="truncate text-xs font-bold text-slate-900">{draggedBooking.customerName}</span>
+          <span className="truncate text-[10px] font-semibold text-slate-500">
+            {dropTarget ? `Drop at ${clockFromHour(dropTarget.startHour)}` : timeRangeLabel(draggedBooking)}
+          </span>
+        </div>
+      )}
+    </DragOverlay>
+    </DndContext>
     </TooltipProvider>
   );
 }
