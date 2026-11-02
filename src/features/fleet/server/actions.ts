@@ -35,6 +35,7 @@ type PumpInput = {
   defaultOperatorId: string | null;
   status: 'available' | 'maintenance';
   maintenanceNote: string | null;
+  availableAgainOn: string | null;
   inspectionDate: string | null;
 };
 
@@ -52,6 +53,7 @@ function pumpRecord(input: PumpInput) {
     default_operator_id: input.defaultOperatorId,
     status: input.status,
     notes: input.status === 'maintenance' ? input.maintenanceNote : null,
+    available_again_on: input.status === 'maintenance' ? input.availableAgainOn : null,
     next_inspection_due: input.inspectionDate,
   };
 }

@@ -2,6 +2,7 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 import type { ScheduleBooking } from '@/components/schedule/schedule-types';
 import type { Tables } from '@/types/database.types';
+import { toOrderStatus } from '@/features/orders/statuses';
 import type { FullOrderData, OrderItem } from '@/features/orders/types';
 
 export type JobRow = Tables<'jobs'>;
@@ -79,9 +80,7 @@ function parseExtraItems(value: unknown): { name: string; quantity: number }[] {
 // ── Status ──
 
 function orderStatus(job: JobRow): OrderItem['status'] {
-  if (job.booking_status === 'cancelled') return 'Cancelled';
-  if (job.field_status === 'done') return 'Completed';
-  return job.booking_status === 'confirmed' ? 'Confirmed' : 'Pending';
+  return toOrderStatus(job.booking_status);
 }
 
 // ── View models ──
@@ -171,9 +170,15 @@ export function toFullOrder(h: HydratedJob): FullOrderData {
 export function toBooking(h: HydratedJob): ScheduleBooking {
   const { job } = h;
   const tz = job.timezone;
-  const startHour = localHour(job.scheduled_start, tz);
-  const durationHours =
+  // The pour starts at scheduled_start and the order ends at scheduled_end, clean-up included.
+  // The board block covers everything: prep before the pour through the end of clean-up.
+  const pourHour = localHour(job.scheduled_start, tz);
+  const pourSpanHours =
     (new Date(job.scheduled_end).getTime() - new Date(job.scheduled_start).getTime()) / 3_600_000;
+  const prepHours = Math.min(pourHour, job.prep_minutes / 60);
+  const startHour = pourHour - prepHours;
+  const durationHours = prepHours + pourSpanHours;
+  const pourHours = Math.max(0.25, pourSpanHours - job.cleanup_minutes / 60);
 
   return {
     id: job.id,
@@ -191,10 +196,13 @@ export function toBooking(h: HydratedJob): ScheduleBooking {
     minPumpSize: job.min_pump_size ?? undefined,
     arriveByLabel: job.arrive_by ? clockOf(job.arrive_by, tz) : undefined,
     pourTimeLabel: clockOf(job.scheduled_start, tz),
+    contactId: h.contact?.id,
     contactName: h.contact?.name,
     contactPhone: h.contact?.phone,
     startHour,
     durationHours: Math.max(0.5, durationHours),
+    pourHour,
+    pourHours,
     volumeYards: Number(job.estimated_yards),
     status: 'travel',
     notes: job.site_instructions ?? undefined,

@@ -107,10 +107,12 @@ describe("clock helpers", () => {
 });
 
 describe("order view models", () => {
-  it("shows Pending, Confirmed, Completed and Cancelled", () => {
+  it("shows Pending, Inspection Pending, Confirmed, Turned In, Reviewed and Cancelled", () => {
     expect(toOrderItem(hydrated()).status).toBe("Pending");
+    expect(toOrderItem(hydrated({ booking_status: "inspection_pending" })).status).toBe("Inspection Pending");
     expect(toOrderItem(hydrated({ booking_status: "confirmed" })).status).toBe("Confirmed");
-    expect(toOrderItem(hydrated({ booking_status: "confirmed", field_status: "done" })).status).toBe("Completed");
+    expect(toOrderItem(hydrated({ booking_status: "turned_in" })).status).toBe("Turned In");
+    expect(toOrderItem(hydrated({ booking_status: "reviewed" })).status).toBe("Reviewed");
     expect(toOrderItem(hydrated({ booking_status: "cancelled" })).status).toBe("Cancelled");
   });
 
@@ -140,8 +142,11 @@ describe("order view models", () => {
 
   it("puts a booking on the grid by local hour and length", () => {
     const booking = toBooking(hydrated({}, { operator: { id: "o1", name: "Rob Black", phone: "" } }));
-    expect(booking.startHour).toBe(7);
-    expect(booking.durationHours).toBe(3);
+    // The block runs from prep (6:30 AM) to the end of clean-up (10:00 AM); the pour is 7:00 AM for 2.5 hours.
+    expect(booking.startHour).toBe(6.5);
+    expect(booking.durationHours).toBe(3.5);
+    expect(booking.pourHour).toBe(7);
+    expect(booking.pourHours).toBe(2.5);
     expect(booking.dispatchStatus).toBe("draft");
     expect(toBooking(hydrated({ dispatch_status: "dispatched" }, { operator: { id: "o1", name: "Rob", phone: "" } })).dispatchStatus).toBe("dispatched");
     expect(toBooking(hydrated()).dispatchStatus).toBe("unassigned");

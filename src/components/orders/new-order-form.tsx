@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createOrder, getDayBlocks } from "@/features/orders/server/actions";
 import { findOverlap } from "@/features/orders/conflicts";
+import { CLEANUP_MINUTES, PREP_MINUTES, formatDuration, pumpMinutesFor } from "@/features/orders/duration";
 import { reportAction } from "@/lib/action-feedback";
 import { DatePicker } from "@/components/ui/date-picker";
 import type { DayBlock, OrderFormContact, OrderFormOptions, OrderFormSite } from "@/features/orders/types";
@@ -30,6 +31,7 @@ import { SiteCombobox } from "@/components/orders/site-combobox";
 import { SupplierCombobox } from "@/components/orders/supplier-combobox";
 import { ensureSupplier } from "@/features/suppliers/ensure";
 import { NewContactModal } from "@/components/contacts/new-contact-modal";
+import { EDITABLE_ORDER_STATUSES, toBookingStatus, type EditableOrderStatus } from "@/features/orders/statuses";
 
 // Common pour types. These move to Settings > Lists once that is saved in the database.
 const POUR_TYPE_OPTIONS = [
@@ -40,7 +42,7 @@ const POUR_TYPE_OPTIONS = [
 ];
 
 const newOrderSchema = z.object({
-  status: z.enum(["Pending", "Confirmed"]),
+  status: z.enum(EDITABLE_ORDER_STATUSES),
   customer: z.string().min(1, "Customer name is required"),
   jobContact: z.string().optional(),
   jobSite: z.string().min(2, "Town or site address is required"),
@@ -84,10 +86,8 @@ const newOrderSchema = z.object({
 function parseMinutes(durationStr: string): number {
   if (!durationStr) return 0;
   const hrMatch = durationStr.match(/(\d+(?:\.\d+)?)\s*hr/i);
-  if (hrMatch) return Math.round(parseFloat(hrMatch[1]) * 60);
   const minMatch = durationStr.match(/(\d+)\s*min/i);
-  if (minMatch) return parseInt(minMatch[1], 10);
-  return 0;
+  return (hrMatch ? Math.round(parseFloat(hrMatch[1]) * 60) : 0) + (minMatch ? parseInt(minMatch[1], 10) : 0);
 }
 
 function parseTimeToMinutes(timeStr: string): number {
@@ -142,7 +142,8 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   const searchParams = useSearchParams();
 
   // Read search parameters passed from schedule slot or quick order modal
-  const paramStatus = searchParams.get("status") as "Pending" | "Confirmed" | null;
+  const rawStatus = searchParams.get("status");
+  const paramStatus = EDITABLE_ORDER_STATUSES.find((status) => status === rawStatus) ?? null;
   const paramVolume = searchParams.get("volume");
   const paramPourTime = searchParams.get("pourTime");
   const paramHour = searchParams.get("hour");
@@ -165,16 +166,19 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
     return "7:00 AM";
   }, [paramPourTime, paramHour]);
 
-  // Dynamically calculate initial arrival (pour - 30m) & finish (pour + 2h + 30m)
+  // How long the pour takes for the starting volume: 60 minutes + 1.5 per yard, to the nearest 15.
+  const initialPumpMinutes = pumpMinutesFor(Number(paramVolume || 60));
+
+  // Arrival is prep (30 min) before the pour; the order finishes after the pour and clean-up (30 min).
   const initialCalculatedTimes = useMemo(() => {
     const pourMins = parseTimeToMinutes(initialPourTime);
-    const arriveMins = pourMins - 30;
-    const finishMins = pourMins + 120 + 30;
+    const arriveMins = pourMins - PREP_MINUTES;
+    const finishMins = pourMins + initialPumpMinutes + CLEANUP_MINUTES;
     return {
       arriveBy: formatMinutesToTime(arriveMins),
       estimatedFinish: formatMinutesToTime(finishMins),
     };
-  }, [initialPourTime]);
+  }, [initialPourTime, initialPumpMinutes]);
 
   const initialJobSite = useMemo(() => {
     if (paramSite && paramTown) return `${paramSite}, ${paramTown}`;
@@ -203,7 +207,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       arriveBy: initialCalculatedTimes.arriveBy,
       estimatedFinish: initialCalculatedTimes.estimatedFinish,
       prepDuration: "30 min",
-      pumpingDuration: "2 hr",
+      pumpingDuration: formatDuration(initialPumpMinutes),
       cleanupDuration: "30 min",
       supplier: "",
       estimatedVolume: paramVolume || "60",
@@ -246,6 +250,11 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
     setValue("arriveBy", formatMinutesToTime(arriveMins), { shouldValidate: true });
     setValue("estimatedFinish", formatMinutesToTime(finishMins), { shouldValidate: true });
   };
+
+  // The usual choices, plus whatever the volume worked out to.
+  const pumpingOptions = [...new Set([...["1 hr", "2 hr", "3 hr", "4 hr", "5 hr"], watch("pumpingDuration")])].sort(
+    (a, b) => parseMinutes(a) - parseMinutes(b),
+  );
 
   const toggleLinesOnSite = () => {
     const next = !linesOnSite;
@@ -336,7 +345,8 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
 
   // Only a warning: a dispatcher can still save a time that overlaps another pour.
   const chosenPump = watch("assignedPump");
-  const startMinutes = parseTimeToMinutes(watch("pourTime"));
+  // The block covers everything: from arrival (prep) to the end of clean-up.
+  const startMinutes = parseTimeToMinutes(watch("arriveBy") || watch("pourTime"));
   let endMinutes = parseTimeToMinutes(watch("estimatedFinish") || "");
   if (endMinutes <= startMinutes) endMinutes += 1440;
   const clash =
@@ -381,7 +391,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       siteInstructions: data.operatorInstructions ?? "",
       internalNote: data.internalNote ?? "",
       billingService: billingServiceOptions.find((o) => o.value === data.billingService)?.label ?? "",
-      bookingStatus: data.status === "Confirmed" ? ("confirmed" as const) : ("pending" as const),
+      bookingStatus: toBookingStatus(data.status),
       contactId: contact?.id ?? null,
       equipmentId: pumpId,
       employeeId: operatorId,
@@ -437,12 +447,12 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
           {/* Status Dropdown */}
           <div className="flex items-center gap-1.5 text-xs text-slate-600 shrink-0">
             <span className="font-medium">Status:</span>
-            <div className="w-28 sm:w-32">
+            <div className="w-40 sm:w-44">
               <AppSelect
                 size="sm"
                 value={watch("status")}
-                onChange={(val) => setValue("status", val as "Pending" | "Confirmed")}
-                options={["Pending", "Confirmed"]}
+                onChange={(val) => setValue("status", val as EditableOrderStatus)}
+                options={[...EDITABLE_ORDER_STATUSES]}
               />
             </div>
           </div>
@@ -641,7 +651,14 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                       min={1}
                       max={10000}
                       step={5}
-                      {...register("estimatedVolume")}
+                      {...register("estimatedVolume", {
+                        // Volume sets how long the pour takes; the arrival and finish times follow.
+                        onChange: (e) => {
+                          const pumping = formatDuration(pumpMinutesFor(Number(e.target.value)));
+                          setValue("pumpingDuration", pumping);
+                          updateCalculatedTimes(getValues("pourTime"), getValues("prepDuration"), pumping, getValues("cleanupDuration"));
+                        },
+                      })}
                       placeholder="120"
                       className={cn(
                         "w-full h-9 pl-3 pr-10 rounded-lg border bg-white text-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
@@ -921,7 +938,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                       setValue("pumpingDuration", val);
                       updateCalculatedTimes(getValues("pourTime"), getValues("prepDuration"), val, getValues("cleanupDuration"));
                     }}
-                    options={["1 hr", "2 hr", "3 hr", "4 hr", "5 hr"]}
+                    options={pumpingOptions}
                   />
                 </div>
 

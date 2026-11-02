@@ -15,6 +15,7 @@ import {
   Check,
   Plus,
   ChevronsLeftRight,
+  MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -113,6 +114,12 @@ const navItems: NavItem[] = [
     title: 'Operators',
     href: '/operators',
     icon: UserCheck,
+    matchPrefix: true,
+  },
+  {
+    title: 'Map',
+    href: '/map',
+    icon: MapPin,
     matchPrefix: true,
   },
 ];
@@ -432,24 +439,7 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
                 <span className="truncate">{item.title}</span>
 
                 {/* Badges */}
-                {item.title === 'Schedule' && item.badge ? (
-                  <span
-                    className={cn(
-                      'ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold transition-all shrink-0',
-                      isActive
-                        ? 'bg-brand text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/80 group-hover:text-slate-900'
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'h-1.5 w-1.5 rounded-full shrink-0',
-                        isActive ? 'bg-emerald-300 animate-pulse' : 'bg-emerald-500 animate-pulse'
-                      )}
-                    />
-                    <span>{item.badge}</span>
-                  </span>
-                ) : item.badge ? (
+                {item.badge ? (
                   <span
                     className={cn(
                       'ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 transition-colors',

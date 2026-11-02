@@ -41,6 +41,7 @@ const pumpRow: EquipmentRow = {
   min_hours_override: 4,
   default_operator_id: "e-1",
   next_inspection_due: "2026-10-28",
+  available_again_on: null,
   notes: null,
 };
 
@@ -90,6 +91,23 @@ describe("mapPump", () => {
     expect(pump.nextInspection.dueSoon).toBe(false);
     expect(pump.hourlyRate).toBe("");
   });
+
+  it("keeps a pump in maintenance until its available-again date, then treats it as available", () => {
+    const row = { ...pumpRow, status: "maintenance" as const, notes: "Service", available_again_on: "2026-10-25" };
+    const before = mapPump(row, new Map(), TODAY);
+    expect(before.inMaintenance).toBe(true);
+    expect(before.availableAgainOn).toBe("2026-10-25");
+
+    const onTheDay = mapPump(row, new Map(), "2026-10-25");
+    expect(onTheDay.inMaintenance).toBe(false);
+    expect(onTheDay.status).toBe("available");
+    expect(onTheDay.maintenanceNote).toBeUndefined();
+  });
+
+  it("stays in maintenance indefinitely when no date is set", () => {
+    const pump = mapPump({ ...pumpRow, status: "maintenance" as const }, new Map(), "2027-01-01");
+    expect(pump.inMaintenance).toBe(true);
+  });
 });
 
 describe("mapOperator", () => {
@@ -120,7 +138,7 @@ describe("schemas", () => {
   const validPump = {
     unitNumber: "05", make: "", model: "", year: 2024, type: "boom_pump" as const, boomSize: 38,
     horizontalReach: 124, hourlyRate: 195, minHours: 4, defaultOperatorId: null,
-    status: "available" as const, maintenanceNote: "", inspectionDate: "",
+    status: "available" as const, maintenanceNote: "", availableAgainOn: "", inspectionDate: "",
   };
 
   it("accepts a valid pump and turns blanks into null", () => {

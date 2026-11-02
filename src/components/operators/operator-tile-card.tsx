@@ -59,12 +59,14 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
     e.preventDefault();
     e.stopPropagation();
     toast.info(`Calling ${name}`, { description: phone });
+    window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   };
 
   const handleText = (e: React.MouseEvent, phone: string, name: string) => {
     e.preventDefault();
     e.stopPropagation();
     toast.info(`Opening SMS with ${name}`, { description: phone });
+    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}`;
   };
 
   return (
@@ -118,8 +120,8 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
           </div>
         </div>
 
-        {/* Details: Assigned Pump, Branch, Today Status, Phone */}
-        <div className="space-y-2 pt-1 text-xs">
+        {/* Details: Assigned Pump, Branch, Today Status, Phone. On mobile the card is just the name and Call / Text. */}
+        <div className="hidden sm:block space-y-2 pt-1 text-xs">
           {/* Assigned Rig / Pump & Yard */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 text-slate-700 font-medium truncate min-w-0">
@@ -130,9 +132,11 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
                   : 'No default pump'}
               </span>
             </div>
-            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">
-              {operator.branch}
-            </span>
+            {operator.branch && (
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">
+                {operator.branch}
+              </span>
+            )}
           </div>
 
           {/* Today's Availability / Shift */}

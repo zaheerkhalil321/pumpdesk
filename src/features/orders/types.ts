@@ -1,4 +1,5 @@
 import type { OrderFormSupplier } from '@/features/suppliers/types';
+import type { OrderStatus } from '@/features/orders/statuses';
 
 /** Real records the New order and quick-booking forms offer in their dropdowns. */
 
@@ -109,7 +110,7 @@ export interface OrderItem {
   /** The operator's phone, or empty when they have none. */
   operatorPhone: string;
   isUnassigned?: boolean;
-  status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+  status: OrderStatus;
   invoiceStatus: 'Not created' | 'Create invoice' | 'Paid';
   volumeYards?: number;
 }
@@ -137,7 +138,7 @@ export interface FullOrderData {
   customerPhone: string;
   customerContact: string;
   jobName: string;
-  status: 'Pending' | 'Confirmed' | 'Turned In' | 'Completed' | 'Cancelled';
+  status: OrderStatus;
   pourType: string;
   locationCity: string;
   serviceDate: string;

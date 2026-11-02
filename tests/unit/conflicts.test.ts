@@ -12,6 +12,8 @@ function booking(id: string, pumpId: string, startHour: number, durationHours: n
     jobSiteName: "Site",
     startHour,
     durationHours,
+    pourHour: startHour,
+    pourHours: durationHours,
     volumeYards: 10,
     status: "travel",
   };

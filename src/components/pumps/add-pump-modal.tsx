@@ -123,6 +123,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
       defaultOperatorId: operatorId === 'none' ? null : operatorId,
       status: 'available' as const,
       maintenanceNote: '',
+      availableAgainOn: '',
       inspectionDate: '',
     };
 

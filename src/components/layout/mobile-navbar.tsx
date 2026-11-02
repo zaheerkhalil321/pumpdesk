@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronDown,
   Check,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -117,6 +118,12 @@ const NAV_ITEMS: NavItem[] = [
     title: 'Operators',
     href: '/operators',
     icon: UserCheck,
+    matchPrefix: true,
+  },
+  {
+    title: 'Map',
+    href: '/map',
+    icon: MapPin,
     matchPrefix: true,
   },
 ];
@@ -319,26 +326,7 @@ export function MobileNavbar({ navCounts }: { navCounts: NavCounts }) {
                     </div>
 
                     {/* Prominent Badges */}
-                    {item.badgeType === 'schedule' ? (
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all shrink-0',
-                          isActive
-                            ? 'bg-brand text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200/60',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'h-1.5 w-1.5 rounded-full shrink-0',
-                            isActive
-                              ? 'bg-emerald-300 animate-pulse'
-                              : 'bg-emerald-500 animate-pulse',
-                          )}
-                        />
-                        <span>{item.badge}</span>
-                      </span>
-                    ) : item.badge ? (
+                    {item.badge ? (
                       <span
                         className={cn(
                           'text-[10.5px] font-semibold px-2 py-0.5 rounded-full shrink-0 transition-colors',

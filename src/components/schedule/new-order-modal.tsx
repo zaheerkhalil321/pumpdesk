@@ -27,20 +27,29 @@ import {
   Trash2,
   Pencil,
   AlertCircle,
+  UserPlus,
+  Contact,
 } from 'lucide-react';
 import { PumpLane, ScheduleBooking } from './schedule-types';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import type { OrderFormOptions } from '@/features/orders/types';
+import type { OrderFormContact, OrderFormCustomer, OrderFormOptions } from '@/features/orders/types';
 import { cn } from '@/lib/utils';
 import { DeleteOrderDialog } from './delete-order-dialog';
 import { cancelOrder, createOrder, updateOrder } from '@/features/orders/server/actions';
 import { clockFromHour, parseClock, shiftClock } from '@/features/orders/mappers';
 import { findOverlap } from '@/features/orders/conflicts';
+import { CLEANUP_MINUTES, PREP_MINUTES, pumpMinutesFor } from '@/features/orders/duration';
 import { reportAction } from '@/lib/action-feedback';
 import { SiteCombobox } from '@/components/orders/site-combobox';
 import { SupplierCombobox } from '@/components/orders/supplier-combobox';
 import { ensureSupplier } from '@/features/suppliers/ensure';
+import { QuickCustomerDialog } from './quick-customer-dialog';
+import { QuickContactDialog } from './quick-contact-dialog';
+
+/** Select values for the "add new" rows at the bottom of the customer and contact pickers. */
+const NEW_CUSTOMER = '__new_customer__';
+const NEW_CONTACT = '__new_contact__';
 
 interface NewOrderModalProps {
   isOpen: boolean;
@@ -90,7 +99,7 @@ function NewOrderModalForm({
 
   // Pour Time State
   const [pourTime, setPourTime] = useState(() =>
-    clockFromHour(editingBooking ? editingBooking.startHour : initialHour || 14),
+    clockFromHour(editingBooking ? editingBooking.pourHour : initialHour || 14),
   );
 
   // Customer & Supplier States
@@ -98,6 +107,26 @@ function NewOrderModalForm({
     () => editingBooking?.customerName || '',
   );
   const [supplier, setSupplier] = useState(() => editingBooking?.supplierName ?? '');
+
+  // Customers and contacts added from this form, shown at once without leaving it.
+  const [addedCustomers, setAddedCustomers] = useState<OrderFormCustomer[]>([]);
+  const [addedContacts, setAddedContacts] = useState<Record<string, OrderFormContact[]>>({});
+  const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [contactId, setContactId] = useState(() => editingBooking?.contactId ?? '');
+  const [contactChosen, setContactChosen] = useState(false);
+
+  const customers = useMemo(() => {
+    const known = new Set(options.customers.map((c) => c.id));
+    return [...options.customers, ...addedCustomers.filter((c) => !known.has(c.id))].map((c) => {
+      const extra = (addedContacts[c.id] ?? []).filter((x) => !c.contacts.some((k) => k.id === x.id));
+      return extra.length ? { ...c, contacts: [...c.contacts, ...extra] } : c;
+    });
+  }, [options.customers, addedCustomers, addedContacts]);
+  const selectedCustomer = customers.find((c) => c.name === customer);
+  const contactList = selectedCustomer?.contacts ?? [];
+  // Falls back to the customer's first contact until someone picks another.
+  const effectiveContactId = contactList.some((c) => c.id === contactId) ? contactId : (contactList[0]?.id ?? '');
 
   // Single Unified Address State (accepts full address, street + city, or city/state)
   const [address, setAddress] = useState(() => {
@@ -249,7 +278,7 @@ function NewOrderModalForm({
     const selectedPump = pumps.find((p) => p.id === assignedPumpId);
     const pumpId = isAssignLater ? null : assignedPumpId;
 
-    const customerRecord = options.customers.find((c) => c.name === customer);
+    const customerRecord = customers.find((c) => c.name === customer);
     if (!customerRecord) {
       setFormErrors({ customer: 'Pick one of your customers.' });
       return;
@@ -282,6 +311,14 @@ function NewOrderModalForm({
           pourTime,
           // Giving a pump to an order that had none confirms it, like a new order with a pump.
           ...(!editingBooking.pumpId && !isAssignLater ? { bookingStatus: 'confirmed' as const } : {}),
+          ...(contactChosen ? { contactId: effectiveContactId || null } : {}),
+          // A new volume means a new pour length: finish moves with it, prep and clean-up stay as saved.
+          ...(volumeChanged
+            ? {
+                pumpMinutes,
+                estimatedFinish: shiftClock(pourTime, pumpMinutes + savedCleanupMinutes),
+              }
+            : {}),
         });
         if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
         toast.success('Order updated', {
@@ -292,16 +329,16 @@ function NewOrderModalForm({
           ...base,
           date: isoDate,
           pourTime,
-          arriveBy: shiftClock(pourTime, -30),
-          estimatedFinish: shiftClock(pourTime, 150),
-          prepMinutes: 30,
-          pumpMinutes: 120,
-          cleanupMinutes: 30,
+          arriveBy: shiftClock(pourTime, -PREP_MINUTES),
+          estimatedFinish: shiftClock(pourTime, pumpMinutes + CLEANUP_MINUTES),
+          prepMinutes: PREP_MINUTES,
+          pumpMinutes,
+          cleanupMinutes: CLEANUP_MINUTES,
           travelMinutes: 0,
           linesOnSite: false,
           collectOnDelivery: false,
           bookingStatus: isAssignLater ? 'pending' : 'confirmed',
-          contactId: customerRecord.contacts[0]?.id ?? null,
+          contactId: effectiveContactId || null,
         });
         if (!reportAction(result, { entity: 'order', refresh: () => router.refresh() })) return;
         if (isAssignLater) {
@@ -336,14 +373,28 @@ function NewOrderModalForm({
   const isAssignLater = assignedPumpId === 'assign-later' || !assignedPumpId;
   const assignedPump = pumps.find((p) => p.id === assignedPumpId);
 
+  // How long the job takes: 60 minutes + 1.5 per yard (to the nearest 15), with prep before and clean-up after.
+  // An order that already exists keeps its own prep and clean-up.
+  const savedPrepMinutes = editingBooking ? Math.round((editingBooking.pourHour - editingBooking.startHour) * 60) : PREP_MINUTES;
+  const savedCleanupMinutes = editingBooking
+    ? Math.max(
+        0,
+        Math.round((editingBooking.durationHours - (editingBooking.pourHour - editingBooking.startHour) - editingBooking.pourHours) * 60),
+      )
+    : CLEANUP_MINUTES;
+  // Changing the volume works out the pour again; otherwise an existing order keeps the pour it has.
+  const volumeChanged = !editingBooking || Number(volumeYards) !== editingBooking.volumeYards;
+  const pumpMinutes = volumeChanged || !editingBooking ? pumpMinutesFor(Number(volumeYards)) : Math.round(editingBooking.pourHours * 60);
+
   // Only a warning: the dispatcher can still save a time that overlaps another pour.
   const { hour: pourHour, minute: pourMinute } = parseClock(pourTime);
   const clash =
     !isAssignLater && format(selectedDate, 'yyyy-MM-dd') === date
       ? findOverlap(bookings, {
           pumpId: assignedPumpId,
-          startHour: pourHour + pourMinute / 60,
-          durationHours: editingBooking?.durationHours ?? 1,
+          // The whole block: prep before the pour through clean-up, for the pour this volume takes.
+          startHour: pourHour + pourMinute / 60 - savedPrepMinutes / 60,
+          durationHours: (savedPrepMinutes + pumpMinutes + savedCleanupMinutes) / 60,
           ignoreId: editingBooking?.id,
         })
       : null;
@@ -445,13 +496,17 @@ function NewOrderModalForm({
             <AppSelect
               value={customer}
               onChange={(val) => {
+                if (val === NEW_CUSTOMER) {
+                  setIsCustomerDialogOpen(true);
+                  return;
+                }
                 // Fill in the new customer's first saved site, unless the dispatcher typed their own address.
-                const previousSites = options.customers.find((c) => c.name === customer)?.sites ?? [];
+                const previousSites = customers.find((c) => c.name === customer)?.sites ?? [];
                 const typedOwnAddress =
                   address.trim() !== '' && !previousSites.some((site) => site.address === address);
                 setCustomer(val);
                 if (!typedOwnAddress) {
-                  const nextAddress = options.customers.find((c) => c.name === val)?.sites[0]?.address ?? '';
+                  const nextAddress = customers.find((c) => c.name === val)?.sites[0]?.address ?? '';
                   setAddress(nextAddress);
                   if (nextAddress && formErrors.address) {
                     setFormErrors((prev) => ({ ...prev, address: undefined }));
@@ -464,7 +519,16 @@ function NewOrderModalForm({
                   }));
                 }
               }}
-              options={options.customers.map((c) => c.name)}
+              options={[
+                ...customers.map((c) => c.name),
+                {
+                  value: NEW_CUSTOMER,
+                  label: 'Add new customer',
+                  description: 'Keeps your order as it is',
+                  icon: UserPlus,
+                  variant: 'action' as const,
+                },
+              ]}
               placeholder="Select customer *"
               icon={User}
               error={Boolean(formErrors.customer)}
@@ -489,6 +553,42 @@ function NewOrderModalForm({
               placeholder="Search or type a supplier"
             />
           </div>
+        </div>
+
+        {/* Job contact: who the crew calls on site */}
+        <div>
+          <label className="text-xs font-semibold text-slate-700 block mb-1">
+            Contact <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <AppSelect
+            value={effectiveContactId}
+            onChange={(val) => {
+              if (val === NEW_CONTACT) {
+                setIsContactDialogOpen(true);
+                return;
+              }
+              setContactId(val);
+              setContactChosen(true);
+            }}
+            options={[
+              ...contactList.map((c) => ({
+                value: c.id,
+                label: c.name,
+                description: [c.role, c.phone].filter(Boolean).join(' · ') || undefined,
+              })),
+              ...(selectedCustomer ? [{
+                    value: NEW_CONTACT,
+                    label: 'Add new contact',
+                    description: `For ${selectedCustomer.name}`,
+                    icon: UserPlus,
+                    variant: 'action' as const,
+                  }] : []),
+            ]}
+            placeholder={selectedCustomer ? 'No contact yet' : 'Pick a customer first'}
+            disabled={!selectedCustomer}
+            icon={Contact}
+            className="h-10"
+          />
         </div>
 
         {/* Row 3: Pour Type & Estimated Volume (yd³) */}
@@ -569,7 +669,7 @@ function NewOrderModalForm({
               setAddress(value);
               if (formErrors.address) setFormErrors((prev) => ({ ...prev, address: undefined }));
             }}
-            sites={options.customers.find((c) => c.name === customer)?.sites ?? []}
+            sites={selectedCustomer?.sites ?? []}
             error={Boolean(formErrors.address)}
             placeholder="Town, cross streets, or street address"
             className="h-10"
@@ -741,6 +841,42 @@ function NewOrderModalForm({
           ) : null}
         </div>
       </div>
+
+      {/* Add a customer or contact without leaving this form */}
+      <QuickCustomerDialog
+        open={isCustomerDialogOpen}
+        onOpenChange={setIsCustomerDialogOpen}
+        onCreated={(created) => {
+          setAddedCustomers((prev) => [...prev, { id: created.id, name: created.name, contacts: [], sites: [] }]);
+          setCustomer(created.name);
+          setContactId('');
+          setContactChosen(false);
+          setFormErrors((prev) => {
+            if (!prev.customer) return prev;
+            const next = { ...prev };
+            delete next.customer;
+            return next;
+          });
+        }}
+        onReload={() => router.refresh()}
+      />
+      {selectedCustomer && (
+        <QuickContactDialog
+          open={isContactDialogOpen}
+          onOpenChange={setIsContactDialogOpen}
+          customerId={selectedCustomer.id}
+          customerName={selectedCustomer.name}
+          onCreated={(created) => {
+            setAddedContacts((prev) => ({
+              ...prev,
+              [selectedCustomer.id]: [...(prev[selectedCustomer.id] ?? []), created],
+            }));
+            setContactId(created.id);
+            setContactChosen(true);
+          }}
+          onReload={() => router.refresh()}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteOrderDialog

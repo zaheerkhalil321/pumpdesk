@@ -23,8 +23,12 @@ export interface ScheduleBooking {
   customerName: string;
   jobSiteName: string;
   address?: string;
-  startHour: number; // e.g. 7.0 for 7:00 AM
-  durationHours: number; // e.g. 4.0
+  /** The whole block on the board: prep before the pour through clean-up. e.g. 6.5 for 6:30 AM. */
+  startHour: number;
+  durationHours: number; // e.g. 3.5
+  /** When the pour itself starts and how long it takes (prep and clean-up not included). */
+  pourHour: number;
+  pourHours: number;
   volumeYards: number;
   status: BookingStatus;
   notes?: string;
@@ -44,6 +48,7 @@ export interface ScheduleBooking {
   arriveByLabel?: string;
   pourTimeLabel?: string;
   /** The job contact saved with the order. */
+  contactId?: string;
   contactName?: string;
   contactPhone?: string;
 }

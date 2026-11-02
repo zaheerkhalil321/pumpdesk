@@ -31,7 +31,7 @@ export function AddOperatorModal({
 }: AddOperatorModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
+      <DialogContent className="grid-cols-[minmax(0,1fr)] max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-none max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:border-0 sm:max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
             Add new operator

@@ -34,7 +34,6 @@ import { toast } from 'sonner';
 import { AppSelect, SelectOption } from '@/components/ui/app-select';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { CopyButton } from '@/components/ui/copy-button';
 
 interface OrderDossierModalProps {
   isOpen: boolean;
@@ -318,12 +317,6 @@ export function OrderDossierModal({
                   <span className="text-xs sm:text-sm font-semibold text-slate-800 truncate block">
                     {contactName}
                   </span>
-                  {contactPhone && (
-                    <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                      <span>{contactPhone}</span>
-                      <CopyButton value={contactPhone} label="Phone" />
-                    </span>
-                  )}
                 </div>
               </div>
               {contactPhone && (
@@ -387,12 +380,6 @@ export function OrderDossierModal({
                     <span className="text-xs sm:text-sm font-bold text-slate-900 truncate block">
                       {operatorDisplayName}
                     </span>
-                    {operatorPhone && (
-                      <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                        <span>{operatorPhone}</span>
-                        <CopyButton value={operatorPhone} label="Phone" />
-                      </span>
-                    )}
                   </div>
                 </div>
                 {operatorPhone && (

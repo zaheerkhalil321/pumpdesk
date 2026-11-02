@@ -50,7 +50,9 @@ async function saveSiteWhenConfirmed(
       .select('booking_status, job_site_id, site_label, customer_id, version')
       .eq('id', result.id)
       .maybeSingle();
-    if (!job || job.booking_status !== 'confirmed' || job.job_site_id || !job.site_label) return result.version;
+    if (!job || ['pending', 'inspection_pending', 'cancelled'].includes(job.booking_status) || job.job_site_id || !job.site_label) {
+      return result.version;
+    }
 
     const address = parseUsAddress(job.site_label);
     if (!address) return result.version;

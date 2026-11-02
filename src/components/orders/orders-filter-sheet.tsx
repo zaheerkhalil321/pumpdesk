@@ -16,8 +16,9 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ORDER_STATUSES, ORDER_STATUS_STYLE, type OrderStatus } from '@/features/orders/statuses';
 
-export type OrderTab = 'all' | 'confirmed' | 'pending' | 'needs_assignment';
+export type OrderTab = 'all' | 'needs_assignment' | OrderStatus;
 
 interface OrdersFilterSheetProps {
   isOpen: boolean;
@@ -29,8 +30,7 @@ interface OrdersFilterSheetProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   totalCount: number;
-  confirmedCount: number;
-  pendingCount: number;
+  statusCounts: Record<OrderStatus, number>;
   needsAssignmentCount: number;
   filteredCount: number;
   onResetFilters: () => void;
@@ -46,8 +46,7 @@ export function OrdersFilterSheet({
   searchQuery,
   onSearchChange,
   totalCount,
-  confirmedCount,
-  pendingCount,
+  statusCounts,
   needsAssignmentCount,
   filteredCount,
   onResetFilters,
@@ -56,8 +55,12 @@ export function OrdersFilterSheet({
 
   const statusOptions: { id: OrderTab; label: string; count: number; dotColor: string }[] = [
     { id: 'all', label: 'All Orders', count: totalCount, dotColor: 'bg-slate-400' },
-    { id: 'confirmed', label: 'Confirmed', count: confirmedCount, dotColor: 'bg-brand' },
-    { id: 'pending', label: 'Pending', count: pendingCount, dotColor: 'bg-amber-500' },
+    ...ORDER_STATUSES.map((status) => ({
+      id: status,
+      label: status,
+      count: statusCounts[status],
+      dotColor: ORDER_STATUS_STYLE[status].dot,
+    })),
     { id: 'needs_assignment', label: 'Needs Assignment', count: needsAssignmentCount, dotColor: 'bg-rose-500' },
   ];
 

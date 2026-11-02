@@ -35,6 +35,8 @@ interface ScheduleToolbarProps {
   viewMode: ScheduleViewMode;
   onViewModeChange: (mode: ScheduleViewMode) => void;
   pumps: PumpLane[];
+  /** Names of the company's active operators, for the operator filter. */
+  operatorNames: string[];
   selectedPumpId: string;
   onSelectPump: (pumpId: string) => void;
   selectedOperator: string;
@@ -54,6 +56,7 @@ export function ScheduleToolbar({
   viewMode,
   onViewModeChange,
   pumps,
+  operatorNames,
   selectedPumpId,
   onSelectPump,
   selectedOperator,
@@ -73,17 +76,8 @@ export function ScheduleToolbar({
   const handlePrevDay = () => onDateChange(subDays(currentDate, 1));
   const handleNextDay = () => onDateChange(addDays(currentDate, 1));
 
-  // Distinct operators list from active company roster
-  const operators = Array.from(
-    new Set([
-      "Rob Black",
-      "Dave Smith",
-      "Tony Perez",
-      "Marcus Brody",
-      "Sam Higgins",
-      ...pumps.map((p) => p.operator).filter(Boolean),
-    ])
-  ) as string[];
+  // Only people marked as active operators.
+  const operators = operatorNames;
 
   const activeFilterCount =
     (selectedPumpId !== "all" ? 1 : 0) +

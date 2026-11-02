@@ -19,9 +19,6 @@ export function ScheduleEmptyState({ onNewBookingClick }: ScheduleEmptyStateProp
       <h3 className="text-base font-bold text-slate-900 tracking-tight">
         Your schedule is clear
       </h3>
-      <p className="text-xs sm:text-[13px] text-slate-500 mt-1 max-w-sm">
-        Choose <span className="font-semibold text-slate-700">New booking</span> to schedule a job.
-      </p>
 
       {/* Action Button */}
       <Button

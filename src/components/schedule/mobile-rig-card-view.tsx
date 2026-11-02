@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PumpLane, ScheduleBooking } from './schedule-types';
+import { clockFromHour } from '@/features/orders/mappers';
 
 interface MobileRigCardViewProps {
   pumps: PumpLane[];
@@ -44,9 +45,6 @@ export function MobileRigCardView({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">
                       {pump.code}
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-200/80 px-2 py-0.5 rounded-md">
-                      {pump.boomLength}
                     </span>
                     {pumpBookings.length > 1 && (
                       <span className="text-[10px] font-semibold text-brand bg-brand-light border border-brand/20 px-1.5 py-0.5 rounded-full">
@@ -86,16 +84,9 @@ export function MobileRigCardView({
                   const isDispatched = booking.dispatchStatus === 'dispatched';
                   const isDraft = booking.dispatchStatus === 'draft' || (!booking.dispatchStatus && booking.operator);
 
-                  const startFormatted =
-                    booking.startHour <= 12
-                      ? `${booking.startHour}:00 AM`
-                      : `${booking.startHour - 12}:00 PM`;
-
-                  const endHour = booking.startHour + booking.durationHours;
-                  const endFormatted =
-                    endHour <= 12
-                      ? `${endHour}:00 AM`
-                      : `${endHour - 12}:00 PM`;
+                  // Clock times keep their minutes, e.g. 1:00 PM to 3:30 PM for a 2.5 hour pour.
+                  const startFormatted = clockFromHour(booking.pourHour);
+                  const endFormatted = clockFromHour(booking.pourHour + booking.pourHours);
 
                   return (
                     <div
@@ -130,7 +121,7 @@ export function MobileRigCardView({
                               {startFormatted} – {endFormatted}
                             </span>
                             <span className="text-slate-400 whitespace-nowrap">
-                              ({booking.durationHours} hrs)
+                              ({booking.pourHours} hrs)
                             </span>
                           </div>
 

@@ -61,6 +61,7 @@ const pumpFields = {
   defaultOperatorId: uuid.nullable(),
   status: z.enum(['available', 'maintenance']),
   maintenanceNote: optionalText(200),
+  availableAgainOn: isoDate,
   inspectionDate: isoDate,
 };
 

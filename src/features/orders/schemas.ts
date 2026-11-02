@@ -68,7 +68,7 @@ const orderFields = {
     )
     .max(20, 'No more than 20 items')
     .optional(),
-  bookingStatus: z.enum(['pending', 'confirmed']).optional(),
+  bookingStatus: z.enum(['pending', 'inspection_pending', 'confirmed', 'turned_in', 'reviewed']).optional(),
   contactId: uuid.nullable().optional(),
   equipmentId: uuid.nullable().optional(),
   employeeId: uuid.nullable().optional(),

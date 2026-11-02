@@ -10,10 +10,10 @@ import { clockFromHour } from '@/features/orders/mappers';
 import { findOverlap } from '@/features/orders/conflicts';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-/** "7:00 - 10:00 AM": when a pour starts and ends, so the card never has to be read off the hour columns. */
+/** "7:00 - 10:00 AM": when the pour starts and ends, so the card never has to be read off the hour columns. */
 function timeRangeLabel(booking: ScheduleBooking): string {
-  const start = clockFromHour(booking.startHour);
-  const end = clockFromHour(booking.startHour + booking.durationHours);
+  const start = clockFromHour(booking.pourHour);
+  const end = clockFromHour(booking.pourHour + booking.pourHours);
   // "7:00 AM - 10:00 AM" reads shorter as "7:00 - 10:00 AM" when both are in the same half of the day.
   const samePeriod = start.slice(-2) === end.slice(-2);
   return `${samePeriod ? start.slice(0, -3) : start} - ${end}`;

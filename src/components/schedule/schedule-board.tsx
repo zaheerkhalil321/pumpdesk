@@ -72,6 +72,8 @@ export function ScheduleBoard({
               ...b,
               pumpId: move.pumpId,
               startHour: move.startHour,
+              // The pour keeps its place inside the block (prep comes first).
+              pourHour: move.startHour + (b.pourHour - b.startHour),
               // A new operator is not dispatched yet, so the card goes back to a draft.
               ...("operator" in move
                 ? { operator: move.operator, dispatchStatus: move.operator ? ("draft" as const) : ("unassigned" as const) }
@@ -144,7 +146,7 @@ export function ScheduleBoard({
   const handleAssignJobFromDrawer = (job: ScheduleBooking) => {
     setEditingBooking(job);
     setDrawerInitialPump(undefined);
-    setDrawerInitialHour(job.startHour);
+    setDrawerInitialHour(job.pourHour);
     setIsDrawerOpen(true);
   };
 
@@ -174,9 +176,9 @@ export function ScheduleBoard({
   ) => {
     const { isUndo = false, operatorChange } = options;
     const targetPump = pumps.find((p) => p.id === targetPumpId);
-    const hour = Math.floor(targetStartHour);
-    const minute = Math.round((targetStartHour - hour) * 60);
-    const clock = `${hour % 12 === 0 ? 12 : hour % 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+    // The card moves as a whole block; the order's pour time is where the pour sits inside it.
+    const prepHours = booking.pourHour - booking.startHour;
+    const clock = clockFromHour(targetStartHour + prepHours);
 
     startSaving(async () => {
       moveBooking({
@@ -215,7 +217,8 @@ export function ScheduleBoard({
           }),
       };
 
-      const range = (start: number) => `${clockFromHour(start)} - ${clockFromHour(start + booking.durationHours)}`;
+      const range = (start: number) =>
+        `${clockFromHour(start + prepHours)} - ${clockFromHour(start + prepHours + booking.pourHours)}`;
       const notes: string[] = [];
       if (operatorChange?.to && booking.dispatchStatus === "dispatched") {
         notes.push(`${operatorChange.from?.name ?? "The previous operator"} was told about this job. ${operatorChange.to.name} needs it dispatched again.`);
@@ -368,6 +371,7 @@ export function ScheduleBoard({
         viewMode={viewMode}
         onViewModeChange={setUserViewMode}
         pumps={pumps}
+        operatorNames={orderOptions.operators.map((o) => o.name)}
         selectedPumpId={selectedPumpId}
         onSelectPump={setSelectedPumpId}
         selectedOperator={selectedOperator}

@@ -53,7 +53,7 @@ export function PumpsDirectory({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
-  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
+  const currentLayout: ViewLayout = userLayout ?? (isTablet && !isMobile ? 'tiles' : 'table');
 
   const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'documents'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
@@ -298,7 +298,7 @@ export function PumpsDirectory({
       </div>
 
       {/* ── 4. Search & Filters Bar (More filters removed for V1) ── */}
-      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 sm:gap-3">
         {/* Search Input */}
         <div className="relative flex-1 group">
           <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-brand transition-colors" />
@@ -326,31 +326,31 @@ export function PumpsDirectory({
         </div>
 
         {/* Controls: Type, Status & View Mode Switcher */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 w-full lg:w-auto sm:justify-end sm:shrink-0 sm:flex-wrap">
           {/* Type Dropdown Filter */}
-          <div className="w-full sm:w-44 shrink-0">
+          <div className="flex-1 min-w-0 lg:flex-none lg:w-44">
             <AppSelect
               size="sm"
               value={typeFilter}
               onChange={(val) => setTypeFilter(val as EquipmentType)}
               options={[
-                { value: 'all', label: 'Type: All types' },
-                { value: 'boom_pump', label: 'Type: Boom pump' },
-                { value: 'line_pump', label: 'Type: Line pump' },
+                { value: 'all', label: isMobile ? 'All types' : 'Type: All types' },
+                { value: 'boom_pump', label: isMobile ? 'Boom pump' : 'Type: Boom pump' },
+                { value: 'line_pump', label: isMobile ? 'Line pump' : 'Type: Line pump' },
               ]}
             />
           </div>
 
           {/* Status Dropdown Filter */}
-          <div className="w-full sm:w-40 shrink-0">
+          <div className="flex-1 min-w-0 lg:flex-none lg:w-40">
             <AppSelect
               size="sm"
               value={statusFilter}
               onChange={(val) => setStatusFilter(val as EquipmentStatus)}
               options={[
-                { value: 'all', label: 'Status: All' },
-                { value: 'available', label: 'Status: Available' },
-                { value: 'maintenance', label: 'Status: Maintenance' },
+                { value: 'all', label: isMobile ? 'All status' : 'Status: All' },
+                { value: 'available', label: isMobile ? 'Available' : 'Status: Available' },
+                { value: 'maintenance', label: isMobile ? 'Maintenance' : 'Status: Maintenance' },
               ]}
             />
           </div>
@@ -467,10 +467,11 @@ export function PumpsDirectory({
                       onCheckedChange={handleSelectAll}
                     />
                   </th>
-                  <th className="py-3 px-4 w-[22%]">Pump</th>
-                  <th className="py-3 px-4 w-[20%]">Type &amp; size</th>
-                  <th className="py-3 px-4 w-[20%]">Default operator</th>
-                  <th className="py-3 px-4 w-[24%]">Today</th>
+                  <th className="py-3 px-4 w-[19%]">Pump</th>
+                  <th className="py-3 px-4 w-[17%]">Type &amp; size</th>
+                  <th className="py-3 px-4 w-[12%]">Horizontal reach</th>
+                  <th className="py-3 px-4 w-[17%]">Default operator</th>
+                  <th className="py-3 px-4 w-[21%]">Today</th>
                   <th className="py-3 px-4 w-[14%]">Next inspection</th>
                   <th className="py-3 px-4 text-right pr-6 w-10">Actions</th>
                 </tr>
@@ -513,6 +514,11 @@ export function PumpsDirectory({
                       {/* 3. Type & size */}
                       <td className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap text-xs sm:text-sm">
                         <span>{pump.typeLabel}</span>
+                      </td>
+
+                      {/* Horizontal reach */}
+                      <td className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap text-xs sm:text-sm">
+                        {pump.horizontalReach ? <span>{pump.horizontalReach} ft</span> : <span className="text-slate-400">Not set</span>}
                       </td>
 
                       {/* 4. Default operator */}

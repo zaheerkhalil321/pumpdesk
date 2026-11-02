@@ -64,7 +64,7 @@ export function ContactsDirectory({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
-  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
+  const currentLayout: ViewLayout = userLayout ?? (isTablet && !isMobile ? 'tiles' : 'table');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 

@@ -42,6 +42,8 @@ export interface PumpItem {
   minHours: string | number;
   inMaintenance: boolean;
   maintenanceNote?: string;
+  /** yyyy-mm-dd when a pump in maintenance returns to service; empty when no date is set. */
+  availableAgainOn: string;
   year?: string;
 }
 

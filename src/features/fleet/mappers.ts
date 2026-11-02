@@ -5,7 +5,7 @@ import { formatE164 } from '@/lib/phone';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 
 export const EQUIPMENT_COLUMNS =
-  'id, branch_id, equipment_number, type, status, make, model, model_year, boom_length_m, horizontal_reach_ft, hourly_rate_override, min_hours_override, default_operator_id, next_inspection_due, notes';
+  'id, branch_id, equipment_number, type, status, make, model, model_year, boom_length_m, horizontal_reach_ft, hourly_rate_override, min_hours_override, default_operator_id, next_inspection_due, available_again_on, notes';
 export const EMPLOYEE_COLUMNS =
   'id, branch_id, first_name, last_name, email, phone, status, is_operator, job_title, cdl_expires_on, medical_cert_expires_on';
 
@@ -25,6 +25,7 @@ export type EquipmentRow = Pick<
   | 'min_hours_override'
   | 'default_operator_id'
   | 'next_inspection_due'
+  | 'available_again_on'
   | 'notes'
 >;
 export type EmployeeRow = Pick<
@@ -61,7 +62,7 @@ export function todayIn(timezone: string, now: Date = new Date()): string {
   return formatInTimeZone(now, timezone, 'yyyy-MM-dd');
 }
 
-function formatDateOnly(isoDate: string): string {
+export function formatDateOnly(isoDate: string): string {
   return formatInTimeZone(`${isoDate}T12:00:00Z`, 'UTC', 'MMM d, yyyy');
 }
 
@@ -131,7 +132,10 @@ export function mapPump(
   const boomSize = row.boom_length_m ? Number(row.boom_length_m) : undefined;
   const reach = row.horizontal_reach_ft ? Number(row.horizontal_reach_ft) : undefined;
   const operator = row.default_operator_id ? operatorsById.get(row.default_operator_id) : undefined;
-  const inMaintenance = row.status !== 'available';
+  // A pump in maintenance with a return date counts as available from that day.
+  const backInService = row.status === 'maintenance' && !!row.available_again_on && row.available_again_on <= today;
+  const inMaintenance = row.status !== 'available' && !backInService;
+  const availableAgainIso = inMaintenance ? (row.available_again_on ?? '') : '';
 
   const typeLabel = isBoom ? (boomSize ? `Boom pump · ${boomSize}M` : 'Boom pump') : 'Line pump';
   const boomLength = isBoom
@@ -158,7 +162,7 @@ export function mapPump(
       ? { id: operator.id, name: fullName(operator), role: operator.job_title ?? 'Operator', badge: null }
       : { id: 'unassigned', name: 'Unassigned', role: 'None', badge: null },
     todayStatus: inMaintenance
-      ? { type: 'maintenance', label: 'Maintenance · Unavailable' }
+      ? { type: 'maintenance', label: availableAgainIso ? `Maintenance · Back ${formatDateOnly(availableAgainIso)}` : 'Maintenance · Unavailable' }
       : { type: 'available', label: operator ? 'Available · Yard ready' : 'Available · Assign operator' },
     nextInspection: {
       date: inspectionIso ? formatDateOnly(inspectionIso) : 'Not set',
@@ -170,6 +174,7 @@ export function mapPump(
     minHours: row.min_hours_override === null ? 4 : Number(row.min_hours_override),
     inMaintenance,
     maintenanceNote: inMaintenance ? (row.notes ?? undefined) : undefined,
+    availableAgainOn: availableAgainIso,
     year: row.model_year ? String(row.model_year) : undefined,
   };
 }

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppSelect } from '@/components/ui/app-select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { formatDateOnly } from '@/features/fleet/mappers';
 import {
   Truck,
   User,
@@ -110,6 +111,7 @@ export function PumpDetailDialog({
   const [editStatus, setEditStatus] = useState<PumpItem['status']>('available');
   const [editOperatorId, setEditOperatorId] = useState('none');
   const [editMaintenanceNote, setEditMaintenanceNote] = useState('');
+  const [editAvailableAgainOn, setEditAvailableAgainOn] = useState('');
   const [editInspectionDate, setEditInspectionDate] = useState('');
 
   // Manual numeric bounds validation flags for Edit mode
@@ -171,6 +173,7 @@ export function PumpDetailDialog({
         : 'none'
     );
     setEditMaintenanceNote(currentPump.maintenanceNote || '');
+    setEditAvailableAgainOn(currentPump.availableAgainOn || '');
     setEditInspectionDate(currentPump.nextInspection?.iso || '');
     setIsEditing(true);
   };
@@ -194,6 +197,7 @@ export function PumpDetailDialog({
       defaultOperatorId: editOperatorId === 'none' ? null : editOperatorId,
       status: editStatus,
       maintenanceNote: editMaintenanceNote,
+      availableAgainOn: editAvailableAgainOn,
       inspectionDate: editInspectionDate,
     };
 
@@ -690,6 +694,17 @@ export function PumpDetailDialog({
                       placeholder="e.g. Hydraulic pump service & annual boom ultrasonic check"
                       className="h-9 text-xs bg-white"
                     />
+                    <label className="text-xs font-semibold text-amber-900 block pt-2">Available again on</label>
+                    <DatePicker
+                      size="sm"
+                      ariaLabel="Date the pump is available again"
+                      value={editAvailableAgainOn}
+                      onChange={setEditAvailableAgainOn}
+                      placeholder="Pick a date (optional)"
+                    />
+                    <p className="text-[11px] text-amber-800/90 pt-1">
+                      With a date, the pump becomes available on that day. Without one, it stays in maintenance until you set it back to available.
+                    </p>
                   </div>
                 )}
 
@@ -753,6 +768,11 @@ export function PumpDetailDialog({
                       <p className="text-amber-800/90 mt-0.5">
                         {currentPump.maintenanceNote || 'Currently flagged for scheduled maintenance service.'}
                       </p>
+                      {currentPump.availableAgainOn && (
+                        <p className="text-amber-800/90 mt-0.5">
+                          Available again on {formatDateOnly(currentPump.availableAgainOn)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

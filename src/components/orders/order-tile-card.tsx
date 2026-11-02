@@ -11,6 +11,7 @@ import {
   Layers,
   User,
 } from 'lucide-react';
+import { ORDER_STATUS_STYLE } from '@/features/orders/statuses';
 import { cn } from '@/lib/utils';
 import type { OrderItem } from '@/features/orders/types';
 
@@ -50,19 +51,14 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
         <span
           className={cn(
             'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0',
-            order.status === 'Confirmed' && 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
-            order.status === 'Pending' && 'bg-amber-50 text-amber-800 border-amber-200/80',
-            order.status === 'Completed' && 'bg-slate-100 text-slate-700 border-slate-200/80',
-            order.status === 'Cancelled' && 'bg-rose-50 text-rose-700 border-rose-200',
+            ORDER_STATUS_STYLE[order.status].badge,
           )}
         >
           <span
             className={cn(
               'h-1.5 w-1.5 rounded-full shrink-0',
-              order.status === 'Confirmed' && 'bg-emerald-500 animate-pulse',
-              order.status === 'Pending' && 'bg-amber-500',
-              order.status === 'Completed' && 'bg-slate-500',
-              order.status === 'Cancelled' && 'bg-rose-500',
+              ORDER_STATUS_STYLE[order.status].dot,
+              order.status === 'Confirmed' && 'animate-pulse',
             )}
           />
           <span>{order.status}</span>

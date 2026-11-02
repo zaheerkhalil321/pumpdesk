@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScheduleBooking } from "./schedule-types";
+import { clockFromHour } from "@/features/orders/mappers";
 
 interface UnassignedJobsDrawerProps {
   unassignedJobs?: ScheduleBooking[];
@@ -62,13 +63,7 @@ export function UnassignedJobsDrawer({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {unassignedJobs.map((job, idx) => {
-                const hour = job.startHour;
-                const timeLabel =
-                  hour === 12
-                    ? "12:00 PM"
-                    : hour < 12
-                    ? `${hour}:00 AM`
-                    : `${hour - 12}:00 PM`;
+                const timeLabel = clockFromHour(job.pourHour);
 
                 return (
                   <div

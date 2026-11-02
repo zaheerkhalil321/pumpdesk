@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2, AlertTriangle, MapPin, Truck, Clock } from 'lucide-react';
 import { ScheduleBooking } from './schedule-types';
+import { clockFromHour } from '@/features/orders/mappers';
 
 interface DeleteOrderDialogProps {
   isOpen: boolean;
@@ -32,13 +33,8 @@ export function DeleteOrderDialog({
     onOpenChange(false);
   };
 
-  const startHour = booking.startHour ?? 7;
-  const hourLabel =
-    startHour === 12
-      ? '12:00 PM'
-      : startHour < 12
-      ? `${startHour}:00 AM`
-      : `${startHour - 12}:00 PM`;
+  const startHour = booking.pourHour ?? 7;
+  const hourLabel = clockFromHour(startHour);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -85,7 +81,7 @@ export function DeleteOrderDialog({
             <div className="flex items-center gap-2">
               <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
               <span>
-                Pour at {hourLabel} ({booking.durationHours || 3}h duration)
+                Pour at {hourLabel} ({booking.pourHours || 3}h pour)
               </span>
             </div>
 

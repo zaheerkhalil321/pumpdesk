@@ -84,7 +84,7 @@ export function OperatorForm({
 
   const roleOptions = ROLE_OPTIONS.includes(role) ? ROLE_OPTIONS : [...ROLE_OPTIONS, role];
   const pumpOptions = [
-    { value: NO_PUMP, label: 'None (Unassigned / Optional)' },
+    { value: NO_PUMP, label: 'None (Unassigned)' },
     ...pumps.map((p) => ({
       value: p.id,
       label: `${getPumpDisplayName(p)} ${p.make} ${p.model}`.trim(),
@@ -137,7 +137,7 @@ export function OperatorForm({
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">
             First name <span className="text-red-500">*</span>
           </label>
@@ -149,7 +149,7 @@ export function OperatorForm({
           />
           <FieldError message={errors.firstName} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">
             Last name <span className="text-red-500">*</span>
           </label>
@@ -164,21 +164,18 @@ export function OperatorForm({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">Role</label>
           <AppSelect size="lg" value={role} onChange={setRole} options={roleOptions} />
         </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-slate-700 block">Default pump</label>
-            <span className="text-[10px] text-slate-400 font-medium">Optional</span>
-          </div>
+        <div className="space-y-1.5 min-w-0">
+          <label className="text-xs font-semibold text-slate-700 block">Default pump</label>
           <AppSelect size="lg" value={pumpId} onChange={setPumpId} options={pumpOptions} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">Phone number</label>
           <Input
             type="tel"
@@ -190,7 +187,7 @@ export function OperatorForm({
           />
           <FieldError message={errors.phone} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">Email</label>
           <Input
             type="email"
@@ -203,13 +200,13 @@ export function OperatorForm({
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 min-w-0">
         <label className="text-xs font-semibold text-slate-700 block">Branch yard</label>
         <AppSelect size="lg" value={branchId} onChange={setBranchId} options={branchSelectOptions} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">CDL expires</label>
           <DatePicker
             ariaLabel="CDL expiry date"
@@ -218,7 +215,7 @@ export function OperatorForm({
             placeholder="Pick a date"
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">Medical certificate expires</label>
           <DatePicker
             ariaLabel="Medical certificate expiry date"
@@ -245,14 +242,14 @@ export function OperatorForm({
         Emergency contacts are coming in a later release.
       </p>
 
-      <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+      <div className="flex flex-wrap items-center justify-end gap-2.5 pt-4 pb-2 border-t border-slate-100">
         {onDelete && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="mr-auto h-9 px-3 text-xs font-semibold cursor-pointer text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+            className="mr-auto max-sm:order-last max-sm:w-full h-9 px-3 text-xs font-semibold cursor-pointer text-rose-600 hover:bg-rose-50 hover:text-rose-700"
           >
             <Trash2 className="h-3.5 w-3.5" />
             <span>Delete operator</span>
@@ -263,7 +260,7 @@ export function OperatorForm({
           variant="outline"
           size="sm"
           onClick={onClose}
-          className="h-9 px-4 text-xs font-semibold cursor-pointer"
+          className="h-9 px-4 text-xs font-semibold cursor-pointer max-sm:flex-1"
         >
           Cancel
         </Button>
@@ -272,7 +269,7 @@ export function OperatorForm({
           variant="brand"
           size="sm"
           disabled={isSaving}
-          className="h-9 px-5 text-xs font-semibold cursor-pointer"
+          className="h-9 px-5 text-xs font-semibold cursor-pointer max-sm:flex-1"
         >
           {isSaving ? 'Saving...' : operator ? 'Save changes' : 'Add operator'}
         </Button>

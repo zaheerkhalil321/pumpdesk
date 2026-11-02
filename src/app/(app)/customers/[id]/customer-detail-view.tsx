@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { CustomerNotificationPreferences } from '@/components/customers/customer-notification-preferences';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
@@ -33,7 +34,6 @@ import { AppSelect } from '@/components/ui/app-select';
 import { StatusSwitch } from '@/components/ui/status-switch';
 import { toast } from 'sonner';
 import { cn, formatUSPhone } from '@/lib/utils';
-import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import {
   deleteJobSite,
   createContact,
@@ -64,11 +64,9 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
   const refresh = () => router.refresh();
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
 
-  // Responsive layout switcher for Contacts in Contacts & Sites tab
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
+  // Layout switcher for Contacts in the Contacts & Sites tab (list by default)
   const [contactLayout, setContactLayout] = useState<'table' | 'tiles' | null>(null);
-  const currentContactLayout = contactLayout ?? (isMobile || isTablet ? 'tiles' : 'tiles');
+  const currentContactLayout = contactLayout ?? 'table';
 
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -421,9 +419,9 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                   <span className="text-slate-900 font-semibold flex-1">{customer.name}</span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500 font-medium w-32">Main phone</span>
-                  <div className="flex-1 flex items-center justify-between gap-2">
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium sm:w-32">Main phone</span>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                     <span className="text-slate-900 font-mono font-medium">{customer.phone}</span>
                     <div className="flex items-center gap-1.5">
                       {customer.phone && (
@@ -464,10 +462,10 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500 font-medium w-32">Email</span>
-                  <div className="flex-1 flex items-center justify-between gap-2">
-                    <span className="text-slate-900 font-medium truncate max-w-[200px]">{customer.email}</span>
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium sm:w-32">Email</span>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                    <span className="text-slate-900 font-medium truncate min-w-0 sm:max-w-[200px]" title={customer.email}>{customer.email}</span>
                     <div className="flex items-center gap-1.5">
                       {customer.email && (
                         <Button
@@ -523,124 +521,6 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Card 2: Contacts & Job Sites */}
-            <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900">Contacts &amp; job sites</span>
-              </div>
-
-              {/* Contacts Subsection */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Contacts</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddContactModalOpen(true)}
-                    className="text-brand hover:underline font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Add contact</span>
-                  </button>
-                </div>
-
-                {customer.contacts.slice(0, 3).map((c) => (
-                  <div key={c.id} className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-900">{c.name}</span>
-                        {c.roles.includes('Primary contact') && (
-                          <span className="px-1.5 py-0.2 rounded-md bg-brand-light text-brand border border-teal-200/50 text-[10px] font-bold">
-                            Primary contact
-                          </span>
-                        )}
-                      </div>
-                      {c.phone && (
-                        <div className="flex items-center gap-1 text-slate-500 font-mono text-[11px] mt-0.5">
-                          <span>{c.phone}</span>
-                          <CopyButton value={c.phone} label="Phone" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {c.phone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCall(c.phone, c.name)}
-                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
-                        >
-                          <Phone className="h-3 w-3 text-brand" />
-                          <span>Call</span>
-                        </Button>
-                      )}
-                      {c.phone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleText(c.phone, c.name)}
-                          className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
-                        >
-                          <MessageSquare className="h-3 w-3 text-brand" />
-                          <span>Text</span>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {customer.contacts.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('contacts_sites')}
-                    className="text-xs font-semibold text-brand hover:underline cursor-pointer"
-                  >
-                    +{customer.contacts.length - 3} more {customer.contacts.length - 3 === 1 ? 'contact' : 'contacts'}
-                  </button>
-                )}
-              </div>
-
-              {/* Job Sites Subsection */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Job sites</span>
-                  <button
-                    type="button"
-                    onClick={openAddSite}
-                    className="text-brand hover:underline font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Add site</span>
-                  </button>
-                </div>
-
-                {customer.jobSites.map((site) => (
-                  <button
-                    type="button"
-                    key={site.id}
-                    onClick={() => openEditSite(site)}
-                    className="w-full text-left p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between text-xs cursor-pointer hover:border-brand/40 transition-colors"
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-900">{site.name}</div>
-                      <div className="text-slate-500 text-[11px] mt-0.5">{site.address}</div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-slate-400" />
-                  </button>
-                ))}
-              </div>
-
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('contacts_sites')}
-                  className="text-xs font-semibold text-[#0D5294] hover:underline cursor-pointer inline-flex items-center gap-1"
-                >
-                  <span>View all contacts &amp; sites</span>
-                  <ChevronRight className="h-3 w-3" />
-                </button>
               </div>
             </div>
 
@@ -1125,23 +1005,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                 </p>
               </div>
 
-              {/* Notification Preferences Banner */}
-              <div className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/70 flex items-start justify-between gap-3 text-xs">
-                <div>
-                  <div className="font-bold text-slate-900 mb-1">
-                    Contact notification preferences
-                  </div>
-                  <p className="text-slate-500 leading-relaxed text-[11.5px]">
-                    Manage confirmations, operator details, en-route updates, authorization requests, work-ticket review, and missing-detail reminders from each contact&apos;s profile.
-                  </p>
-                </div>
-                <Link
-                  href="/contacts"
-                  className="text-xs font-semibold text-[#0D5294] hover:underline whitespace-nowrap cursor-pointer shrink-0 mt-0.5"
-                >
-                  Manage contacts &rarr;
-                </Link>
-              </div>
+              <CustomerNotificationPreferences />
             </div>
           </div>
         </div>

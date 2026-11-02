@@ -19,6 +19,8 @@ export interface SelectOption {
   className?: string;
   icon?: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  /** "action" is an add-new row: set apart with a divider and a brand-coloured icon, and never shown as selected. */
+  variant?: "action";
 }
 
 export type SelectOptionItem = string | SelectOption;
@@ -158,8 +160,29 @@ export function AppSelect({
           )}
         >
           {normalizedOptions.map((option) => {
-            const isSelected = option.value === currentValue;
+            const isAction = option.variant === "action";
+            const isSelected = !isAction && option.value === currentValue;
             const OptIcon = option.icon;
+
+            if (isAction) {
+              return (
+                <React.Fragment key={option.value}>
+                  <div className="-mx-1.5 h-px bg-border" role="separator" />
+                  <DropdownMenuItem
+                    onClick={() => handleSelect(option.value)}
+                    className="-mx-1.5 -mb-1.5 flex items-center gap-2.5 px-4 py-2.5 rounded-none rounded-b-2xl text-xs font-semibold cursor-pointer transition-colors outline-none text-foreground hover:bg-muted"
+                  >
+                    {OptIcon ? <OptIcon className="h-4 w-4 shrink-0 text-brand" /> : null}
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate">{option.label}</span>
+                      {option.description && (
+                        <span className="text-[11px] text-muted-foreground truncate font-normal">{option.description}</span>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                </React.Fragment>
+              );
+            }
 
             return (
               <DropdownMenuItem

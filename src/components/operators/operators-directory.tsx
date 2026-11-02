@@ -47,7 +47,7 @@ export function OperatorsDirectory({
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
-  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
+  const currentLayout: ViewLayout = userLayout ?? (isTablet && !isMobile ? 'tiles' : 'table');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>('Active');
@@ -143,11 +143,13 @@ export function OperatorsDirectory({
   const handleCall = (e: React.MouseEvent, phone: string, name: string) => {
     e.stopPropagation();
     toast.info(`Calling ${name}`, { description: phone });
+    window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   };
 
   const handleText = (e: React.MouseEvent, phone: string, name: string) => {
     e.stopPropagation();
     toast.info(`Opening SMS with ${name}`, { description: phone });
+    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}`;
   };
 
   if (operators.length === 0) {
@@ -193,7 +195,7 @@ export function OperatorsDirectory({
       />
 
       {/* ── 2. Search & Filters Bar ── */}
-      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 sm:gap-3">
         {/* Search Input */}
         <div className="relative flex-1 group">
           <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-brand transition-colors" />
@@ -221,29 +223,29 @@ export function OperatorsDirectory({
         </div>
 
         {/* Controls: Status, Availability & View Mode Switcher */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 w-full lg:w-auto sm:justify-end sm:shrink-0 sm:flex-wrap">
           {/* Status Dropdown Filter */}
-          <div className="w-full sm:w-36 shrink-0">
+          <div className="flex-1 min-w-0 lg:flex-none lg:w-36">
             <AppSelect
               size="sm"
               value={statusFilter}
               onChange={(val) => setStatusFilter(val as StatusFilterOption)}
               options={[
-                { value: 'Active', label: 'Status: Active' },
-                { value: 'all', label: 'Status: All' },
-                { value: 'Inactive', label: 'Status: Inactive' },
+                { value: 'Active', label: isMobile ? 'Active' : 'Status: Active' },
+                { value: 'all', label: isMobile ? 'All' : 'Status: All' },
+                { value: 'Inactive', label: isMobile ? 'Inactive' : 'Status: Inactive' },
               ]}
             />
           </div>
 
           {/* Availability Dropdown Filter */}
-          <div className="w-full sm:w-40 shrink-0">
+          <div className="flex-1 min-w-0 lg:flex-none lg:w-40">
             <AppSelect
               size="sm"
               value={availabilityFilter}
               onChange={(val) => setAvailabilityFilter(val as AvailabilityFilterOption)}
               options={[
-                { value: 'all', label: 'Availability: All' },
+                { value: 'all', label: isMobile ? 'Availability' : 'Availability: All' },
                 { value: 'available', label: 'Available' },
                 { value: 'assigned', label: 'Assigned' },
                 { value: 'time_off', label: 'Time off' },
@@ -337,11 +339,11 @@ export function OperatorsDirectory({
       ) : (
         <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+            <table className="w-full table-fixed sm:table-auto text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 font-semibold select-none">
                   {/* Select All Checkbox */}
-                  <th className="py-3 px-4 w-10">
+                  <th className="py-3 pl-4 pr-1 sm:px-4 w-12 sm:w-10">
                     <Checkbox
                       aria-label="Select all operators"
                       checked={allSelected}
@@ -349,11 +351,11 @@ export function OperatorsDirectory({
                       onCheckedChange={handleSelectAll}
                     />
                   </th>
-                  <th className="py-3 px-4 w-[24%]">Operator</th>
-                  <th className="py-3 px-4 w-[18%]">Phone</th>
-                  <th className="py-3 px-4 w-[20%]">Default pump</th>
-                  <th className="py-3 px-4 w-[24%]">Today</th>
-                  <th className="py-3 px-4 text-left sm:pr-6 w-[14%]">Actions</th>
+                  <th className="py-3 pl-4 pr-2 sm:px-4 sm:w-[24%]">Operator</th>
+                  <th className="hidden sm:table-cell py-3 px-2 sm:px-4 w-[18%]">Phone</th>
+                  <th className="hidden sm:table-cell py-3 px-2 sm:px-4 w-[20%]">Default pump</th>
+                  <th className="hidden sm:table-cell py-3 px-2 sm:px-4 sm:w-[24%]">Today</th>
+                  <th className="py-3 px-2 sm:px-4 text-left sm:pr-6 w-1/2 sm:w-[14%]">Actions</th>
                 </tr>
               </thead>
 
@@ -373,7 +375,7 @@ export function OperatorsDirectory({
                       )}
                     >
                       {/* 1. Checkbox */}
-                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-3.5 pl-4 pr-1 sm:px-4" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           aria-label={`Select ${op.name}`}
                           checked={isChecked}
@@ -382,7 +384,7 @@ export function OperatorsDirectory({
                       </td>
 
                       {/* 2. Operator Name & Role */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 pl-4 pr-2 sm:px-4">
                         <div className="flex flex-col min-w-0">
                           <Link
                             href={`/operators/${op.id}`}
@@ -398,7 +400,7 @@ export function OperatorsDirectory({
                       </td>
 
                       {/* 3. Phone */}
-                      <td className="py-3.5 px-4 font-normal text-slate-700 whitespace-nowrap">
+                      <td className="hidden sm:table-cell py-3.5 px-2 sm:px-4 font-normal text-slate-700 whitespace-nowrap">
                         {op.phone && (
                           <button
                             type="button"
@@ -413,7 +415,7 @@ export function OperatorsDirectory({
                       </td>
 
                       {/* 4. Default Pump Badge */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="hidden sm:table-cell py-3.5 px-2 sm:px-4 whitespace-nowrap">
                         {op.defaultPump && op.defaultPump !== 'None' && op.defaultPump !== 'No default pump' ? (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200/80">
                             {op.defaultPump}
@@ -426,7 +428,7 @@ export function OperatorsDirectory({
                       </td>
 
                       {/* 5. Today Availability Status */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="hidden sm:table-cell py-3.5 px-2 sm:px-4 whitespace-nowrap">
                         {op.todayStatus.type === 'available' ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -447,17 +449,17 @@ export function OperatorsDirectory({
 
                       {/* 6. Actions Column — Left/Start aligned */}
                       <td
-                        className="py-3.5 px-4 text-left sm:pr-6 whitespace-nowrap"
+                        className="py-3.5 px-2 sm:px-4 text-left sm:pr-6 whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="inline-flex items-center justify-start gap-1.5">
+                        <div className="inline-flex items-center justify-start gap-1 sm:gap-1.5">
                           {op.phone && (
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
                               onClick={(e) => handleCall(e, op.phone, op.name)}
-                              className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                              className="h-8 px-2 sm:px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1 sm:gap-1.5 transition-all"
                               title={`Call ${op.phone}`}
                             >
                               <Phone className="h-3.5 w-3.5 text-brand" />
@@ -471,7 +473,7 @@ export function OperatorsDirectory({
                               variant="outline"
                               size="sm"
                               onClick={(e) => handleText(e, op.phone, op.name)}
-                              className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
+                              className="h-8 px-2 sm:px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1 sm:gap-1.5 transition-all"
                               title={`Text ${op.phone}`}
                             >
                               <MessageSquare className="h-3.5 w-3.5 text-brand" />
@@ -481,7 +483,7 @@ export function OperatorsDirectory({
 
                           <Link
                             href={`/operators/${op.id}`}
-                            className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-brand hover:bg-brand-light transition-colors ml-0.5"
+                            className="h-8 w-6 sm:w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-brand hover:bg-brand-light transition-colors sm:ml-0.5"
                             title="View operator profile"
                           >
                             <ChevronRight className="h-4 w-4" />

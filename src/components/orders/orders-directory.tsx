@@ -21,6 +21,7 @@ import { AppSelect } from '@/components/ui/app-select';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { OrderTileCard } from '@/components/orders/order-tile-card';
+import { ORDER_STATUSES, ORDER_STATUS_STYLE, type OrderStatus } from '@/features/orders/statuses';
 import { OrdersFilterSheet, OrderTab } from '@/components/orders/orders-filter-sheet';
 
 import type { OrderItem } from '@/features/orders/types';
@@ -43,7 +44,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
-  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
+  const currentLayout: ViewLayout = userLayout ?? (isTablet && !isMobile ? 'tiles' : 'table');
 
   // Keyboard shortcut listener: Cmd/Ctrl + K or / to focus search
   useEffect(() => {
@@ -61,10 +62,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
   const filteredOrders = useMemo(() => {
     const list = orders.filter((order) => {
       // 1. Tab filter
-      if (activeTab === 'confirmed' && order.status !== 'Confirmed') {
-        return false;
-      }
-      if (activeTab === 'pending' && order.status !== 'Pending') {
+      if (activeTab !== 'all' && activeTab !== 'needs_assignment' && order.status !== activeTab) {
         return false;
       }
       if (activeTab === 'needs_assignment' && !order.isUnassigned) {
@@ -123,14 +121,11 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
   // Tab count badges
-  const confirmedCount = useMemo(
-    () => orders.filter((o) => o.status === 'Confirmed').length,
-    [orders]
-  );
-  const pendingCount = useMemo(
-    () => orders.filter((o) => o.status === 'Pending').length,
-    [orders]
-  );
+  const statusCounts = useMemo(() => {
+    const counts = Object.fromEntries(ORDER_STATUSES.map((status) => [status, 0])) as Record<OrderStatus, number>;
+    for (const order of orders) counts[order.status] += 1;
+    return counts;
+  }, [orders]);
   const needsAssignmentCount = useMemo(
     () => orders.filter((o) => o.isUnassigned).length,
     [orders]
@@ -202,13 +197,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                 <span>Filter</span>
                 {activeTab !== 'all' ? (
                   <span className="h-4 px-1.5 rounded-full bg-white text-brand text-[10px] font-bold flex items-center">
-                    {activeTab === 'confirmed'
-                      ? 'Confirmed'
-                      : activeTab === 'pending'
-                      ? 'Pending'
-                      : activeTab === 'needs_assignment'
-                      ? 'Needs Rig'
-                      : 'Invoice'}
+                    {activeTab === 'needs_assignment' ? 'Needs Rig' : activeTab}
                   </span>
                 ) : (
                   <span className="text-[10px] text-slate-400 font-mono">
@@ -300,39 +289,25 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                 </span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleTabChange('confirmed')}
-                className={cn(
-                  'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5',
-                  activeTab === 'confirmed'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                )}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-                <span>Confirmed</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-slate-200/70 text-[10.5px] font-bold text-slate-700">
-                  {confirmedCount}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleTabChange('pending')}
-                className={cn(
-                  'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5',
-                  activeTab === 'pending'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                )}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                <span>Pending</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-slate-200/70 text-[10.5px] font-bold text-slate-700">
-                  {pendingCount}
-                </span>
-              </button>
+              {ORDER_STATUSES.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => handleTabChange(status)}
+                  className={cn(
+                    'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap',
+                    activeTab === status
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  <span className={cn('h-1.5 w-1.5 rounded-full', ORDER_STATUS_STYLE[status].dot)} />
+                  <span>{status}</span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-slate-200/70 text-[10.5px] font-bold text-slate-700">
+                    {statusCounts[status]}
+                  </span>
+                </button>
+              ))}
 
               <button
                 type="button"
@@ -590,23 +565,13 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                       <span
                         className={cn(
                           'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border',
-                          order.status === 'Confirmed' &&
-                            'bg-brand-light text-brand border-brand/25',
-                          order.status === 'Pending' &&
-                            'bg-amber-50 text-amber-800 border-amber-200/80',
-                          order.status === 'Completed' &&
-                            'bg-slate-100 text-slate-700 border-slate-200/80',
-                          order.status === 'Cancelled' &&
-                            'bg-slate-50 text-slate-500 border-slate-200'
+                          ORDER_STATUS_STYLE[order.status].badge
                         )}
                       >
                         <span
                           className={cn(
                             'h-1.5 w-1.5 rounded-full shrink-0',
-                            order.status === 'Confirmed' && 'bg-brand',
-                            order.status === 'Pending' && 'bg-amber-600',
-                            order.status === 'Completed' && 'bg-slate-500',
-                            order.status === 'Cancelled' && 'bg-slate-400'
+                            ORDER_STATUS_STYLE[order.status].dot
                           )}
                         />
                         <span>{order.status}</span>
@@ -686,8 +651,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         totalCount={orders.length}
-        confirmedCount={confirmedCount}
-        pendingCount={pendingCount}
+        statusCounts={statusCounts}
         needsAssignmentCount={needsAssignmentCount}
         filteredCount={filteredOrders.length}
         onResetFilters={handleResetFilters}

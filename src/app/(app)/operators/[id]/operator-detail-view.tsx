@@ -16,6 +16,10 @@ import { toast } from 'sonner';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { EditOperatorModal } from '@/components/operators/edit-operator-modal';
 import { CopyButton } from '@/components/ui/copy-button';
+import { OperatorCredentialsCard } from '@/components/operators/operator-credentials-card';
+import { cn } from '@/lib/utils';
+
+type DetailTab = 'profile' | 'credentials';
 
 interface OperatorDetailViewProps {
   operator: OperatorItem;
@@ -25,6 +29,7 @@ interface OperatorDetailViewProps {
 
 export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorDetailViewProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>('profile');
 
   const handleCopy = (text: string, label: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -131,7 +136,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
 
           <button
             type="button"
-            onClick={() => toast.info('Review credential details in driver file')}
+            onClick={() => setActiveTab('credentials')}
             className="text-xs font-semibold text-amber-900 hover:text-amber-950 hover:underline inline-flex items-center gap-1 cursor-pointer self-start sm:self-auto shrink-0"
           >
             <span>Review credential</span>
@@ -140,18 +145,34 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
         </div>
       )}
 
-      {/* ── 4. Profile Tab (Figma Image 2: Credentials and Work history hidden as requested) ── */}
+      {/* ── 4. Tabs ── */}
       <div className="flex items-center gap-2 border-b border-slate-200/80 pt-1">
-        <button
-          type="button"
-          className="px-4 py-2 text-xs font-bold text-brand border-b-2 border-brand bg-brand-light/40 rounded-t-lg transition-colors cursor-pointer select-none"
-        >
-          Profile
-        </button>
+        {(['profile', 'credentials'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-4 py-2 text-xs font-bold rounded-t-lg transition-colors cursor-pointer select-none capitalize',
+              activeTab === tab
+                ? 'text-brand border-b-2 border-brand bg-brand-light/40'
+                : 'text-slate-500 hover:text-slate-900'
+            )}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* ── 5. Main Cards (Credentials, Work history & Time & availability excluded as requested) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {activeTab === 'credentials' && (
+        <OperatorCredentialsCard
+          cdlExpiresOn={operator.cdlExpiresOn}
+          medicalCertExpiresOn={operator.medicalCertExpiresOn}
+        />
+      )}
+
+      {/* ── 5. Main Cards (Work history & Time & availability excluded as requested) ── */}
+      <div className={cn('grid grid-cols-1 lg:grid-cols-2 gap-5', activeTab !== 'profile' && 'hidden')}>
         {/* Card 1: Contact & Assignment */}
         <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">

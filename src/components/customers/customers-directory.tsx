@@ -11,12 +11,8 @@ import {
   ChevronRight,
   X,
   Copy,
-  ExternalLink,
   LayoutGrid,
   Table as TableIcon,
-  FileText,
-  User,
-  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,12 +44,11 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [sortBy, setSortBy] = useState<SortOption>('name_asc');
-  const [selectedCustomerForQuickView, setSelectedCustomerForQuickView] = useState<CustomerItem | null>(null);
 
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const [userLayout, setUserLayout] = useState<ViewLayout | null>(null);
-  const currentLayout: ViewLayout = userLayout ?? (isMobile || isTablet ? 'tiles' : 'table');
+  const currentLayout: ViewLayout = userLayout ?? (isTablet && !isMobile ? 'tiles' : 'table');
 
   // Add New Customer Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -407,7 +402,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
             <CustomerTileCard
               key={cust.id}
               customer={cust}
-              onClick={() => setSelectedCustomerForQuickView(cust)}
+              onClick={() => router.push(`/customers/${cust.id}`)}
               onCall={handleCall}
               onText={handleText}
               onCopyPhone={handleCopyPhone}
@@ -434,7 +429,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                   <tr
                     key={cust.id}
                     className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                    onClick={() => setSelectedCustomerForQuickView(cust)}
+                    onClick={() => router.push(`/customers/${cust.id}`)}
                   >
                     {/* Customer Info with Monogram Badge */}
                     <td className="py-3.5 px-4 sm:px-6">
@@ -722,179 +717,6 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
         </DialogContent>
       </Dialog>
 
-      {/* ── 7. Quick View Customer Modal ── */}
-      {selectedCustomerForQuickView && (
-        <Dialog
-          open={!!selectedCustomerForQuickView}
-          onOpenChange={(open) => !open && setSelectedCustomerForQuickView(null)}
-        >
-          <DialogContent className="sm:max-w-lg p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
-            <DialogHeader>
-              <div className="flex items-center gap-3.5">
-                <div className="h-11 w-11 rounded-xl bg-brand text-white font-bold text-base flex items-center justify-center shadow-xs shrink-0">
-                  {getInitials(selectedCustomerForQuickView.name)}
-                </div>
-                <div className="min-w-0">
-                  <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
-                    {selectedCustomerForQuickView.name}
-                  </DialogTitle>
-                  {selectedCustomerForQuickView.number && (
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span className="text-xs text-slate-400 font-medium">
-                        Account ID: {selectedCustomerForQuickView.number}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-4 pt-1">
-              {/* Contact Details */}
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5 space-y-2">
-                {/* Primary Contact */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
-                      <User className="h-4.5 w-4.5 text-slate-500" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[13px] font-semibold text-slate-500 block">
-                        Primary contact
-                      </span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-semibold text-sm text-slate-900">
-                          {selectedCustomerForQuickView.contactName}
-                        </span>
-                        {selectedCustomerForQuickView.contactRole && (
-                          <span className="text-xs text-slate-500 font-normal">
-                            ({selectedCustomerForQuickView.contactRole})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Phone */}
-{selectedCustomerForQuickView.phone && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/phone">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
-                        <Phone className="h-4.5 w-4.5 text-slate-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[13px] font-semibold text-slate-500 block">
-                          Phone number
-                        </span>
-                        <span className="font-mono text-sm font-semibold text-slate-900 tracking-tight">
-                          {selectedCustomerForQuickView.phone}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleCopyPhone(selectedCustomerForQuickView.phone, selectedCustomerForQuickView.name)}
-                      className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
-                      title="Click to copy phone"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">Copy</span>
-                    </Button>
-                  </div>
-)}
-
-                {/* Email */}
-{selectedCustomerForQuickView.email && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200/60 shadow-2xs gap-3 group/email">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-lg bg-slate-100/90 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
-                        <Mail className="h-4.5 w-4.5 text-slate-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[13px] font-semibold text-slate-500 block">
-                          Email address
-                        </span>
-                        <a
-                          href={`mailto:${selectedCustomerForQuickView.email}`}
-                          className="text-sm font-semibold text-slate-900 hover:text-brand hover:underline truncate block"
-                          title={`Send email to ${selectedCustomerForQuickView.email}`}
-                        >
-                          {selectedCustomerForQuickView.email}
-                        </a>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleCopyEmail(selectedCustomerForQuickView.email, selectedCustomerForQuickView.name)}
-                      className="h-8 px-2.5 text-xs text-slate-600 hover:text-brand hover:bg-brand-light/60 gap-1.5 cursor-pointer rounded-lg shrink-0 border border-slate-200/60 hover:border-brand/30"
-                      title="Click to copy email"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">Copy</span>
-                    </Button>
-                  </div>
-)}
-              </div>
-
-              {/* Dispatch Note (Shown only when there's a note for the customer) */}
-              {selectedCustomerForQuickView.dispatchNote && (
-                <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-950 font-medium">
-                  <FileText className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5 min-w-0">
-                    <span className="font-bold text-xs text-amber-800 block">
-                      Dispatch Note
-                    </span>
-                    <p className="text-amber-900 leading-snug">
-                      {selectedCustomerForQuickView.dispatchNote}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Direct Actions */}
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-2">
-                  {selectedCustomerForQuickView.phone && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCall(selectedCustomerForQuickView.contactName, selectedCustomerForQuickView.phone)}
-                      className="h-8.5 px-3 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs hover:bg-brand-light hover:text-brand hover:border-brand/30"
-                    >
-                      <Phone className="h-3.5 w-3.5 text-brand" />
-                      <span>Call</span>
-                    </Button>
-                  )}
-                  {selectedCustomerForQuickView.phone && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleText(selectedCustomerForQuickView.contactName, selectedCustomerForQuickView.phone)}
-                      className="h-8.5 px-3 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs hover:bg-brand-light hover:text-brand hover:border-brand/30"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5 text-brand" />
-                      <span>Text</span>
-                    </Button>
-                  )}
-                </div>
-
-                <Link
-                  href={`/customers/${selectedCustomerForQuickView.id}`}
-                  className="ml-auto h-8.5 px-3.5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
-                >
-                  <span>View details</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

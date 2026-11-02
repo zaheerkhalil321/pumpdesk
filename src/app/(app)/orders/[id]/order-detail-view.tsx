@@ -37,6 +37,19 @@ import { reportAction } from '@/lib/action-feedback';
 import { cancelOrder, updateOrder } from '@/features/orders/server/actions';
 import { POUR_TYPE_OPTIONS, STANDARD_TIMES } from '@/features/orders/constants';
 import type { FullOrderData, OrderFormOptions } from '@/features/orders/types';
+import { shiftClock } from '@/features/orders/mappers';
+import { pumpMinutesFor } from '@/features/orders/duration';
+import {
+  EDITABLE_ORDER_STATUSES,
+  ORDER_STATUS_STYLE,
+  toBookingStatus,
+  type EditableOrderStatus,
+  type OrderStatus,
+} from '@/features/orders/statuses';
+
+/** The status an order is edited from; a cancelled order cannot be edited, so it never gets here. */
+const editableStatusOf = (status: OrderStatus): EditableOrderStatus =>
+  status === 'Cancelled' ? 'Pending' : status;
 
 interface OrderDetailViewProps {
   order: FullOrderData;
@@ -87,9 +100,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
   const [editMaxPumpSize, setEditMaxPumpSize] = useState(order.maxPumpSize || NONE);
   const [editExtraItems, setEditExtraItems] = useState(toRows(order.extraItems));
   const [editSecondOperatorId, setEditSecondOperatorId] = useState(order.secondOperatorId ?? UNASSIGNED);
-  const [editStatus, setEditStatus] = useState<'Pending' | 'Confirmed'>(
-    order.status === 'Confirmed' ? 'Confirmed' : 'Pending',
-  );
+  const [editStatus, setEditStatus] = useState<EditableOrderStatus>(editableStatusOf(order.status));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearError = (field: string) => setErrors((prev) => ({ ...prev, [field]: '' }));
@@ -118,7 +129,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
     setEditMaxPumpSize(order.maxPumpSize || NONE);
     setEditExtraItems(toRows(order.extraItems));
     setEditSecondOperatorId(order.secondOperatorId ?? UNASSIGNED);
-    setEditStatus(order.status === 'Confirmed' ? 'Confirmed' : 'Pending');
+    setEditStatus(editableStatusOf(order.status));
     setErrors({});
     setIsEditingOrder(true);
   };
@@ -224,9 +235,10 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
       pourTime: editPourTime,
       arriveBy: editArriveBy,
       estimatedFinish: editEstimatedEnd,
+      ...(Number(editVolume) !== order.volumeYards ? { pumpMinutes: pumpMinutesFor(Number(editVolume)) } : {}),
       equipmentId: editPumpId === UNASSIGNED ? null : editPumpId,
       employeeId: editOperatorId === UNASSIGNED ? null : editOperatorId,
-      bookingStatus: editStatus === 'Confirmed' ? ('confirmed' as const) : ('pending' as const),
+      bookingStatus: toBookingStatus(editStatus),
       supplierName: editSupplier,
       customerNotes: editCustomerNotes,
       internalNote: editInternalNote,
@@ -444,6 +456,12 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                         onChange={(e) => {
                           setEditVolume(e.target.value);
                           if (errors.volume) setErrors((prev) => ({ ...prev, volume: '' }));
+                          // A new volume means a new pour length: the finish moves with it (it can still be changed by hand).
+                          if (Number(e.target.value) > 0) {
+                            const pumpMinutes = pumpMinutesFor(Number(e.target.value));
+                            const cleanupMinutes = Math.round(order.adjustedCleanup * 60);
+                            setEditEstimatedEnd(shiftClock(editPourTime, pumpMinutes + cleanupMinutes));
+                          }
                         }}
                         className={cn(
                           'h-9 pr-12 text-xs font-semibold text-slate-900 focus-visible:border-brand',
@@ -684,11 +702,8 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                     <label className="text-slate-600 font-medium">Booking status</label>
                     <AppSelect
                       value={editStatus}
-                      onChange={(val) => setEditStatus(val as 'Pending' | 'Confirmed')}
-                      options={[
-                        { value: "Confirmed", label: "Confirmed" },
-                        { value: "Pending", label: "Pending" },
-                      ]}
+                      onChange={(val) => setEditStatus(val as EditableOrderStatus)}
+                      options={EDITABLE_ORDER_STATUSES.map((status) => ({ value: status, label: status }))}
                     />
                   </div>
                 </div>
@@ -744,23 +759,13 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border',
-                order.status === 'Confirmed' &&
-                  'bg-brand-light text-brand border border-brand/25',
-                order.status === 'Completed' &&
-                  'bg-brand-light text-brand border border-brand/25',
-                order.status === 'Pending' &&
-                  'bg-amber-50 text-amber-800 border-amber-200/80',
-                order.status === 'Cancelled' &&
-                  'bg-slate-50 text-slate-500 border-slate-200'
+                ORDER_STATUS_STYLE[order.status].badge
               )}
             >
               <span
                 className={cn(
                   'h-1.5 w-1.5 rounded-full shrink-0',
-                  (order.status === 'Confirmed' || order.status === 'Completed') &&
-                    'bg-brand',
-                  order.status === 'Pending' && 'bg-amber-600',
-                  order.status === 'Cancelled' && 'bg-slate-400'
+                  ORDER_STATUS_STYLE[order.status].dot
                 )}
               />
               <span>{order.status}</span>
