@@ -12,10 +12,14 @@ import {
   cancelOrderSchema,
   dayBlocksSchema,
   dayCountsSchema,
+  driveTimeSchema,
   operatorJobsSchema,
   updateOrderSchema,
 } from '@/features/orders/schemas';
 import { listDayBlocks, listDayCounts, listOperatorJobs } from '@/features/orders/server/queries';
+import { getShopAddress } from '@/features/company/server/queries';
+import { estimateDriveMinutes } from '@/features/orders/server/drive-time';
+import { previousBlock } from '@/features/orders/travel';
 import type { Database, Json } from '@/types/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -243,6 +247,23 @@ export const getDayBlocks = authedAction({
   schema: dayBlocksSchema,
   roles: ['owner', 'admin', 'dispatcher', 'office', 'operator', 'mechanic', 'accountant', 'read_only'],
   run: async ({ input }) => listDayBlocks(input.date),
+});
+
+/**
+ * Drive time into a new job, from Google: from the pump's previous job that day, or from the shop
+ * when it has none. Read only. Minutes is null when Google could not say; the form keeps its own value.
+ */
+export const getDriveTime = authedAction({
+  schema: driveTimeSchema,
+  roles: ORDER_EDITORS,
+  run: async ({ input }) => {
+    const blocks = await listDayBlocks(input.date);
+    const previous = previousBlock(blocks, input.pumpId, input.startHour, input.ignoreId);
+    const origin = previous?.siteAddress ?? (await getShopAddress());
+    if (!origin) return { minutes: null, from: 'shop' as const };
+    const minutes = await estimateDriveMinutes(origin, input.destination);
+    return { minutes, from: previous ? ('job' as const) : ('shop' as const) };
+  },
 });
 
 /** The open jobs an operator is on, shown in the delete confirmation. Read only. */

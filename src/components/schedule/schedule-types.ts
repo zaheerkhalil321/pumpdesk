@@ -29,6 +29,8 @@ export interface ScheduleBooking {
   /** When the pour itself starts and how long it takes (prep and clean-up not included). */
   pourHour: number;
   pourHours: number;
+  /** Drive time into this job, from the shop or the pump's previous job. */
+  travelMinutes: number;
   volumeYards: number;
   status: BookingStatus;
   notes?: string;

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { PumpLane, ScheduleBooking } from './schedule-types';
 import { clockFromHour } from '@/features/orders/mappers';
 import { findOverlap } from '@/features/orders/conflicts';
+import { formatDuration } from '@/features/orders/duration';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 /** "7:00 - 10:00 AM": when the pour starts and ends, so the card never has to be read off the hour columns. */
@@ -103,6 +104,86 @@ function assignTracks(bookings: ScheduleBooking[]): { ordered: ScheduleBooking[]
     trackOf.set(booking.id, track);
   }
   return { ordered, trackOf, tracks: Math.max(1, Math.min(trackEnds.length, MAX_TRACKS)) };
+}
+
+const colIndex = (hour: number) => Math.max(0, Math.min(23, Math.floor(hour)));
+const colSpan = (durationHours: number) => Math.max(1, Math.min(24, Math.round(durationHours)));
+
+/**
+ * The route of one pump through the day: from the shop to the first job, between jobs, and back to the shop.
+ * A line between two jobs shows the drive time; it turns red when the gap is shorter than the drive.
+ */
+function TravelConnectors({ ordered, trackOf }: { ordered: ScheduleBooking[]; trackOf: Map<string, number> }) {
+  if (ordered.length === 0) return null;
+  const items: React.ReactNode[] = [];
+
+  const endCol = (b: ScheduleBooking) => {
+    const start = colIndex(b.startHour);
+    return start + Math.min(colSpan(b.durationHours), 24 - start);
+  };
+
+  const first = ordered[0];
+  const firstCol = colIndex(first.startHour);
+  if (firstCol >= 1) {
+    items.push(
+      <div
+        key="shop-out"
+        title="From the shop"
+        className={cn('flex items-center self-center', ROW_STARTS[trackOf.get(first.id) ?? 0], COL_STARTS[firstCol - 1], COL_SPANS[0])}
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full bg-slate-400" />
+        <span className="h-px flex-1 bg-slate-400" />
+      </div>,
+    );
+  }
+
+  ordered.forEach((current, i) => {
+    const next = ordered[i + 1];
+    if (!next) return;
+    const track = trackOf.get(current.id) ?? 0;
+    if (trackOf.get(next.id) !== track) return;
+    const from = endCol(current);
+    const to = colIndex(next.startHour);
+    if (to - from < 1) return;
+    const gapMinutes = Math.round((next.startHour - (current.startHour + current.durationHours)) * 60);
+    const short = gapMinutes < next.travelMinutes;
+    items.push(
+      <div
+        key={`${current.id}-${next.id}`}
+        title={`${next.travelMinutes > 0 ? `${formatDuration(next.travelMinutes)} drive` : 'No drive time set'}${short ? ` - only ${formatDuration(Math.max(0, gapMinutes))} between jobs` : ''}`}
+        className={cn('relative flex items-center self-center', ROW_STARTS[track], COL_STARTS[from], COL_SPANS[to - from - 1])}
+      >
+        <span className={cn('h-0.5 flex-1', short ? 'bg-rose-500' : 'bg-slate-400')} />
+        {next.travelMinutes > 0 && (
+          <span
+            className={cn(
+              'absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold leading-none',
+              short ? 'text-rose-600' : 'text-slate-500',
+            )}
+          >
+            {formatDuration(next.travelMinutes)}
+          </span>
+        )}
+      </div>,
+    );
+  });
+
+  const last = ordered[ordered.length - 1];
+  const lastEnd = endCol(last);
+  if (lastEnd <= 23) {
+    items.push(
+      <div
+        key="shop-back"
+        title="Back to the shop"
+        className={cn('flex items-center self-center', ROW_STARTS[trackOf.get(last.id) ?? 0], COL_STARTS[lastEnd], COL_SPANS[0])}
+      >
+        <span className="h-px flex-1 bg-slate-400" />
+        <span className="h-2 w-2 shrink-0 rounded-full bg-slate-400" />
+      </div>,
+    );
+  }
+
+  return <>{items}</>;
 }
 
 interface TimelineGridProps {
@@ -468,6 +549,7 @@ export function TimelineGrid({
                           </DraggableCard>
                         );
                       })}
+                      <TravelConnectors ordered={ordered} trackOf={trackOf} />
                     </div>
 
                     {/* Layer C: where the dragged card would land, over everything on this row */}

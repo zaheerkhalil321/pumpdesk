@@ -203,6 +203,7 @@ export function toBooking(h: HydratedJob): ScheduleBooking {
     durationHours: Math.max(0.5, durationHours),
     pourHour,
     pourHours,
+    travelMinutes: job.travel_minutes,
     volumeYards: Number(job.estimated_yards),
     status: 'travel',
     notes: job.site_instructions ?? undefined,

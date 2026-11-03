@@ -65,6 +65,10 @@ export interface DayBlock {
   /** Hours from midnight, e.g. 7.5 for 7:30 AM. */
   startHour: number;
   durationHours: number;
+  /** Drive time into this job, from the shop or the pump's previous job. */
+  travelMinutes: number;
+  /** Where the pour is, as typed or saved with the order. */
+  siteAddress: string;
   customerName: string;
   orderNumber: string;
 }

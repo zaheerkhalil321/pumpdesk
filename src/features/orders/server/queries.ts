@@ -312,6 +312,8 @@ export async function listDayBlocks(date: string): Promise<DayBlock[]> {
       pumpId: b.pumpId,
       startHour: b.startHour,
       durationHours: b.durationHours,
+      travelMinutes: b.travelMinutes,
+      siteAddress: b.address ?? b.jobSiteName,
       customerName: b.customerName,
       orderNumber: b.orderNumber,
     }));

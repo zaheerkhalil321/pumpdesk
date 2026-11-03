@@ -200,7 +200,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                 if (error) setError(null);
               }}
               placeholder="e.g. 05 or P-04"
-              className="h-9 text-xs"
+              className="h-9 text-xs sm:text-xs"
               autoFocus
             />
             {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
@@ -209,9 +209,8 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
           {/* Make & Model */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Manufacturer</label>
+              <label className="flex h-5 items-center text-xs font-semibold text-slate-700">Manufacturer</label>
               <AppSelect
-                size="sm"
                 value={make}
                 onChange={setMake}
                 options={[
@@ -224,12 +223,12 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Model</label>
+              <label className="flex h-5 items-center text-xs font-semibold text-slate-700">Model</label>
               <Input
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="e.g. 38Z or B50"
-                className="h-9 text-xs"
+                className="h-9 text-xs sm:text-xs"
               />
             </div>
           </div>
@@ -237,9 +236,8 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
           {/* Equipment Type & Year */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Equipment Type</label>
+              <label className="flex h-5 items-center text-xs font-semibold text-slate-700">Equipment Type</label>
               <AppSelect
-                size="sm"
                 value={type}
                 onChange={(val) => setType(val as 'boom_pump' | 'line_pump')}
                 options={[
@@ -271,7 +269,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                   }}
                   placeholder="2024"
                   className={cn(
-                    'h-9 text-xs',
+                    'h-9 text-xs sm:text-xs',
                     isYearInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                   )}
                 />
@@ -309,7 +307,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                 placeholder={type === 'boom_pump' ? 'e.g. 38' : 'N/A'}
                 disabled={type === 'line_pump'}
                 className={cn(
-                  'h-9 text-xs',
+                  'h-9 text-xs sm:text-xs',
                   isBoomInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
@@ -342,7 +340,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                 }}
                 placeholder={type === 'boom_pump' ? 'e.g. 124' : 'e.g. 500'}
                 className={cn(
-                  'h-9 text-xs',
+                  'h-9 text-xs sm:text-xs',
                   isReachInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
@@ -362,11 +360,10 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                 className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
                 <UserPlus className="h-3 w-3" />
-                <span>+ New Operator</span>
+                <span>New Operator</span>
               </button>
             </div>
             <AppSelect
-              size="sm"
               value={operatorId}
               onChange={setOperatorId}
               options={operatorOptions}
@@ -399,7 +396,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                 }}
                 placeholder="195"
                 className={cn(
-                  'h-9 text-xs',
+                  'h-9 text-xs sm:text-xs',
                   isRateInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />
@@ -431,7 +428,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
                 }}
                 placeholder="4.0"
                 className={cn(
-                  'h-9 text-xs',
+                  'h-9 text-xs sm:text-xs',
                   isMinHoursInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                 )}
               />

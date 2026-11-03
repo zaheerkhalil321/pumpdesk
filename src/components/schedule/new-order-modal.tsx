@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, parse } from 'date-fns';
 import {
@@ -39,6 +39,10 @@ import { DeleteOrderDialog } from './delete-order-dialog';
 import { cancelOrder, createOrder, updateOrder } from '@/features/orders/server/actions';
 import { clockFromHour, parseClock, shiftClock } from '@/features/orders/mappers';
 import { findOverlap } from '@/features/orders/conflicts';
+import { DEFAULT_TRAVEL_MINUTES, findTravelClash } from '@/features/orders/travel';
+import { TravelClashDialog, type PendingTravelClash } from './travel-clash-dialog';
+import { TravelTimeField } from '@/components/orders/travel-time-field';
+import { useDriveTime } from '@/components/orders/use-drive-time';
 import { CLEANUP_MINUTES, PREP_MINUTES, pumpMinutesFor } from '@/features/orders/duration';
 import { reportAction } from '@/lib/action-feedback';
 import { SiteCombobox } from '@/components/orders/site-combobox';
@@ -101,6 +105,12 @@ function NewOrderModalForm({
   const [pourTime, setPourTime] = useState(() =>
     clockFromHour(editingBooking ? editingBooking.pourHour : initialHour || 14),
   );
+
+  // Drive time into this job, from the shop or the pump's previous job.
+  const [travelMinutes, setTravelMinutes] = useState(() => editingBooking?.travelMinutes ?? DEFAULT_TRAVEL_MINUTES);
+  // Once the dispatcher picks a drive time themselves, Google's estimate no longer replaces it.
+  const travelPickedByHand = useRef(false);
+  const [pendingTravel, setPendingTravel] = useState<{ clash: PendingTravelClash; suggestedPour: string | null; save: (pourClock: string) => void } | null>(null);
 
   // Customer & Supplier States
   const [customer, setCustomer] = useState(
@@ -299,7 +309,8 @@ function NewOrderModalForm({
       employeeId: operatorId,
     };
 
-    startSaving(async () => {
+    const save = (pourClock: string) =>
+      startSaving(async () => {
       await ensureSupplier(supplier, options.suppliers);
       if (editingBooking) {
         if (!editingBooking.jobId || editingBooking.version === undefined) return;
@@ -308,7 +319,8 @@ function NewOrderModalForm({
           id: editingBooking.jobId,
           version: editingBooking.version,
           date: isoDate,
-          pourTime,
+          pourTime: pourClock,
+          travelMinutes,
           // Giving a pump to an order that had none confirms it, like a new order with a pump.
           ...(!editingBooking.pumpId && !isAssignLater ? { bookingStatus: 'confirmed' as const } : {}),
           ...(contactChosen ? { contactId: effectiveContactId || null } : {}),
@@ -316,7 +328,7 @@ function NewOrderModalForm({
           ...(volumeChanged
             ? {
                 pumpMinutes,
-                estimatedFinish: shiftClock(pourTime, pumpMinutes + savedCleanupMinutes),
+                estimatedFinish: shiftClock(pourClock, pumpMinutes + savedCleanupMinutes),
               }
             : {}),
         });
@@ -328,13 +340,13 @@ function NewOrderModalForm({
         const result = await createOrder({
           ...base,
           date: isoDate,
-          pourTime,
-          arriveBy: shiftClock(pourTime, -PREP_MINUTES),
-          estimatedFinish: shiftClock(pourTime, pumpMinutes + CLEANUP_MINUTES),
+          pourTime: pourClock,
+          arriveBy: shiftClock(pourClock, -PREP_MINUTES),
+          estimatedFinish: shiftClock(pourClock, pumpMinutes + CLEANUP_MINUTES),
           prepMinutes: PREP_MINUTES,
           pumpMinutes,
           cleanupMinutes: CLEANUP_MINUTES,
-          travelMinutes: 0,
+          travelMinutes,
           linesOnSite: false,
           collectOnDelivery: false,
           bookingStatus: isAssignLater ? 'pending' : 'confirmed',
@@ -347,12 +359,58 @@ function NewOrderModalForm({
           });
         } else {
           toast.success('Order booked on the schedule', {
-            description: `${result.data.job_number} • ${customer} on ${selectedPump?.code || 'a pump'} at ${pourTime}.`,
+            description: `${result.data.job_number} • ${customer} on ${selectedPump?.code || 'a pump'} at ${pourClock}.`,
           });
         }
       }
       onOpenChange(false);
-    });
+      });
+
+    // Too little drive time from the pump's other job: ask before saving.
+    const prepHours = savedPrepMinutes / 60;
+    const chosen = parseClock(pourTime);
+    const pourHourNow = chosen.hour + chosen.minute / 60;
+    const travel =
+      !isAssignLater && isoDate === date
+        ? findTravelClash(bookings, {
+            pumpId: assignedPumpId,
+            startHour: pourHourNow - prepHours,
+            durationHours: (savedPrepMinutes + pumpMinutes + savedCleanupMinutes) / 60,
+            prepHours,
+            travelMinutes,
+            ignoreId: editingBooking?.id,
+          })
+        : null;
+    if (travel) {
+      setPendingTravel({
+        save,
+        suggestedPour: travel.suggestedPourHour === null ? null : clockFromHour(travel.suggestedPourHour),
+        clash: {
+          kind: travel.kind,
+          customerName: customer,
+          otherCustomerName: travel.other.customerName,
+          otherOrderNumber: travel.other.orderNumber,
+          gapMinutes: travel.gapMinutes,
+          travelMinutes: travel.travelMinutes,
+          suggestedPourClock: travel.suggestedPourHour === null ? null : clockFromHour(travel.suggestedPourHour),
+          chosenPourClock: pourTime,
+        },
+      });
+      return;
+    }
+    save(pourTime);
+  };
+
+  const answerTravel = (moveToSuggested: boolean) => {
+    if (!pendingTravel) return;
+    const { suggestedPour, save } = pendingTravel;
+    setPendingTravel(null);
+    if (moveToSuggested && suggestedPour) {
+      setPourTime(suggestedPour);
+      save(suggestedPour);
+      return;
+    }
+    save(pourTime);
   };
 
   // Delete confirmation dialog state
@@ -398,6 +456,18 @@ function NewOrderModalForm({
           ignoreId: editingBooking?.id,
         })
       : null;
+
+  // New orders get the drive time from Google once the pump, time and address are known.
+  const driveStatus = useDriveTime({
+    enabled: !isEditMode && !isAssignLater,
+    date: isoDate,
+    pumpId: isAssignLater ? null : assignedPumpId,
+    startHour: pourHour + pourMinute / 60 - savedPrepMinutes / 60,
+    destination: address,
+    onEstimate: (minutes) => {
+      if (!travelPickedByHand.current) setTravelMinutes(minutes);
+    },
+  });
 
   return (
     <>
@@ -481,6 +551,20 @@ function NewOrderModalForm({
               onChange={setPourTime}
               options={pourTimeOptions}
               icon={Clock}
+              className="h-10"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Travel time to this job
+            </label>
+            <TravelTimeField
+              value={travelMinutes}
+              onChange={(minutes) => {
+                travelPickedByHand.current = true;
+                setTravelMinutes(minutes);
+              }}
+              status={driveStatus}
               className="h-10"
             />
           </div>
@@ -884,6 +968,12 @@ function NewOrderModalForm({
         onOpenChange={setIsDeleteDialogOpen}
         booking={editingBooking}
         onConfirmDelete={handleConfirmDelete}
+      />
+      <TravelClashDialog
+        clash={pendingTravel?.clash ?? null}
+        onMove={() => answerTravel(true)}
+        onKeep={() => answerTravel(false)}
+        onCancel={() => setPendingTravel(null)}
       />
     </>
   );

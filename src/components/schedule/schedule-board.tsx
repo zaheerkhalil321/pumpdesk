@@ -9,6 +9,7 @@ import { TimelineGrid } from "@/components/schedule/timeline-grid";
 import { MobileRigCardView } from "@/components/schedule/mobile-rig-card-view";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { findOverlap } from "@/features/orders/conflicts";
+import { findTravelClash } from "@/features/orders/travel";
 import { ScheduleEmptyState } from "@/components/schedule/schedule-empty-state";
 import { UnassignedJobsDrawer } from "@/components/schedule/unassigned-jobs-drawer";
 import { ScheduleLegend } from "@/components/schedule/schedule-legend";
@@ -16,6 +17,7 @@ import { NewOrderModal } from "@/components/schedule/new-order-modal";
 import { OrderDossierModal } from "@/components/schedule/order-dossier-popover";
 import { OperatorSwapDialog, type OperatorRef } from "@/components/schedule/operator-swap-dialog";
 import { MoveDetailsDialog, type MoveDetails } from "@/components/schedule/move-details-dialog";
+import { TravelClashDialog, type PendingTravelClash } from "@/components/schedule/travel-clash-dialog";
 import { clockFromHour } from "@/features/orders/mappers";
 import {
   PumpLane,
@@ -285,6 +287,15 @@ export function ScheduleBoard({
     usual: OperatorRef;
   } | null>(null);
 
+  // A drag that leaves too little drive time between two jobs waits here for an answer.
+  const [pendingTravel, setPendingTravel] = useState<{
+    booking: ScheduleBooking;
+    targetPumpId: string;
+    targetStartHour: number;
+    suggestedStartHour: number | null;
+    clash: PendingTravelClash;
+  } | null>(null);
+
   const handleRescheduleBooking = (
     bookingId: string,
     targetPumpId: string,
@@ -293,6 +304,47 @@ export function ScheduleBoard({
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking?.jobId || booking.version === undefined) return;
     if (booking.pumpId === targetPumpId && booking.startHour === targetStartHour) return;
+
+    const prepHours = booking.pourHour - booking.startHour;
+    const travel = findTravelClash(bookings, {
+      pumpId: targetPumpId,
+      startHour: targetStartHour,
+      durationHours: booking.durationHours,
+      prepHours,
+      travelMinutes: booking.travelMinutes,
+      ignoreId: booking.id,
+    });
+    if (travel) {
+      setPendingTravel({
+        booking,
+        targetPumpId,
+        targetStartHour,
+        suggestedStartHour: travel.suggestedPourHour === null ? null : travel.suggestedPourHour - prepHours,
+        clash: {
+          kind: travel.kind,
+          customerName: booking.customerName,
+          otherCustomerName: travel.other.customerName,
+          otherOrderNumber: travel.other.orderNumber,
+          gapMinutes: travel.gapMinutes,
+          travelMinutes: travel.travelMinutes,
+          suggestedPourClock: travel.suggestedPourHour === null ? null : clockFromHour(travel.suggestedPourHour),
+          chosenPourClock: clockFromHour(targetStartHour + prepHours),
+        },
+      });
+      return;
+    }
+    continueReschedule(booking, targetPumpId, targetStartHour);
+  };
+
+  const answerTravel = (moveToSuggested: boolean) => {
+    if (!pendingTravel) return;
+    const { booking, targetPumpId, targetStartHour, suggestedStartHour } = pendingTravel;
+    setPendingTravel(null);
+    continueReschedule(booking, targetPumpId, moveToSuggested && suggestedStartHour !== null ? suggestedStartHour : targetStartHour);
+  };
+
+  const continueReschedule = (booking: ScheduleBooking, targetPumpId: string, targetStartHour: number) => {
+    if (booking.version === undefined) return;
 
     // Moving to another pump brings that pump's usual operator, like choosing it in a form.
     if (booking.pumpId !== targetPumpId) {
@@ -475,6 +527,13 @@ export function ScheduleBoard({
         onKeep={() => answerSwap(false)}
         onSwitch={() => answerSwap(true)}
         onCancel={() => setPendingSwap(null)}
+      />
+
+      <TravelClashDialog
+        clash={pendingTravel?.clash ?? null}
+        onMove={() => answerTravel(true)}
+        onKeep={() => answerTravel(false)}
+        onCancel={() => setPendingTravel(null)}
       />
 
       {/* ── 8. Order Dossier Popover (Screenshot 3) ── */}

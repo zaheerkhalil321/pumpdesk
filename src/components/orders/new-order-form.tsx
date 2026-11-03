@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/incompatible-library */
 
-import { useEffect, useState, useMemo, useTransition } from "react";
+import { useEffect, useState, useMemo, useRef, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -15,6 +15,7 @@ import {
   Info,
   Search,
   AlertCircle,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/app-select";
@@ -22,15 +23,25 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createOrder, getDayBlocks } from "@/features/orders/server/actions";
 import { findOverlap } from "@/features/orders/conflicts";
+import { DEFAULT_TRAVEL_MINUTES, findTravelClash } from "@/features/orders/travel";
+import { TravelClashDialog, type PendingTravelClash } from "@/components/schedule/travel-clash-dialog";
+import { TravelTimeField } from "@/components/orders/travel-time-field";
+import { useDriveTime } from "@/components/orders/use-drive-time";
+import { clockFromHour } from "@/features/orders/mappers";
 import { CLEANUP_MINUTES, PREP_MINUTES, formatDuration, pumpMinutesFor } from "@/features/orders/duration";
 import { reportAction } from "@/lib/action-feedback";
 import { DatePicker } from "@/components/ui/date-picker";
-import type { DayBlock, OrderFormContact, OrderFormOptions, OrderFormSite } from "@/features/orders/types";
+import type { DayBlock, OrderFormContact, OrderFormCustomer, OrderFormOptions, OrderFormSite } from "@/features/orders/types";
+import { QuickCustomerDialog } from "@/components/schedule/quick-customer-dialog";
+
+/** Select value for the "add new customer" row at the bottom of the customer picker. */
+const NEW_CUSTOMER = "__new_customer__";
+const NEW_CONTACT = "__new_contact__";
 import { AddSiteModal } from "@/components/customers/add-site-modal";
 import { SiteCombobox } from "@/components/orders/site-combobox";
 import { SupplierCombobox } from "@/components/orders/supplier-combobox";
 import { ensureSupplier } from "@/features/suppliers/ensure";
-import { NewContactModal } from "@/components/contacts/new-contact-modal";
+import { QuickContactDialog } from "@/components/schedule/quick-contact-dialog";
 import { EDITABLE_ORDER_STATUSES, toBookingStatus, type EditableOrderStatus } from "@/features/orders/statuses";
 
 // Common pour types. These move to Settings > Lists once that is saved in the database.
@@ -231,6 +242,18 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   });
 
   const [linesOnSite, setLinesOnSite] = useState(false);
+  // Drive time into this job, from the shop or the pump's previous job.
+  const [travelMinutes, setTravelMinutes] = useState(DEFAULT_TRAVEL_MINUTES);
+  // Once the dispatcher picks a drive time themselves, Google's estimate no longer replaces it.
+  const travelPickedByHand = useRef(false);
+  const [pendingTravel, setPendingTravel] = useState<{
+    clash: PendingTravelClash;
+    suggestedPour: string | null;
+    save: (times?: { pourTime: string; arriveBy: string; estimatedFinish: string }) => void;
+    pump: number;
+    prep: number;
+    cleanup: number;
+  } | null>(null);
   const [collectOnDelivery, setCollectOnDelivery] = useState(false);
 
   const updateCalculatedTimes = (
@@ -269,7 +292,14 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   };
 
   // Real records for the dropdowns, from the database.
-  const selectedCustomer = options.customers.find((c) => c.name === watch("customer"));
+  // Customers added from this form show at once, without leaving it.
+  const [addedCustomers, setAddedCustomers] = useState<OrderFormCustomer[]>([]);
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const customers = useMemo(() => {
+    const known = new Set(options.customers.map((c) => c.id));
+    return [...options.customers, ...addedCustomers.filter((c) => !known.has(c.id))];
+  }, [options.customers, addedCustomers]);
+  const selectedCustomer = customers.find((c) => c.name === watch("customer"));
 
   // Sites and contacts added from this form show up at once, before the page data reloads.
   // Extra equipment or supplies, one row each.
@@ -320,8 +350,12 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   );
 
   const handleCustomerChange = (name: string) => {
+    if (name === NEW_CUSTOMER) {
+      setIsAddCustomerOpen(true);
+      return;
+    }
     setValue("customer", name, { shouldValidate: true });
-    const customer = options.customers.find((c) => c.name === name);
+    const customer = customers.find((c) => c.name === name);
     // A new customer means a new contact; offer the customer's first contact and site.
     setValue("jobContact", customer?.contacts[0]?.name ?? "");
     setValue("jobSite", customer?.sites[0]?.address ?? "", { shouldValidate: Boolean(customer?.sites[0]) });
@@ -359,6 +393,18 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       : null;
   const clashPump = options.pumps.find((p) => p.id === chosenPump);
 
+  // The drive time from Google, once the pump, time and address are known.
+  const driveStatus = useDriveTime({
+    enabled: true,
+    date: chosenDate,
+    pumpId: chosenPump && chosenPump !== "unassigned" ? chosenPump : null,
+    startHour: startMinutes / 60,
+    destination: watch("jobSite") ?? "",
+    onEstimate: (minutes) => {
+      if (!travelPickedByHand.current) setTravelMinutes(minutes);
+    },
+  });
+
   const handleCreateOrder = (data: NewOrderFormValues) => {
     const pumpId = data.assignedPump !== "unassigned" ? data.assignedPump : null;
     const operatorId = data.assignedOperator !== "unassigned" ? data.assignedOperator : null;
@@ -381,7 +427,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       prepMinutes: parseMinutes(data.prepDuration),
       pumpMinutes: parseMinutes(data.pumpingDuration),
       cleanupMinutes: parseMinutes(data.cleanupDuration),
-      travelMinutes: 0,
+      travelMinutes,
       estimatedYards: Number(data.estimatedVolume),
       minPumpSize: data.minPumpSize,
       linesOnSite: data.linesOnSite,
@@ -402,14 +448,66 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       secondEmployeeId: showSecondOperator && secondOperatorId !== "unassigned" ? secondOperatorId : null,
     };
 
-    startSaving(async () => {
+    const save = (times?: { pourTime: string; arriveBy: string; estimatedFinish: string }) =>
+      startSaving(async () => {
       await ensureSupplier(data.supplier ?? "", options.suppliers);
-      const result = await createOrder(payload);
+      const result = await createOrder({ ...payload, ...times });
       if (!reportAction(result, { entity: "order", refresh: () => router.refresh() })) return;
       toast.success("Order created", {
         description: `${data.customer} • ${result.data.job_number} saved as ${data.status}.`,
       });
       router.push("/schedule");
+      });
+
+    // Too little drive time from the pump's other job: ask before saving.
+    const prepMins = parseMinutes(data.prepDuration);
+    const travel = pumpId
+      ? findTravelClash(dayBlocks[data.date] ?? [], {
+          pumpId,
+          startHour: startMinutes / 60,
+          durationHours: Math.max(0.25, (endMinutes - startMinutes) / 60),
+          prepHours: prepMins / 60,
+          travelMinutes,
+        })
+      : null;
+    if (travel) {
+      setPendingTravel({
+        save,
+        pump: parseMinutes(data.pumpingDuration),
+        prep: prepMins,
+        cleanup: parseMinutes(data.cleanupDuration),
+        suggestedPour: travel.suggestedPourHour === null ? null : clockFromHour(travel.suggestedPourHour),
+        clash: {
+          kind: travel.kind,
+          customerName: data.customer,
+          otherCustomerName: travel.other.customerName,
+          otherOrderNumber: travel.other.orderNumber,
+          gapMinutes: travel.gapMinutes,
+          travelMinutes: travel.travelMinutes,
+          suggestedPourClock: travel.suggestedPourHour === null ? null : clockFromHour(travel.suggestedPourHour),
+          chosenPourClock: data.pourTime,
+        },
+      });
+      return;
+    }
+    save();
+  };
+
+  const answerTravel = (moveToSuggested: boolean) => {
+    if (!pendingTravel) return;
+    const { save, suggestedPour, prep, pump, cleanup } = pendingTravel;
+    setPendingTravel(null);
+    if (!moveToSuggested || !suggestedPour) {
+      save();
+      return;
+    }
+    const pourMins = parseTimeToMinutes(suggestedPour);
+    setValue("pourTime", suggestedPour, { shouldValidate: true });
+    updateCalculatedTimes(suggestedPour, getValues("prepDuration"), getValues("pumpingDuration"), getValues("cleanupDuration"));
+    save({
+      pourTime: suggestedPour,
+      arriveBy: formatMinutesToTime(pourMins - prep),
+      estimatedFinish: formatMinutesToTime(pourMins + pump + cleanup),
     });
   };
 
@@ -513,7 +611,16 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                   <AppSelect
                     value={watch("customer")}
                     onChange={handleCustomerChange}
-                    options={options.customers.map((c) => c.name)}
+                    options={[
+                      ...customers.map((c) => c.name),
+                      {
+                        value: NEW_CUSTOMER,
+                        label: "Add new customer",
+                        description: "Keeps your order as it is",
+                        icon: UserPlus,
+                        variant: "action" as const,
+                      },
+                    ]}
                     placeholder="Select customer *"
                     icon={Search}
                     error={Boolean(errors.customer)}
@@ -532,30 +639,34 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                   </label>
                   <AppSelect
                     value={watch("jobContact") || ""}
-                    onChange={(val) => setValue("jobContact", val)}
-                    placeholder="Select contact"
-                    options={contactChoices.map((c) => ({
-                      value: c.name,
-                      label: c.name,
-                      description: c.role || undefined,
-                    }))}
-                  />
-                  <div className="mt-1 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedCustomer) {
-                          toast.info("Pick a customer first");
-                          return;
-                        }
+                    onChange={(val) => {
+                      if (val === NEW_CONTACT) {
                         setIsAddContactOpen(true);
-                      }}
-                      className="text-brand hover:underline font-medium cursor-pointer inline-flex items-center gap-0.5"
-                    >
-                      <Plus className="h-3 w-3" />
-                      <span>Add contact</span>
-                    </button>
-                  </div>
+                        return;
+                      }
+                      setValue("jobContact", val);
+                    }}
+                    placeholder={selectedCustomer ? "Select contact" : "Pick a customer first"}
+                    disabled={!selectedCustomer}
+                    options={[
+                      ...contactChoices.map((c) => ({
+                        value: c.name,
+                        label: c.name,
+                        description: c.role || undefined,
+                      })),
+                      ...(selectedCustomer
+                        ? [
+                            {
+                              value: NEW_CONTACT,
+                              label: "Add new contact",
+                              description: `For ${selectedCustomer.name}`,
+                              icon: UserPlus,
+                              variant: "action" as const,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -911,7 +1022,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
               </div>
 
               {/* Durations Row: Prep, Pumping, Cleanup */}
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div>
                   <label className="text-[11px] font-medium text-slate-600 block mb-1">
                     Prep
@@ -954,6 +1065,21 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                       updateCalculatedTimes(getValues("pourTime"), getValues("prepDuration"), getValues("pumpingDuration"), val);
                     }}
                     options={["15 min", "30 min", "45 min", "1 hr"]}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-slate-600 block mb-1">
+                    Travel
+                  </label>
+                  <TravelTimeField
+                    value={travelMinutes}
+                    onChange={(minutes) => {
+                      travelPickedByHand.current = true;
+                      setTravelMinutes(minutes);
+                    }}
+                    status={driveStatus}
+                    className="h-9"
                   />
                 </div>
               </div>
@@ -1211,23 +1337,36 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
         />
       )}
 
+      {/* Add a customer without leaving the order form */}
+      <TravelClashDialog
+        clash={pendingTravel?.clash ?? null}
+        onMove={() => answerTravel(true)}
+        onKeep={() => answerTravel(false)}
+        onCancel={() => setPendingTravel(null)}
+      />
+      <QuickCustomerDialog
+        open={isAddCustomerOpen}
+        onOpenChange={setIsAddCustomerOpen}
+        onCreated={(created) => {
+          setAddedCustomers((prev) => [...prev, { id: created.id, name: created.name, contacts: [], sites: [] }]);
+          setValue("customer", created.name, { shouldValidate: true });
+          setValue("jobContact", "");
+        }}
+        onReload={() => router.refresh()}
+      />
+
       {/* Add a contact for the chosen customer without leaving the order form */}
-      {isAddContactOpen && selectedCustomer && (
-        <NewContactModal
-          open
+      {selectedCustomer && (
+        <QuickContactDialog
+          open={isAddContactOpen}
           onOpenChange={setIsAddContactOpen}
-          customerOptions={[{ value: selectedCustomer.id, label: selectedCustomer.name }]}
-          defaultRoles={["Site contact"]}
+          customerId={selectedCustomer.id}
+          customerName={selectedCustomer.name}
           onCreated={(created) => {
-            setAddedContacts((prev) => [
-              ...prev,
-              {
-                customerId: selectedCustomer.id,
-                contact: { id: created.id, name: created.name, role: created.role, phone: created.phone },
-              },
-            ]);
+            setAddedContacts((prev) => [...prev, { customerId: selectedCustomer.id, contact: created }]);
             setValue("jobContact", created.name);
           }}
+          onReload={() => router.refresh()}
         />
       )}
     </div>

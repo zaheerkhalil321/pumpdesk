@@ -426,14 +426,13 @@ export function PumpDetailDialog({
                       maxLength={15}
                       onChange={(e) => setEditUnitNumber(e.target.value)}
                       placeholder="e.g. 01 or P-04"
-                      className="h-9 text-xs"
+                      className="h-9 text-xs sm:text-xs"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-700 block">Equipment Type</label>
                     <AppSelect
-                      size="sm"
                       value={editType}
                       onChange={(val) => setEditType(val as PumpItem['type'])}
                       options={[
@@ -465,7 +464,7 @@ export function PumpDetailDialog({
                       onChange={(e) => setEditYear(e.target.value)}
                       placeholder="e.g. 2024"
                       className={cn(
-                        'h-9 text-xs',
+                        'h-9 text-xs sm:text-xs',
                         isEditYearInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
@@ -481,7 +480,7 @@ export function PumpDetailDialog({
                       value={editMake}
                       onChange={(e) => setEditMake(e.target.value)}
                       placeholder="e.g. Putzmeister"
-                      className="h-9 text-xs"
+                      className="h-9 text-xs sm:text-xs"
                     />
                   </div>
                   <div className="space-y-1">
@@ -492,7 +491,7 @@ export function PumpDetailDialog({
                       value={editModel}
                       onChange={(e) => setEditModel(e.target.value)}
                       placeholder="e.g. BSF 36-4.16 H"
-                      className="h-9 text-xs"
+                      className="h-9 text-xs sm:text-xs"
                     />
                   </div>
                 </div>
@@ -520,7 +519,7 @@ export function PumpDetailDialog({
                       placeholder={editType === 'boom_pump' ? 'e.g. 34' : 'N/A'}
                       disabled={editType === 'line_pump'}
                       className={cn(
-                        'h-9 text-xs',
+                        'h-9 text-xs sm:text-xs',
                         isEditBoomInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
@@ -548,7 +547,7 @@ export function PumpDetailDialog({
                       onChange={(e) => setEditHorizontalReach(e.target.value)}
                       placeholder="e.g. 112"
                       className={cn(
-                        'h-9 text-xs',
+                        'h-9 text-xs sm:text-xs',
                         isEditReachInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
@@ -577,7 +576,7 @@ export function PumpDetailDialog({
                       onChange={(e) => setEditHourlyRate(e.target.value)}
                       placeholder="195"
                       className={cn(
-                        'h-9 text-xs',
+                        'h-9 text-xs sm:text-xs',
                         isEditRateInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
@@ -609,7 +608,7 @@ export function PumpDetailDialog({
                       onChange={(e) => setEditMinHours(e.target.value)}
                       placeholder="4.0"
                       className={cn(
-                        'h-9 text-xs',
+                        'h-9 text-xs sm:text-xs',
                         isEditMinHoursInvalid && 'border-rose-500 focus-visible:border-rose-500 bg-rose-50/20'
                       )}
                     />
@@ -658,13 +657,12 @@ export function PumpDetailDialog({
                         className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1 cursor-pointer"
                       >
                         <UserPlus className="h-3 w-3" />
-                        <span>+ New Operator</span>
+                        <span>New Operator</span>
                       </button>
                     </div>
                   </div>
 
                   <AppSelect
-                    size="sm"
                     value={editOperatorId}
                     onChange={setEditOperatorId}
                     options={operatorSelectOptions}
@@ -675,7 +673,6 @@ export function PumpDetailDialog({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 block">Equipment Status</label>
                   <AppSelect
-                    size="sm"
                     value={editStatus}
                     onChange={(val) => setEditStatus(val as PumpItem['status'])}
                     options={[
@@ -890,7 +887,6 @@ export function PumpDetailDialog({
                       {/* Quick Reassign Dropdown */}
                       <div className="w-full sm:w-36 shrink-0">
                         <AppSelect
-                          size="sm"
                           value={currentPump.defaultOperator?.id || 'none'}
                           onChange={handleAssignOperator}
                           options={operatorSelectOptions}
@@ -905,7 +901,6 @@ export function PumpDetailDialog({
                       </div>
                       <div className="w-full sm:w-40 shrink-0">
                         <AppSelect
-                          size="sm"
                           value="none"
                           onChange={handleAssignOperator}
                           options={operatorSelectOptions}

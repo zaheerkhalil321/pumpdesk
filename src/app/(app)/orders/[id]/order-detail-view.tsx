@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ import {
   Plus,
   Save,
   Info,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,14 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { reportAction } from '@/lib/action-feedback';
 import { cancelOrder, updateOrder } from '@/features/orders/server/actions';
 import { POUR_TYPE_OPTIONS, STANDARD_TIMES } from '@/features/orders/constants';
-import type { FullOrderData, OrderFormOptions } from '@/features/orders/types';
+import type {
+  FullOrderData,
+  OrderFormContact,
+  OrderFormCustomer,
+  OrderFormOptions,
+} from '@/features/orders/types';
+import { QuickCustomerDialog } from '@/components/schedule/quick-customer-dialog';
+import { QuickContactDialog } from '@/components/schedule/quick-contact-dialog';
 import { shiftClock } from '@/features/orders/mappers';
 import { pumpMinutesFor } from '@/features/orders/duration';
 import {
@@ -46,6 +54,10 @@ import {
   type EditableOrderStatus,
   type OrderStatus,
 } from '@/features/orders/statuses';
+
+/** Select value for the "add new customer" row at the bottom of the customer picker. */
+const NEW_CUSTOMER = '__new_customer__';
+const NEW_CONTACT = '__new_contact__';
 
 /** The status an order is edited from; a cancelled order cannot be edited, so it never gets here. */
 const editableStatusOf = (status: OrderStatus): EditableOrderStatus =>
@@ -134,8 +146,21 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
     setIsEditingOrder(true);
   };
 
+  // Customers and contacts added while editing show at once, without leaving the order.
+  const [addedCustomers, setAddedCustomers] = useState<OrderFormCustomer[]>([]);
+  const [addedContacts, setAddedContacts] = useState<Record<string, OrderFormContact[]>>({});
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const customers = useMemo(() => {
+    const known = new Set(options.customers.map((c) => c.id));
+    return [...options.customers, ...addedCustomers.filter((c) => !known.has(c.id))].map((c) => {
+      const extra = (addedContacts[c.id] ?? []).filter((x) => !c.contacts.some((k) => k.id === x.id));
+      return extra.length ? { ...c, contacts: [...c.contacts, ...extra] } : c;
+    });
+  }, [options.customers, addedCustomers, addedContacts]);
+
   // Real records for the dropdowns, from the database.
-  const selectedCustomer = options.customers.find((c) => c.name === editCustomer);
+  const selectedCustomer = customers.find((c) => c.name === editCustomer);
   const customerId = selectedCustomer?.id ?? order.customerId;
   const contactChoices = selectedCustomer?.contacts ?? [];
   const selectedContact = contactChoices.find((c) => c.name === editContact);
@@ -345,14 +370,27 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                     <AppSelect
                       value={editCustomer}
                       onChange={(val) => {
+                        if (val === NEW_CUSTOMER) {
+                          setIsAddCustomerOpen(true);
+                          return;
+                        }
                         setEditCustomer(val);
-                        const next = options.customers.find((c) => c.name === val);
+                        const next = customers.find((c) => c.name === val);
                         // A different customer means a different contact and site.
                         setEditContact(next?.contacts[0]?.name ?? '');
                         setEditJobSite(next?.sites[0]?.address ?? '');
                         clearError('customer');
                       }}
-                      options={withValue(options.customers.map((c) => c.name), editCustomer)}
+                      options={[
+                        ...withValue(customers.map((c) => c.name), editCustomer),
+                        {
+                          value: NEW_CUSTOMER,
+                          label: 'Add new customer',
+                          description: 'Keeps your order as it is',
+                          icon: UserPlus,
+                          variant: 'action' as const,
+                        },
+                      ]}
                       error={Boolean(errors.customer)}
                     />
                     {errors.customer && (
@@ -383,13 +421,32 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                     <label className="text-slate-600 font-medium">Customer contact</label>
                     <AppSelect
                       value={editContact}
-                      onChange={setEditContact}
+                      onChange={(val) => {
+                        if (val === NEW_CONTACT) {
+                          setIsAddContactOpen(true);
+                          return;
+                        }
+                        setEditContact(val);
+                      }}
                       placeholder="No contact"
-                      options={contactChoices.map((c) => ({
-                        value: c.name,
-                        label: c.name,
-                        description: c.role || undefined,
-                      }))}
+                      options={[
+                        ...contactChoices.map((c) => ({
+                          value: c.name,
+                          label: c.name,
+                          description: c.role || undefined,
+                        })),
+                        ...(selectedCustomer
+                          ? [
+                              {
+                                value: NEW_CONTACT,
+                                label: 'Add new contact',
+                                description: `For ${selectedCustomer.name}`,
+                                icon: UserPlus,
+                                variant: 'action' as const,
+                              },
+                            ]
+                          : []),
+                      ]}
                     />
                     {contactPhone && (
                       <p className="text-[11px] text-slate-500 font-mono">{contactPhone}</p>
@@ -717,6 +774,35 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
             </div>
           </div>
         </form>
+
+        {/* Add a customer or contact without leaving the order */}
+        <QuickCustomerDialog
+          open={isAddCustomerOpen}
+          onOpenChange={setIsAddCustomerOpen}
+          onCreated={(created) => {
+            setAddedCustomers((prev) => [...prev, { id: created.id, name: created.name, contacts: [], sites: [] }]);
+            setEditCustomer(created.name);
+            setEditContact('');
+            clearError('customer');
+          }}
+          onReload={() => router.refresh()}
+        />
+        {selectedCustomer && (
+          <QuickContactDialog
+            open={isAddContactOpen}
+            onOpenChange={setIsAddContactOpen}
+            customerId={selectedCustomer.id}
+            customerName={selectedCustomer.name}
+            onCreated={(created) => {
+              setAddedContacts((prev) => ({
+                ...prev,
+                [selectedCustomer.id]: [...(prev[selectedCustomer.id] ?? []), created],
+              }));
+              setEditContact(created.name);
+            }}
+            onReload={() => router.refresh()}
+          />
+        )}
       </div>
     );
   }

@@ -106,5 +106,16 @@ export const dayCountsSchema = z
 /** One day, for the order form's overlap check. */
 export const dayBlocksSchema = z.object({ date: isoDate });
 
+/** Where a pump comes from and goes to, to work out the drive time into a new job. */
+export const driveTimeSchema = z.object({
+  date: isoDate,
+  pumpId: uuid,
+  /** Hours from midnight where the job's block starts (prep before the pour). */
+  startHour: z.number().min(0).max(48),
+  destination: z.string().trim().min(5).max(200),
+  /** An order being edited is not its own previous job. */
+  ignoreId: uuid.optional(),
+});
+
 /** One operator, to list the jobs they are on. */
 export const operatorJobsSchema = z.object({ id: uuid });
