@@ -312,6 +312,7 @@ export function ScheduleBoard({
       durationHours: booking.durationHours,
       prepHours,
       travelMinutes: booking.travelMinutes,
+      linked: booking.linkedToPrevious,
       ignoreId: booking.id,
     });
     if (travel) {

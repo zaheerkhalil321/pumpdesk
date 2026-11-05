@@ -65,7 +65,7 @@ export function localHour(iso: string, timezone: string): number {
 // ── Columns each query asks for ──
 
 export const JOB_COLUMNS =
-  'id, company_id, job_number, customer_id, job_site_id, site_label, job_name, pour_type, supplier_name, scheduled_start, scheduled_end, arrive_by, timezone, service_date, travel_minutes, prep_minutes, pump_minutes, cleanup_minutes, estimated_yards, min_pump_size, lines_on_site, purchase_order_number, collect_on_delivery, customer_notes, site_instructions, internal_note, billing_service, max_pump_size, extra_items, priority, booking_status, dispatch_status, field_status, confirmed_at, dispatched_at, cancelled_at, cancellation_reason, completed_at, version, created_by, updated_by, created_at, updated_at';
+  'id, company_id, job_number, customer_id, job_site_id, site_label, job_name, pour_type, supplier_name, scheduled_start, scheduled_end, arrive_by, timezone, service_date, travel_minutes, linked_to_previous, prep_minutes, pump_minutes, cleanup_minutes, estimated_yards, min_pump_size, lines_on_site, purchase_order_number, collect_on_delivery, customer_notes, site_instructions, internal_note, billing_service, max_pump_size, extra_items, priority, booking_status, dispatch_status, field_status, confirmed_at, dispatched_at, cancelled_at, cancellation_reason, completed_at, version, created_by, updated_by, created_at, updated_at';
 
 /** extra_items is a JSON list of {name, quantity}; anything else reads as no items. */
 function parseExtraItems(value: unknown): { name: string; quantity: number }[] {
@@ -204,6 +204,7 @@ export function toBooking(h: HydratedJob): ScheduleBooking {
     pourHour,
     pourHours,
     travelMinutes: job.travel_minutes,
+    linkedToPrevious: job.linked_to_previous,
     volumeYards: Number(job.estimated_yards),
     status: 'travel',
     notes: job.site_instructions ?? undefined,

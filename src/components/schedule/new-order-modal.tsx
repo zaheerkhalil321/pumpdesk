@@ -110,6 +110,8 @@ function NewOrderModalForm({
   const [travelMinutes, setTravelMinutes] = useState(() => editingBooking?.travelMinutes ?? DEFAULT_TRAVEL_MINUTES);
   // Once the dispatcher picks a drive time themselves, Google's estimate no longer replaces it.
   const travelPickedByHand = useRef(false);
+  // Linked: the crew drives straight from the pump's previous job. Not linked: from the shop.
+  const [linkedToPrevious, setLinkedToPrevious] = useState(() => editingBooking?.linkedToPrevious ?? false);
   const [pendingTravel, setPendingTravel] = useState<{ clash: PendingTravelClash; suggestedPour: string | null; save: (pourClock: string) => void } | null>(null);
 
   // Customer & Supplier States
@@ -158,7 +160,7 @@ function NewOrderModalForm({
     () => editingBooking?.pourType || 'Foundation',
   );
   const [volumeYards, setVolumeYards] = useState<number | string>(
-    () => editingBooking?.volumeYards ?? '',
+    () => editingBooking?.volumeYards || '',
   );
 
   // Pump & Operator States
@@ -267,7 +269,8 @@ function NewOrderModalForm({
     }
 
     const checkVolume = Number(volumeYards);
-    if (isNaN(checkVolume) || checkVolume < 1 || checkVolume > 10000) {
+    // Volume is optional: blank is fine, and the pour then defaults to 1 hour.
+    if (checkVolume !== 0 && String(volumeYards).trim() !== '' && (isNaN(checkVolume) || checkVolume < 1 || checkVolume > 10000)) {
       errors.volume = 'Volume must be between 1 and 10,000 yd³.';
     }
 
@@ -303,7 +306,7 @@ function NewOrderModalForm({
       siteLabel: siteText,
       pourType,
       supplierName: supplier,
-      estimatedYards: Number(volumeYards),
+      estimatedYards: Number(volumeYards) || 0,
       minPumpSize,
       equipmentId: pumpId,
       employeeId: operatorId,
@@ -321,6 +324,7 @@ function NewOrderModalForm({
           date: isoDate,
           pourTime: pourClock,
           travelMinutes,
+          linkedToPrevious,
           // Giving a pump to an order that had none confirms it, like a new order with a pump.
           ...(!editingBooking.pumpId && !isAssignLater ? { bookingStatus: 'confirmed' as const } : {}),
           ...(contactChosen ? { contactId: effectiveContactId || null } : {}),
@@ -347,6 +351,7 @@ function NewOrderModalForm({
           pumpMinutes,
           cleanupMinutes: CLEANUP_MINUTES,
           travelMinutes,
+          linkedToPrevious,
           linesOnSite: false,
           collectOnDelivery: false,
           bookingStatus: isAssignLater ? 'pending' : 'confirmed',
@@ -378,6 +383,7 @@ function NewOrderModalForm({
             durationHours: (savedPrepMinutes + pumpMinutes + savedCleanupMinutes) / 60,
             prepHours,
             travelMinutes,
+            linked: linkedToPrevious,
             ignoreId: editingBooking?.id,
           })
         : null;
@@ -464,6 +470,8 @@ function NewOrderModalForm({
     pumpId: isAssignLater ? null : assignedPumpId,
     startHour: pourHour + pourMinute / 60 - savedPrepMinutes / 60,
     destination: address,
+    linked: linkedToPrevious,
+    operatorId: options.operators.find((o) => o.name === assignedOperator)?.id,
     onEstimate: (minutes) => {
       if (!travelPickedByHand.current) setTravelMinutes(minutes);
     },
@@ -565,6 +573,8 @@ function NewOrderModalForm({
                 setTravelMinutes(minutes);
               }}
               status={driveStatus}
+              linked={linkedToPrevious}
+              onLinkedChange={setLinkedToPrevious}
               className="h-10"
             />
           </div>
@@ -693,7 +703,7 @@ function NewOrderModalForm({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-semibold text-slate-700">
-                Estimated volume
+                Estimated volume <span className="font-normal text-slate-400">(optional)</span>
               </label>
                               <span
                   className={cn(
@@ -994,7 +1004,7 @@ export function NewOrderModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={true}
-        className="sm:max-w-[620px] max-h-[92vh] overflow-y-auto p-6 rounded-2xl bg-white gap-5 border border-slate-200/90 shadow-2xl"
+        className="grid-cols-[minmax(0,1fr)] max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-none max-sm:h-dvh max-sm:max-h-none max-sm:content-start max-sm:gap-5 max-sm:rounded-none max-sm:border-0 sm:max-w-[620px] sm:max-h-[92vh] overflow-y-auto overflow-x-hidden p-6 rounded-2xl bg-white gap-5 border border-slate-200/90 shadow-2xl"
       >
         <NewOrderModalForm
           key={

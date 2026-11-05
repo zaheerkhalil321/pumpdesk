@@ -66,7 +66,7 @@ export function LinkAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-6 rounded-2xl bg-white shadow-xl border-slate-200">
+      <DialogContent fullScreenOnMobile className="max-w-md p-6 rounded-2xl bg-white shadow-xl border-slate-200">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
             Link Customer Account
@@ -76,7 +76,7 @@ export function LinkAccountModal({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleLink} className="space-y-4 pt-2">
+        <form onSubmit={handleLink} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
               Select customer account

@@ -313,6 +313,7 @@ export async function listDayBlocks(date: string): Promise<DayBlock[]> {
       startHour: b.startHour,
       durationHours: b.durationHours,
       travelMinutes: b.travelMinutes,
+      linkedToPrevious: b.linkedToPrevious,
       siteAddress: b.address ?? b.jobSiteName,
       customerName: b.customerName,
       orderNumber: b.orderNumber,

@@ -13,8 +13,15 @@ import { NotificationsSettingsTab } from '@/components/settings/notifications-se
 import { ListsSettingsTab } from '@/components/settings/lists-settings-tab';
 import { IntegrationsSettingsTab } from '@/components/settings/integrations-settings-tab';
 import type { SupplierItem } from '@/features/suppliers/types';
+import type { YardItem } from '@/features/yards/types';
 
-function SettingsContent({ suppliers, logoUrl }: { suppliers: SupplierItem[]; logoUrl: string | null }) {
+interface SettingsPageProps {
+  suppliers: SupplierItem[];
+  logoUrl: string | null;
+  yards: YardItem[];
+}
+
+function SettingsContent({ suppliers, logoUrl, yards }: SettingsPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -46,7 +53,7 @@ function SettingsContent({ suppliers, logoUrl }: { suppliers: SupplierItem[]; lo
           <SettingsHub onSelectTab={handleTabChange} />
         )}
 
-        {currentTab === 'company' && <CompanySettingsTab logoUrl={logoUrl} />}
+        {currentTab === 'company' && <CompanySettingsTab logoUrl={logoUrl} yards={yards} />}
 
         {currentTab === 'pricing' && <PricingSettingsTab />}
 
@@ -60,7 +67,7 @@ function SettingsContent({ suppliers, logoUrl }: { suppliers: SupplierItem[]; lo
   );
 }
 
-export function SettingsPage({ suppliers, logoUrl }: { suppliers: SupplierItem[]; logoUrl: string | null }) {
+export function SettingsPage({ suppliers, logoUrl, yards }: SettingsPageProps) {
   return (
     <Suspense
       fallback={
@@ -69,7 +76,7 @@ export function SettingsPage({ suppliers, logoUrl }: { suppliers: SupplierItem[]
         </div>
       }
     >
-      <SettingsContent suppliers={suppliers} logoUrl={logoUrl} />
+      <SettingsContent suppliers={suppliers} logoUrl={logoUrl} yards={yards} />
     </Suspense>
   );
 }

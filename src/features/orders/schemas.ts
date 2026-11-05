@@ -42,10 +42,15 @@ const orderFields = {
   pumpMinutes: minutes('Pumping time').optional(),
   cleanupMinutes: minutes('Cleanup time').optional(),
   travelMinutes: minutes('Travel time').optional(),
+  /** The crew drives straight from the previous job on this pump. Off means from the shop. */
+  linkedToPrevious: z.boolean().optional(),
+  /** Optional. Left out or 0 means no volume was given, and the pour defaults to 1 hour. */
   estimatedYards: z
-    .number({ error: 'Estimated volume is required' })
-    .min(1, 'Volume must be between 1 and 10,000 yd³')
-    .max(10000, 'Volume must be between 1 and 10,000 yd³'),
+    .number({ error: 'Volume must be a number' })
+    .min(0, 'Volume must be between 1 and 10,000 yd³')
+    .max(10000, 'Volume must be between 1 and 10,000 yd³')
+    .refine((v) => v === 0 || v >= 1, 'Volume must be between 1 and 10,000 yd³')
+    .optional(),
   minPumpSize: text(40).optional(),
   linesOnSite: z.boolean().optional(),
   purchaseOrder: text(80).optional(),
@@ -115,6 +120,10 @@ export const driveTimeSchema = z.object({
   destination: z.string().trim().min(5).max(200),
   /** An order being edited is not its own previous job. */
   ignoreId: uuid.optional(),
+  /** Linked to the previous job: drive from it. Otherwise from the shop. */
+  linked: z.boolean().optional(),
+  /** The operator on the order. Their home yard is where the drive starts when the job is not linked. */
+  operatorId: uuid.optional(),
 });
 
 /** One operator, to list the jobs they are on. */

@@ -15,6 +15,7 @@ const TODAY = "2026-10-21";
 const operatorRow: EmployeeRow = {
   id: "e-1",
   branch_id: "b-1",
+  home_yard_id: null,
   first_name: "Rob",
   last_name: "Black",
   email: "rob@midcoast.example",
@@ -153,7 +154,7 @@ describe("schemas", () => {
     expect(createPumpSchema.safeParse({ ...validPump, type: "line_pump", boomSize: null }).success).toBe(true);
   });
   it("normalises an operator phone to E.164 and rejects a bad one", () => {
-    const base = { firstName: "A", lastName: "B", role: "", email: "", branchId: null, cdlExpiresOn: "", medicalCertExpiresOn: "", defaultPumpId: null };
+    const base = { firstName: "A", lastName: "B", role: "", email: "", branchId: null, homeYardId: null, cdlExpiresOn: "", medicalCertExpiresOn: "", defaultPumpId: null };
     expect(createOperatorSchema.parse({ ...base, phone: "(207) 555-0168" }).phone).toBe("+12075550168");
     expect(createOperatorSchema.safeParse({ ...base, phone: "555" }).success).toBe(false);
   });

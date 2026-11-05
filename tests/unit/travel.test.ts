@@ -2,16 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { findTravelClash } from "@/features/orders/travel";
 
-const block = (id: string, pumpId: string, startHour: number, durationHours: number, travelMinutes = 30) => ({
+const block = (id: string, pumpId: string, startHour: number, durationHours: number, travelMinutes = 30, linkedToPrevious = true) => ({
   id,
   pumpId,
   startHour,
   durationHours,
   travelMinutes,
+  linkedToPrevious,
 });
 
 const day = [block("a", "p1", 7, 3), block("b", "p2", 7, 3)];
-const slot = { pumpId: "p1", durationHours: 3, prepHours: 0.5, travelMinutes: 30 };
+const slot = { pumpId: "p1", durationHours: 3, prepHours: 0.5, travelMinutes: 30, linked: true };
 
 describe("findTravelClash", () => {
   it("is clear when there is enough time to drive between jobs", () => {
@@ -43,6 +44,15 @@ describe("findTravelClash", () => {
     expect(clash?.kind).toBe("next");
     expect(clash?.gapMinutes).toBe(15);
     expect(clash?.suggestedPourHour).toBeNull();
+  });
+
+  it("does not check the job before when this job is not linked", () => {
+    expect(findTravelClash(day, { ...slot, startHour: 9, linked: false })).toBeNull();
+  });
+
+  it("does not check the job after when that job is not linked", () => {
+    const unlinked = [block("n", "p1", 11, 3, 30, false)];
+    expect(findTravelClash(unlinked, { ...slot, startHour: 7.75 })).toBeNull();
   });
 
   it("treats zero travel back-to-back as fine", () => {

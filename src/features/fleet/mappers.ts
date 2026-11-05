@@ -7,7 +7,7 @@ import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/type
 export const EQUIPMENT_COLUMNS =
   'id, branch_id, equipment_number, type, status, make, model, model_year, boom_length_m, horizontal_reach_ft, hourly_rate_override, min_hours_override, default_operator_id, next_inspection_due, available_again_on, notes';
 export const EMPLOYEE_COLUMNS =
-  'id, branch_id, first_name, last_name, email, phone, status, is_operator, job_title, cdl_expires_on, medical_cert_expires_on';
+  'id, branch_id, home_yard_id, first_name, last_name, email, phone, status, is_operator, job_title, cdl_expires_on, medical_cert_expires_on';
 
 export type EquipmentRow = Pick<
   Tables<'equipment'>,
@@ -32,6 +32,7 @@ export type EmployeeRow = Pick<
   Tables<'employees'>,
   | 'id'
   | 'branch_id'
+  | 'home_yard_id'
   | 'first_name'
   | 'last_name'
   | 'email'
@@ -99,6 +100,7 @@ export function mapOperator(
   branchesById: Map<string, string>,
   defaultPumpLabel: string | undefined,
   today: string,
+  yardsById: Map<string, string> = new Map(),
 ): OperatorItem {
   const alerts = credentialAlertsFor(row, today);
 
@@ -112,6 +114,8 @@ export function mapOperator(
     email: row.email ?? '',
     branch: row.branch_id ? (branchesById.get(row.branch_id) ?? '') : '',
     branchId: row.branch_id,
+    homeYardId: row.home_yard_id,
+    homeYard: row.home_yard_id ? (yardsById.get(row.home_yard_id) ?? '') : '',
     defaultPump: defaultPumpLabel ?? 'None',
     todayStatus: { type: 'available', label: 'Available' },
     status: row.status === 'active' ? 'Active' : 'Inactive',

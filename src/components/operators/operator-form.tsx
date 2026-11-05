@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { StatusSwitch } from '@/components/ui/status-switch';
 import { createOperator, updateOperator } from '@/features/fleet/server/actions';
 import { createOperatorSchema, updateOperatorSchema } from '@/features/fleet/schemas';
+import { getYardOptions } from '@/features/yards/server/actions';
 import { getPumpDisplayName } from '@/features/fleet/format';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { reportAction } from '@/lib/action-feedback';
@@ -20,6 +21,7 @@ import { cn, formatUSPhone } from '@/lib/utils';
 const ROLE_OPTIONS = ['Operator', 'Lead operator', 'Relief operator'];
 const NO_PUMP = 'none';
 const NO_BRANCH = 'none';
+const NO_YARD = 'none';
 
 const INPUT_CLASS =
   'h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand rounded-lg shadow-2xs';
@@ -69,6 +71,8 @@ export function OperatorForm({
   const [phone, setPhone] = useState(operator?.phone ?? '');
   const [email, setEmail] = useState(operator?.email ?? '');
   const [branchId, setBranchId] = useState(operator?.branchId ?? NO_BRANCH);
+  const [homeYardId, setHomeYardId] = useState(operator?.homeYardId ?? NO_YARD);
+  const [yardOptions, setYardOptions] = useState<{ value: string; label: string }[]>([]);
   const [pumpId, setPumpId] = useState(currentPump?.id ?? initialPumpId ?? NO_PUMP);
   const [cdlExpiresOn, setCdlExpiresOn] = useState(operator?.cdlExpiresOn ?? '');
   const [medicalExpiresOn, setMedicalExpiresOn] = useState(operator?.medicalCertExpiresOn ?? '');
@@ -90,6 +94,17 @@ export function OperatorForm({
       label: `${getPumpDisplayName(p)} ${p.make} ${p.model}`.trim(),
     })),
   ];
+  // The yards come from Settings. An inactive yard the operator already has stays in the list.
+  useEffect(() => {
+    let cancelled = false;
+    void getYardOptions({}).then((result) => {
+      if (!cancelled && result.ok) setYardOptions(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const yardSelectOptions = [{ value: NO_YARD, label: 'Shop (no home yard)' }, ...yardOptions];
   const branchSelectOptions = [{ value: NO_BRANCH, label: 'No branch' }, ...branchOptions];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,6 +117,7 @@ export function OperatorForm({
       phone,
       email,
       branchId: branchId === NO_BRANCH ? null : branchId,
+      homeYardId: homeYardId === NO_YARD ? null : homeYardId,
       cdlExpiresOn,
       medicalCertExpiresOn: medicalExpiresOn,
       defaultPumpId: pumpId === NO_PUMP ? null : pumpId,
@@ -135,7 +151,7 @@ export function OperatorForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">
@@ -201,8 +217,14 @@ export function OperatorForm({
       </div>
 
       <div className="space-y-1.5 min-w-0">
-        <label className="text-xs font-semibold text-slate-700 block">Branch yard</label>
+        <label className="text-xs font-semibold text-slate-700 block">Branch</label>
         <AppSelect size="lg" value={branchId} onChange={setBranchId} options={branchSelectOptions} />
+      </div>
+
+      <div className="space-y-1.5 min-w-0">
+        <label className="text-xs font-semibold text-slate-700 block">Home yard</label>
+        <AppSelect size="lg" value={homeYardId} onChange={setHomeYardId} options={yardSelectOptions} />
+        <p className="text-[11px] text-slate-400">Where this operator starts the day. Travel time to a job is worked out from here.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

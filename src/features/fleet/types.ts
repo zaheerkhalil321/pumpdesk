@@ -63,6 +63,10 @@ export interface OperatorItem {
   email: string;
   branch: string;
   branchId: string | null;
+  /** The yard the operator starts the day from. Travel time to a job is worked out from it. */
+  homeYardId: string | null;
+  /** The home yard's name, or empty when the operator starts from the shop. */
+  homeYard: string;
   defaultPump?: string;
   todayStatus: {
     type: 'assigned' | 'available' | 'time_off';

@@ -68,11 +68,12 @@ const newOrderSchema = z.object({
   cleanupDuration: z.string(),
 
   supplier: z.string().optional(),
+  // Optional: blank means no volume, and the pour defaults to 1 hour.
   estimatedVolume: z
     .string()
-    .min(1, "Estimated volume (yd³) is required")
     .refine(
       (val) => {
+        if (val.trim() === "") return true;
         const n = Number(val);
         return !isNaN(n) && n >= 1 && n <= 10000;
       },
@@ -156,6 +157,10 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   const rawStatus = searchParams.get("status");
   const paramStatus = EDITABLE_ORDER_STATUSES.find((status) => status === rawStatus) ?? null;
   const paramVolume = searchParams.get("volume");
+  // Where the dispatcher came from: the Orders page sends ?from=orders, everything else comes from the schedule.
+  const fromOrders = searchParams.get("from") === "orders";
+  const backHref = fromOrders ? "/orders" : "/schedule";
+  const backLabel = fromOrders ? "Orders" : "Schedule";
   const paramPourTime = searchParams.get("pourTime");
   const paramHour = searchParams.get("hour");
   const paramDate = searchParams.get("date");
@@ -178,7 +183,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   }, [paramPourTime, paramHour]);
 
   // How long the pour takes for the starting volume: 60 minutes + 1.5 per yard, to the nearest 15.
-  const initialPumpMinutes = pumpMinutesFor(Number(paramVolume || 60));
+  const initialPumpMinutes = pumpMinutesFor(Number(paramVolume || 0));
 
   // Arrival is prep (30 min) before the pour; the order finishes after the pour and clean-up (30 min).
   const initialCalculatedTimes = useMemo(() => {
@@ -221,7 +226,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       pumpingDuration: formatDuration(initialPumpMinutes),
       cleanupDuration: "30 min",
       supplier: "",
-      estimatedVolume: paramVolume || "60",
+      estimatedVolume: paramVolume || "",
       pourType: "",
       linesOnSite: false,
       customerDetails: "",
@@ -246,6 +251,8 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
   const [travelMinutes, setTravelMinutes] = useState(DEFAULT_TRAVEL_MINUTES);
   // Once the dispatcher picks a drive time themselves, Google's estimate no longer replaces it.
   const travelPickedByHand = useRef(false);
+  // Linked: the crew drives straight from the pump's previous job. Not linked: from the shop.
+  const [linkedToPrevious, setLinkedToPrevious] = useState(false);
   const [pendingTravel, setPendingTravel] = useState<{
     clash: PendingTravelClash;
     suggestedPour: string | null;
@@ -400,6 +407,8 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
     pumpId: chosenPump && chosenPump !== "unassigned" ? chosenPump : null,
     startHour: startMinutes / 60,
     destination: watch("jobSite") ?? "",
+    linked: linkedToPrevious,
+    operatorId: watch("assignedOperator") !== "unassigned" ? watch("assignedOperator") : undefined,
     onEstimate: (minutes) => {
       if (!travelPickedByHand.current) setTravelMinutes(minutes);
     },
@@ -428,7 +437,8 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       pumpMinutes: parseMinutes(data.pumpingDuration),
       cleanupMinutes: parseMinutes(data.cleanupDuration),
       travelMinutes,
-      estimatedYards: Number(data.estimatedVolume),
+      linkedToPrevious,
+      estimatedYards: Number(data.estimatedVolume) || 0,
       minPumpSize: data.minPumpSize,
       linesOnSite: data.linesOnSite,
       purchaseOrder: data.purchaseOrder ?? "",
@@ -456,7 +466,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       toast.success("Order created", {
         description: `${data.customer} • ${result.data.job_number} saved as ${data.status}.`,
       });
-      router.push("/schedule");
+      router.push(backHref);
       });
 
     // Too little drive time from the pump's other job: ask before saving.
@@ -468,6 +478,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
           durationHours: Math.max(0.25, (endMinutes - startMinutes) / 60),
           prepHours: prepMins / 60,
           travelMinutes,
+          linked: linkedToPrevious,
         })
       : null;
     if (travel) {
@@ -524,10 +535,10 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       {/* ── Breadcrumb ── */}
       <nav className="flex items-center gap-1.5 text-xs text-slate-500">
         <Link
-          href="/schedule"
+          href={backHref}
           className="hover:text-slate-900 transition-colors font-medium"
         >
-          Schedule
+          {backLabel}
         </Link>
         <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
         <span className="font-semibold text-slate-900">
@@ -559,7 +570,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/schedule")}
+              onClick={() => router.push(backHref)}
               className="h-9 px-3 sm:px-4 rounded-lg border-slate-200 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
             >
               Cancel
@@ -754,7 +765,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                 {/* Estimated volume */}
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1 whitespace-nowrap">
-                    Estimated volume <span className="text-red-500">*</span>
+                    Estimated volume <span className="font-normal text-slate-400">(optional)</span>
                   </label>
                   <div className="relative">
                     <input
@@ -770,7 +781,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                           updateCalculatedTimes(getValues("pourTime"), getValues("prepDuration"), pumping, getValues("cleanupDuration"));
                         },
                       })}
-                      placeholder="120"
+                      placeholder="e.g. 80"
                       className={cn(
                         "w-full h-9 pl-3 pr-10 rounded-lg border bg-white text-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                         errors.estimatedVolume
@@ -1079,6 +1090,8 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                       setTravelMinutes(minutes);
                     }}
                     status={driveStatus}
+                    linked={linkedToPrevious}
+                    onLinkedChange={setLinkedToPrevious}
                     className="h-9"
                   />
                 </div>
@@ -1306,7 +1319,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/schedule")}
+            onClick={() => router.push(backHref)}
             className="flex-1 sm:flex-none h-9 px-4 rounded-lg border-slate-200 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
           >
             Cancel

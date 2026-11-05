@@ -95,7 +95,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
   const [editPO, setEditPO] = useState(order.purchaseOrder);
   const [editJobName, setEditJobName] = useState(order.jobName);
   const [editPourType, setEditPourType] = useState(order.pourType);
-  const [editVolume, setEditVolume] = useState<number | string>(order.volumeYards);
+  const [editVolume, setEditVolume] = useState<number | string>(order.volumeYards || '');
   const [editPumpRequested, setEditPumpRequested] = useState(order.pumpRequested);
   const [editInstructions, setEditInstructions] = useState(order.siteInstructions);
   const [editDate, setEditDate] = useState(order.serviceDateIso);
@@ -124,7 +124,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
     setEditPO(order.purchaseOrder);
     setEditJobName(order.jobName);
     setEditPourType(order.pourType);
-    setEditVolume(order.volumeYards);
+    setEditVolume(order.volumeYards || '');
     setEditPumpRequested(order.pumpRequested);
     setEditInstructions(order.siteInstructions);
     setEditDate(order.serviceDateIso);
@@ -222,7 +222,8 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
       errs.arriveBy = 'Arrive by time is required';
     }
     const volume = Number(editVolume);
-    if (!volume || volume < 1 || volume > 10000) {
+    // Volume is optional: blank or 0 means none was given.
+    if (String(editVolume).trim() !== '' && (isNaN(volume) || volume < 0 || (volume > 0 && volume < 1) || volume > 10000)) {
       errs.volume = 'Volume must be between 1 and 10,000 yd³';
     }
 
@@ -253,7 +254,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
       purchaseOrder: editPO,
       jobName: editJobName,
       pourType: editPourType,
-      estimatedYards: Number(editVolume),
+      estimatedYards: Number(editVolume) || 0,
       minPumpSize: editPumpRequested,
       siteInstructions: editInstructions,
       date: editDate,
@@ -505,7 +506,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
 
                   {/* Planned volume */}
                   <div className="space-y-1">
-                    <label className="text-slate-600 font-medium">Planned volume</label>
+                    <label className="text-slate-600 font-medium">Planned volume <span className="font-normal text-slate-400">(optional)</span></label>
                     <div className="relative">
                       <Input
                         type="number"
@@ -944,7 +945,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
               <div>
                 <div className="text-[11px] font-medium text-slate-500">Planned volume</div>
                 <div className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums">
-                  {order.volumeYards} yd³
+                  {order.volumeYards > 0 ? `${order.volumeYards} yd³` : 'Not set'}
                 </div>
               </div>
             </div>

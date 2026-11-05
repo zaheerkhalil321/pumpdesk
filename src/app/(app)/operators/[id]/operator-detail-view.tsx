@@ -226,6 +226,14 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
               </span>
             </div>
 
+            {/* Home yard */}
+            <div className="py-3 flex items-center justify-between gap-4">
+              <span className="text-slate-500 font-medium">Home yard</span>
+              <span className="text-slate-900 font-medium text-right">
+                {operator.homeYard || 'Shop'}
+              </span>
+            </div>
+
             {/* Default Pump */}
             <div className="py-3 flex items-center justify-between gap-4">
               <span className="text-slate-500 font-medium">Default pump</span>

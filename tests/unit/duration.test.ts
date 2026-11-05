@@ -4,6 +4,7 @@ import { formatDuration, pumpMinutesFor } from "@/features/orders/duration";
 
 describe("pumpMinutesFor", () => {
   it("is 60 minutes plus 1.5 per yard, to the nearest 15 minutes", () => {
+    expect(pumpMinutesFor(0)).toBe(60);
     expect(pumpMinutesFor(2)).toBe(60);
     expect(pumpMinutesFor(5)).toBe(75);
     expect(pumpMinutesFor(12)).toBe(75);

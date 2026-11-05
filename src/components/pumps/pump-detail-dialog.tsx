@@ -294,8 +294,9 @@ export function PumpDetailDialog({
         }}
       >
         <DialogContent
+          fullScreenOnMobile
           showCloseButton={false}
-          className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl border-slate-200"
+          className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto p-0 gap-0 max-sm:gap-0 rounded-2xl border-slate-200"
         >
           {/* Header */}
           <div className="p-4 sm:p-6 bg-slate-50/70 border-b border-slate-100 flex items-start justify-between gap-3">

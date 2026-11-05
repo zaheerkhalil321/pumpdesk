@@ -144,9 +144,11 @@ export function MobileRigCardView({
 
                         {/* Right Pill: Volume & Status */}
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-800 shadow-2xs">
-                            {booking.volumeYards} yd³
-                          </span>
+                          {booking.volumeYards > 0 && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-800 shadow-2xs">
+                              {booking.volumeYards} yd³
+                            </span>
+                          )}
 
                           {isDispatched ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 rounded-full">

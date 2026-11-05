@@ -88,6 +88,7 @@ const operatorFields = {
   phone,
   email,
   branchId: uuid.nullable(),
+  homeYardId: uuid.nullable(),
   cdlExpiresOn: isoDate,
   medicalCertExpiresOn: isoDate,
 };

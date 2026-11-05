@@ -166,7 +166,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-6 rounded-2xl border-slate-200">
+      <DialogContent fullScreenOnMobile className="sm:max-w-md p-6 rounded-2xl border-slate-200">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-lg font-bold text-slate-900">
             Add New Pump Rig
@@ -176,7 +176,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Unit Number */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">

@@ -67,9 +67,11 @@ export function DeleteOrderDialog({
             <span className="font-bold text-slate-900 text-sm truncate">
               {booking.customerName || 'Customer'}
             </span>
-            <span className="font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md text-[11px] shadow-2xs shrink-0">
-              {booking.volumeYards || 120} yd³
-            </span>
+            {booking.volumeYards > 0 && (
+              <span className="font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md text-[11px] shadow-2xs shrink-0">
+                {booking.volumeYards} yd³
+              </span>
+            )}
           </div>
 
           <div className="space-y-1 text-slate-600">

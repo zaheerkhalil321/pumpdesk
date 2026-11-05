@@ -86,7 +86,7 @@ export function QuickContactDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="sm:max-w-[420px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
+      <DialogContent fullScreenOnMobile className="sm:max-w-[420px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">New contact</DialogTitle>
           <p className="text-xs text-slate-500">For {customerName}. Your order stays open.</p>

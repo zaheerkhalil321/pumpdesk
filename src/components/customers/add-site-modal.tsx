@@ -79,14 +79,14 @@ export function AddSiteModal({ open, onOpenChange, customerId, customerName, onC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+      <DialogContent fullScreenOnMobile className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
             Add job site for {customerName}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-1">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 block">
               Site name <span className="font-normal text-slate-400">(optional)</span>

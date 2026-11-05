@@ -6,6 +6,8 @@ export const DEFAULT_TRAVEL_MINUTES = 30;
 type TravelBlock = Pick<DayBlock, 'id' | 'pumpId' | 'startHour' | 'durationHours'> & {
   /** Drive time into this job. */
   travelMinutes?: number;
+  /** Only a linked job drives from the job before it. */
+  linkedToPrevious?: boolean;
 };
 
 interface TravelSlot {
@@ -17,6 +19,8 @@ interface TravelSlot {
   prepHours: number;
   /** Drive time into this job. */
   travelMinutes: number;
+  /** Linked to the job before it. Not linked means the crew starts from the shop, so nothing to check. */
+  linked: boolean;
   ignoreId?: string;
 }
 
@@ -46,7 +50,7 @@ export function findTravelClash<T extends TravelBlock>(bookings: T[], slot: Trav
   const slotEnd = slot.startHour + slot.durationHours;
 
   const previous = others.filter((b) => b.startHour <= slot.startHour).pop();
-  if (previous) {
+  if (previous && slot.linked) {
     const gapMinutes = Math.round((slot.startHour - (previous.startHour + previous.durationHours)) * 60);
     if (gapMinutes < slot.travelMinutes) {
       const earliestBlockStart = previous.startHour + previous.durationHours + slot.travelMinutes / 60;
@@ -61,7 +65,7 @@ export function findTravelClash<T extends TravelBlock>(bookings: T[], slot: Trav
   }
 
   const next = others.find((b) => b.startHour > slot.startHour);
-  if (next) {
+  if (next?.linkedToPrevious) {
     const travelMinutes = next.travelMinutes ?? 0;
     const gapMinutes = Math.round((next.startHour - slotEnd) * 60);
     if (gapMinutes < travelMinutes) {
@@ -72,7 +76,7 @@ export function findTravelClash<T extends TravelBlock>(bookings: T[], slot: Trav
 }
 
 
-/** The job a pump drives from to reach a new one: the latest one that starts before it, or null for the shop. */
+/** The job a pump drives from to reach a linked one: the latest one that starts before it, or null for the shop. */
 export function previousBlock<T extends Pick<DayBlock, 'id' | 'pumpId' | 'startHour'>>(
   bookings: T[],
   pumpId: string,

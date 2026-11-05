@@ -31,6 +31,8 @@ export interface ScheduleBooking {
   pourHours: number;
   /** Drive time into this job, from the shop or the pump's previous job. */
   travelMinutes: number;
+  /** The crew drives straight from the previous job on the pump, not from the shop. */
+  linkedToPrevious: boolean;
   volumeYards: number;
   status: BookingStatus;
   notes?: string;

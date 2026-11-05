@@ -142,7 +142,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
         actions={
           <Button
             variant="brand"
-            onClick={() => router.push('/orders/new')}
+            onClick={() => router.push('/orders/new?from=orders')}
             className="font-semibold gap-1.5 text-sm h-9 px-3.5"
           >
             <Plus className="h-4 w-4" />

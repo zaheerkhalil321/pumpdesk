@@ -26,7 +26,7 @@ const isUuid = (value: string) => z.string().uuid().safeParse(value).success;
 async function loadFleet() {
   const session = await requireSession();
   const supabase = await createClient();
-  const [equipment, employees, branches] = await Promise.all([
+  const [equipment, employees, branches, yards] = await Promise.all([
     supabase.from('equipment').select(EQUIPMENT_COLUMNS).eq('is_active', true).order('equipment_number'),
     supabase
       .from('employees')
@@ -35,6 +35,7 @@ async function loadFleet() {
       .neq('status', 'terminated')
       .order('first_name'),
     supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
+    supabase.from('yards').select('id, name'),
   ]);
   if (equipment.error) throw equipment.error;
   if (employees.error) throw employees.error;
@@ -43,11 +44,13 @@ async function loadFleet() {
     equipment: (equipment.data ?? []) as EquipmentRow[],
     employees: (employees.data ?? []) as EmployeeRow[],
     branches: branches.data ?? [],
+    yards: yards.data ?? [],
   };
 }
 
 function buildOperators(fleet: Awaited<ReturnType<typeof loadFleet>>): OperatorItem[] {
   const branchesById = new Map(fleet.branches.map((b) => [b.id, b.name]));
+  const yardsById = new Map(fleet.yards.map((y) => [y.id, y.name]));
   const operatorsById = new Map(fleet.employees.map((e) => [e.id, e]));
   const pumpLabelByOperator = new Map<string, string>();
   for (const row of fleet.equipment) {
@@ -55,7 +58,7 @@ function buildOperators(fleet: Awaited<ReturnType<typeof loadFleet>>): OperatorI
     pumpLabelByOperator.set(row.default_operator_id, getPumpDisplayName(mapPump(row, operatorsById, fleet.today)));
   }
   return fleet.employees.map((e) =>
-    mapOperator(e, branchesById, pumpLabelByOperator.get(e.id), fleet.today),
+    mapOperator(e, branchesById, pumpLabelByOperator.get(e.id), fleet.today, yardsById),
   );
 }
 

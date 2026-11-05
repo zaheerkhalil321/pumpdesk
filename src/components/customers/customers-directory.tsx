@@ -574,14 +574,14 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
           if (!open) setNewCustomerNameError(null);
         }}
       >
-        <DialogContent className="sm:max-w-[440px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+        <DialogContent fullScreenOnMobile className="sm:max-w-[440px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
               Add new customer
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleCreateCustomer} noValidate className="space-y-4 pt-1">
+          <form onSubmit={handleCreateCustomer} noValidate className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">
                 Company name <span className="text-red-500">*</span>

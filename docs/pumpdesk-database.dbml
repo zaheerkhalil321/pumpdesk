@@ -292,6 +292,24 @@ Table branches {
   Note: 'Yards: Warren HQ, Portland, Bangor.'
 }
 
+Table yards {
+  id uuid [pk, note: 'gen_random_uuid()']
+  company_id uuid [not null, ref: > companies.id, note: 'tenant']
+  branch_id uuid [ref: > branches.id]
+  name text [not null, note: 'e.g. Shop, or an operator\'s home']
+  address text [not null, note: 'full address, as Google reads it']
+  is_active boolean [not null, note: 'default true; soft delete']
+  created_at timestamptz [not null, note: 'now()']
+  updated_at timestamptz [not null, note: 'now(), trigger']
+
+  indexes {
+    (company_id, id) [unique, note: 'target of composite tenant FKs']
+    (company_id, name) [unique, note: 'active rows only, case-insensitive']
+  }
+
+  Note: 'Where an operator starts the day. Drive time into a job starts at the operator\'s home yard.'
+}
+
 Table app_users {
   id uuid [pk, note: '= auth.users.id']
   full_name text
@@ -539,6 +557,7 @@ Table jobs {
   timezone text [not null, note: 'IANA, copied from site or company']
   service_date date [not null, note: 'local day of scheduled_start, set by trigger']
   travel_minutes integer [not null]
+  linked_to_previous boolean [not null, note: 'crew drives straight from the previous job on the pump; false means from the shop']
   prep_minutes integer [not null]
   pump_minutes integer [not null]
   cleanup_minutes integer [not null]
@@ -834,6 +853,7 @@ Table employees {
   id uuid [pk, note: 'gen_random_uuid()']
   company_id uuid [not null, ref: > companies.id, note: 'tenant']
   branch_id uuid [ref: > branches.id]
+  home_yard_id uuid [ref: > yards.id, note: 'where the operator starts the day']
   user_id uuid [ref: > app_users.id, note: 'null if no login']
   employee_number text
   first_name text [not null]

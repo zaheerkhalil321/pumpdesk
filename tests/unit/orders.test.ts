@@ -33,6 +33,7 @@ function job(overrides: Partial<JobRow> = {}): JobRow {
     timezone: "America/New_York",
     service_date: "2026-09-12",
     travel_minutes: 0,
+    linked_to_previous: false,
     prep_minutes: 30,
     pump_minutes: 120,
     cleanup_minutes: 30,
@@ -195,8 +196,12 @@ describe("order validation", () => {
     expect(bookOrderSchema.safeParse({ ...valid, siteLabel: " " }).success).toBe(false);
     expect(bookOrderSchema.safeParse({ ...valid, pourTime: "25:00" }).success).toBe(false);
     expect(bookOrderSchema.safeParse({ ...valid, pourTime: "7 AM" }).success).toBe(false);
-    expect(bookOrderSchema.safeParse({ ...valid, estimatedYards: 0 }).success).toBe(false);
+    expect(bookOrderSchema.safeParse({ ...valid, estimatedYards: 0.5 }).success).toBe(false);
+    expect(bookOrderSchema.safeParse({ ...valid, estimatedYards: -1 }).success).toBe(false);
     expect(bookOrderSchema.safeParse({ ...valid, estimatedYards: 10001 }).success).toBe(false);
+    // Yardage is optional: left out or 0 is fine.
+    expect(bookOrderSchema.safeParse({ ...valid, estimatedYards: undefined }).success).toBe(true);
+    expect(bookOrderSchema.safeParse({ ...valid, estimatedYards: 0 }).success).toBe(true);
     expect(bookOrderSchema.safeParse({ ...valid, date: "12/09/2026" }).success).toBe(false);
   });
 

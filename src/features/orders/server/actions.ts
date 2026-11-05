@@ -20,6 +20,7 @@ import { listDayBlocks, listDayCounts, listOperatorJobs } from '@/features/order
 import { getShopAddress } from '@/features/company/server/queries';
 import { estimateDriveMinutes } from '@/features/orders/server/drive-time';
 import { previousBlock } from '@/features/orders/travel';
+import { getOperatorYard } from '@/features/yards/server/queries';
 import type { Database, Json } from '@/types/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -112,6 +113,7 @@ const FIELD_COLUMNS = {
   pumpMinutes: 'pump_minutes',
   cleanupMinutes: 'cleanup_minutes',
   travelMinutes: 'travel_minutes',
+  linkedToPrevious: 'linked_to_previous',
   estimatedYards: 'estimated_yards',
   minPumpSize: 'min_pump_size',
   linesOnSite: 'lines_on_site',
@@ -250,19 +252,22 @@ export const getDayBlocks = authedAction({
 });
 
 /**
- * Drive time into a new job, from Google: from the pump's previous job that day, or from the shop
- * when it has none. Read only. Minutes is null when Google could not say; the form keeps its own value.
+ * Drive time into a new job, from Google: from the pump's previous job when linked, else from the
+ * operator's home yard, else from the shop. Read only. Minutes is null when Google could not say; the form keeps its own value.
  */
 export const getDriveTime = authedAction({
   schema: driveTimeSchema,
   roles: ORDER_EDITORS,
   run: async ({ input }) => {
     const blocks = await listDayBlocks(input.date);
-    const previous = previousBlock(blocks, input.pumpId, input.startHour, input.ignoreId);
-    const origin = previous?.siteAddress ?? (await getShopAddress());
-    if (!origin) return { minutes: null, from: 'shop' as const };
+    const previous = input.linked === false ? null : previousBlock(blocks, input.pumpId, input.startHour, input.ignoreId);
+    // Not linked: the operator drives from their home yard, or from the shop when they have none.
+    const yard = previous || !input.operatorId ? null : await getOperatorYard(input.operatorId);
+    const origin = previous?.siteAddress ?? yard?.address ?? (await getShopAddress());
+    const from = previous ? ('job' as const) : yard ? ('yard' as const) : ('shop' as const);
+    if (!origin) return { minutes: null, from, yardName: yard?.name ?? null };
     const minutes = await estimateDriveMinutes(origin, input.destination);
-    return { minutes, from: previous ? ('job' as const) : ('shop' as const) };
+    return { minutes, from, yardName: yard?.name ?? null };
   },
 });
 

@@ -43,9 +43,12 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  fullScreenOnMobile = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /** On a phone, fill the whole screen instead of floating as a card. Use for forms. */
+  fullScreenOnMobile?: boolean
 }) {
   return (
     <DialogPortal>
@@ -54,6 +57,8 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-2xl bg-white p-6 text-sm text-popover-foreground shadow-2xl border border-slate-200/90 transition-all duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 outline-none sm:max-w-md",
+          fullScreenOnMobile &&
+            "grid-cols-[minmax(0,1fr)] max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-none max-sm:h-dvh max-sm:max-h-none max-sm:content-start max-sm:gap-5 max-sm:rounded-none max-sm:border-0 max-sm:overflow-y-auto max-sm:overflow-x-hidden",
           className
         )}
         {...props}

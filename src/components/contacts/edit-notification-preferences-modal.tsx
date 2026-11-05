@@ -41,7 +41,7 @@ export function EditNotificationPreferencesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-6 rounded-2xl bg-white shadow-xl border-slate-200">
+      <DialogContent fullScreenOnMobile className="max-w-lg p-6 rounded-2xl bg-white shadow-xl border-slate-200">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
             Notification Preferences

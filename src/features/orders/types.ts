@@ -67,6 +67,8 @@ export interface DayBlock {
   durationHours: number;
   /** Drive time into this job, from the shop or the pump's previous job. */
   travelMinutes: number;
+  /** The crew drives straight from the previous job on the pump, not from the shop. */
+  linkedToPrevious: boolean;
   /** Where the pour is, as typed or saved with the order. */
   siteAddress: string;
   customerName: string;

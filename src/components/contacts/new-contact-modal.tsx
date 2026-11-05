@@ -157,7 +157,7 @@ export function NewContactModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-6 rounded-2xl bg-white shadow-xl border-slate-200">
+      <DialogContent fullScreenOnMobile className="max-w-md p-6 rounded-2xl bg-white shadow-xl border-slate-200">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
             Add New Contact
@@ -167,7 +167,7 @@ export function NewContactModal({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* First & Last Name */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -275,8 +275,8 @@ export function NewContactModal({
           </div>
 
           {/* Phone & Phone Type */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="sm:col-span-2">
               <label className="text-xs font-semibold text-slate-700 block mb-1">
                 Phone number <span className="text-red-500">*</span>
               </label>

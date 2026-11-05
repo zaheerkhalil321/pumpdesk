@@ -331,7 +331,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Customer since {customer.customerSince}
+              <span className="whitespace-nowrap">Customer since {customer.customerSince}</span>
               {customer.location && <> &bull; {customer.location}</>}
             </p>
           </div>
@@ -1015,14 +1015,14 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
       {/* ── 7. Dialog: Add Contact ── */}
       <Dialog open={isAddContactModalOpen} onOpenChange={setIsAddContactModalOpen}>
-        <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+        <DialogContent fullScreenOnMobile className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
               Add contact for {customer.name}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleCreateContact} className="space-y-4 pt-1">
+          <form onSubmit={handleCreateContact} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">Full name *</label>
               <Input
@@ -1105,14 +1105,14 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
       {/* ── 8. Dialog: Add Job Site ── */}
       <Dialog open={isAddSiteModalOpen} onOpenChange={setIsAddSiteModalOpen}>
-        <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+        <DialogContent fullScreenOnMobile className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
               Add authorized site for {customer.name}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleCreateSite} className="space-y-4 pt-1">
+          <form onSubmit={handleCreateSite} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">Site name</label>
               <Input
@@ -1188,14 +1188,14 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
       {/* ── 9. Dialog: Edit Customer ── */}
       <Dialog open={isEditCustomerModalOpen} onOpenChange={setIsEditCustomerModalOpen}>
-        <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+        <DialogContent fullScreenOnMobile className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
               Edit {customer.name}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSaveCustomer} className="space-y-4 pt-1">
+          <form onSubmit={handleSaveCustomer} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">Company name</label>
               <Input
@@ -1305,14 +1305,14 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
       {/* ── 10. Dialog: Edit / Delete Job Site ── */}
       <Dialog open={siteBeingEdited !== null} onOpenChange={(open) => !open && setSiteBeingEdited(null)}>
-        <DialogContent className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
+        <DialogContent fullScreenOnMobile className="sm:max-w-[430px] p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 tracking-tight">
               Edit job site
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSaveSite} className="space-y-4 pt-1">
+          <form onSubmit={handleSaveSite} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">Site name</label>
               <Input

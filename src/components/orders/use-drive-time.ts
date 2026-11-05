@@ -10,7 +10,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export type DriveTimeStatus =
   | { state: 'idle' }
   | { state: 'loading' }
-  | { state: 'ready'; from: 'shop' | 'job'; minutes: number };
+  | { state: 'ready'; from: 'shop' | 'yard' | 'job'; yardName: string | null; minutes: number };
 
 interface UseDriveTimeOptions {
   /** Off while editing a saved order, which keeps the drive time it has. */
@@ -21,6 +21,10 @@ interface UseDriveTimeOptions {
   startHour: number;
   destination: string;
   ignoreId?: string;
+  /** Linked to the previous job: drive from it. Otherwise from the operator's yard, or the shop. */
+  linked: boolean;
+  /** The operator on the order, whose home yard is where an unlinked drive starts. */
+  operatorId?: string;
   /** Called with Google's answer. The form decides whether to use it. */
   onEstimate: (minutes: number) => void;
 }
@@ -30,7 +34,7 @@ interface UseDriveTimeOptions {
  * once the pump, time and address are known. If Google can't say, the status stays idle and the
  * dispatcher's own value stands.
  */
-export function useDriveTime({ enabled, date, pumpId, startHour, destination, ignoreId, onEstimate }: UseDriveTimeOptions) {
+export function useDriveTime({ enabled, date, pumpId, startHour, destination, ignoreId, linked, operatorId, onEstimate }: UseDriveTimeOptions) {
   const [status, setStatus] = useState<DriveTimeStatus>({ state: 'idle' });
   const onEstimateRef = useRef(onEstimate);
   useEffect(() => {
@@ -43,10 +47,10 @@ export function useDriveTime({ enabled, date, pumpId, startHour, destination, ig
     let cancelled = false;
     const timer = setTimeout(async () => {
       setStatus({ state: 'loading' });
-      const result = await getDriveTime({ date, pumpId, startHour, destination: destination.trim(), ...(ignoreId ? { ignoreId } : {}) });
+      const result = await getDriveTime({ date, pumpId, startHour, destination: destination.trim(), linked, ...(operatorId ? { operatorId } : {}), ...(ignoreId ? { ignoreId } : {}) });
       if (cancelled) return;
       if (result.ok && result.data.minutes !== null) {
-        setStatus({ state: 'ready', from: result.data.from, minutes: result.data.minutes });
+        setStatus({ state: 'ready', from: result.data.from, yardName: result.data.yardName, minutes: result.data.minutes });
         onEstimateRef.current(result.data.minutes);
       } else {
         setStatus({ state: 'idle' });
@@ -56,7 +60,7 @@ export function useDriveTime({ enabled, date, pumpId, startHour, destination, ig
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [ready, date, pumpId, startHour, destination, ignoreId]);
+  }, [ready, date, pumpId, startHour, destination, ignoreId, linked, operatorId]);
 
   return ready ? status : ({ state: 'idle' } as DriveTimeStatus);
 }

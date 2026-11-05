@@ -11,13 +11,17 @@ import { findOverlap } from '@/features/orders/conflicts';
 import { formatDuration } from '@/features/orders/duration';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-/** "7:00 - 10:00 AM": when the pour starts and ends, so the card never has to be read off the hour columns. */
-function timeRangeLabel(booking: ScheduleBooking): string {
-  const start = clockFromHour(booking.pourHour);
-  const end = clockFromHour(booking.pourHour + booking.pourHours);
-  // "7:00 AM - 10:00 AM" reads shorter as "7:00 - 10:00 AM" when both are in the same half of the day.
+/** "7:00 - 10:00 AM": a span between two hours, shortened when both are in the same half of the day. */
+function hourRangeLabel(startHour: number, endHour: number): string {
+  const start = clockFromHour(startHour);
+  const end = clockFromHour(endHour);
   const samePeriod = start.slice(-2) === end.slice(-2);
   return `${samePeriod ? start.slice(0, -3) : start} - ${end}`;
+}
+
+/** When the pour starts and ends, so the card never has to be read off the hour columns. */
+function timeRangeLabel(booking: ScheduleBooking): string {
+  return hourRangeLabel(booking.pourHour, booking.pourHour + booking.pourHours);
 }
 
 /** The board covers the full day; jobs can start as early as 12 AM or as late as 11 PM. */
@@ -86,9 +90,75 @@ const COL_SPANS = [
   'col-span-24',
 ];
 
+// Width of the prep and clean-up strips as a share of the card, 0 to 45%.
+const STRIP_BASIS = [
+  'basis-[0%]',
+  'basis-[1%]',
+  'basis-[2%]',
+  'basis-[3%]',
+  'basis-[4%]',
+  'basis-[5%]',
+  'basis-[6%]',
+  'basis-[7%]',
+  'basis-[8%]',
+  'basis-[9%]',
+  'basis-[10%]',
+  'basis-[11%]',
+  'basis-[12%]',
+  'basis-[13%]',
+  'basis-[14%]',
+  'basis-[15%]',
+  'basis-[16%]',
+  'basis-[17%]',
+  'basis-[18%]',
+  'basis-[19%]',
+  'basis-[20%]',
+  'basis-[21%]',
+  'basis-[22%]',
+  'basis-[23%]',
+  'basis-[24%]',
+  'basis-[25%]',
+  'basis-[26%]',
+  'basis-[27%]',
+  'basis-[28%]',
+  'basis-[29%]',
+  'basis-[30%]',
+  'basis-[31%]',
+  'basis-[32%]',
+  'basis-[33%]',
+  'basis-[34%]',
+  'basis-[35%]',
+  'basis-[36%]',
+  'basis-[37%]',
+  'basis-[38%]',
+  'basis-[39%]',
+  'basis-[40%]',
+  'basis-[41%]',
+  'basis-[42%]',
+  'basis-[43%]',
+  'basis-[44%]',
+  'basis-[45%]',
+];
+
+/** Diagonal hatching for the prep and clean-up strips on either side of a pour. */
+const HATCH = 'bg-slate-50 bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--color-slate-200)_5px_6px)]';
+
+/** A hatched strip beside a pour, for prep before it or clean-up after it. The label shows once the strip is wide enough. */
+function StripLabel({ kind, range, percent, className }: { kind: string; range: string; percent: number; className?: string }) {
+  return (
+    <div
+      className={cn('flex shrink-0 flex-col items-center justify-center overflow-hidden px-0.5 text-center', HATCH, STRIP_BASIS[percent], className)}
+      title={`${kind} ${range}`}
+    >
+      {percent >= 12 && <span className="text-[9px] font-bold leading-tight text-slate-600">{kind}</span>}
+      {percent >= 14 && <span className="text-[8px] font-medium leading-tight text-slate-500">{range.replace(' - ', '–').replace(/ (AM|PM)$/, '')}</span>}
+    </div>
+  );
+}
+
 // Pours that overlap on one pump are stacked in tracks so none is hidden. Three tracks is the cap.
 const MAX_TRACKS = 3;
-const LANE_MIN_HEIGHT = ['min-h-[82px]', 'min-h-[164px]', 'min-h-[246px]'];
+const LANE_MIN_HEIGHT = ['min-h-[96px]', 'min-h-[192px]', 'min-h-[288px]'];
 const OVERLAY_ROWS = ['grid-rows-1', 'grid-rows-2', 'grid-rows-3'];
 const ROW_STARTS = ['row-start-1 row-end-2', 'row-start-2 row-end-3', 'row-start-3 row-end-4'];
 
@@ -141,7 +211,7 @@ function TravelConnectors({ ordered, trackOf }: { ordered: ScheduleBooking[]; tr
     const next = ordered[i + 1];
     if (!next) return;
     const track = trackOf.get(current.id) ?? 0;
-    if (trackOf.get(next.id) !== track) return;
+    if (!next.linkedToPrevious || trackOf.get(next.id) !== track) return;
     const from = endCol(current);
     const to = colIndex(next.startHour);
     if (to - from < 1) return;
@@ -296,7 +366,7 @@ export function TimelineGrid({
         }}
         className="overflow-x-auto min-w-full"
       >
-        <div className="min-w-[2200px]">
+        <div className="min-w-[2800px]">
           {/* ── 1. HEADER ROW ── */}
           <div className="flex border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold text-xs sticky top-0 z-30">
             {/* Frozen Left Header */}
@@ -305,7 +375,7 @@ export function TimelineGrid({
             </div>
 
             {/* 24 Time Header Slots */}
-            <div className="flex-1 grid grid-cols-[repeat(24,minmax(0,1fr))] min-w-[2000px]">
+            <div className="flex-1 grid grid-cols-[repeat(24,minmax(0,1fr))] min-w-[2600px]">
               {TIMELINE_HOURS.map((slot) => (
                 <div
                   key={slot.hour}
@@ -349,7 +419,7 @@ export function TimelineGrid({
                   </div>
 
                   {/* Right Timeline Area: 24-Column Grid */}
-                  <DroppableLane pumpId={pump.id} className="flex-1 relative min-w-[2000px]">
+                  <DroppableLane pumpId={pump.id} className="flex-1 relative min-w-[2600px]">
                     {/* Layer A: 24 hourly cells; an empty one starts a booking */}
                     <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] h-full">
                       {TIMELINE_HOURS.map((slot) => {
@@ -403,9 +473,18 @@ export function TimelineGrid({
                           maxAllowedSpan,
                         );
                         const spanColClass = COL_SPANS[actualSpan - 1];
-                        const isNarrow = actualSpan <= 1;
 
                         const isBeingDragged = draggedBookingId === booking.id;
+
+                        // Prep and clean-up sit beside the pour as hatched strips, sized to their share of the card.
+                        const stripPercent = (hours: number) =>
+                          Math.min(STRIP_BASIS.length - 1, Math.round((Math.max(0, hours) / actualSpan) * 100));
+                        const prepPercent = stripPercent(booking.pourHour - booking.startHour);
+                        const cleanupPercent = stripPercent(
+                          booking.durationHours - (booking.pourHour - booking.startHour) - booking.pourHours,
+                        );
+                        // The pour card itself is what is left after the strips. Under a column and a half it gets the compact layout.
+                        const isNarrow = (actualSpan * (100 - prepPercent - cleanupPercent)) / 100 < 1.5;
 
                         // Another pour on this pump at the same time. Allowed, but worth a second look.
                         const overlap = findOverlap(pumpBookings, {
@@ -416,7 +495,7 @@ export function TimelineGrid({
                         });
 
                         // Descriptive tooltip with full un-truncated details
-                        const cardTooltip = `${booking.customerName} • ${booking.volumeYards} yd³\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${timeRangeLabel(booking)} (${booking.durationHours}h)${overlap ? `\nOverlaps ${overlap.customerName} (${overlap.orderNumber}) at ${timeRangeLabel(overlap)}` : ""}\nDrag to reschedule (on a tablet, hold then drag) • Click to view details`;
+                        const cardTooltip = `${booking.customerName}${booking.volumeYards > 0 ? ` • ${booking.volumeYards} yd³` : ''}\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${timeRangeLabel(booking)} (${booking.durationHours}h)${overlap ? `\nOverlaps ${overlap.customerName} (${overlap.orderNumber}) at ${timeRangeLabel(overlap)}` : ""}\nDrag to reschedule (on a tablet, hold then drag) • Click to view details`;
 
                         return (
                           <DraggableCard
@@ -426,14 +505,28 @@ export function TimelineGrid({
                               if (!justDragged.current) onBookingClick(booking);
                             }}
                             className={cn(
-                              'pointer-events-auto',
-                              'h-full rounded-lg flex flex-col justify-between shadow-2xs border transition-all cursor-grab active:cursor-grabbing hover:shadow-md select-none overflow-hidden max-w-full min-w-0 border-l-[3.5px]',
+                              'pointer-events-auto group',
+                              'h-full flex items-stretch transition-all cursor-grab active:cursor-grabbing select-none max-w-full min-w-0',
                               ROW_STARTS[trackOf.get(booking.id) ?? 0],
-                              isNarrow ? 'p-1.5' : 'p-2.5',
                               startColClass,
                               spanColClass,
-                              isBeingDragged &&
-                                'opacity-40 scale-98 border-2 border-brand',
+                              isBeingDragged && 'opacity-40 scale-98',
+                            )}
+                            title={cardTooltip}
+                          >
+                            {prepPercent > 0 && (
+                              <StripLabel
+                                kind="Prep"
+                                range={hourRangeLabel(booking.startHour, booking.pourHour)}
+                                percent={prepPercent}
+                                className="rounded-l-lg"
+                              />
+                            )}
+                            <div
+                              className={cn(
+                                'flex min-w-0 flex-1 flex-col justify-between overflow-hidden rounded-lg border border-l-[3.5px] shadow-2xs group-hover:shadow-md',
+                                isNarrow ? 'p-1.5' : 'p-2.5',
+                                isBeingDragged && 'border-2 border-brand',
                               // Left border status stripe for instantaneous visual scanning
                               !booking.operator && 'border-l-rose-500',
                               booking.operator && booking.dispatchStatus === 'dispatched' && 'border-l-emerald-500',
@@ -444,9 +537,8 @@ export function TimelineGrid({
                                 'bg-slate-100 border-slate-300 text-slate-700 hover:border-slate-400',
                               booking.status === 'washout' &&
                                 'bg-amber-50 border-amber-300 text-amber-900 hover:border-amber-400',
-                            )}
-                            title={cardTooltip}
-                          >
+                              )}
+                            >
                             {/* Row 1: Customer Name & Yards */}
                             <div className="flex items-center justify-between gap-1 min-w-0">
                               <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -474,16 +566,16 @@ export function TimelineGrid({
                                   </TooltipContent>
                                 </Tooltip>
                               )}
-                              <span
-                                className={cn(
-                                  'font-bold uppercase tracking-wider rounded bg-white/90 shrink-0 shadow-2xs text-slate-800',
-                                  isNarrow
-                                    ? 'text-[9px] px-1 py-0.2'
-                                    : 'text-[10px] px-1.5 py-0.5'
-                                )}
-                              >
-                                {isNarrow ? `${booking.volumeYards}y` : `${booking.volumeYards} yd³`}
-                              </span>
+                              {booking.volumeYards > 0 && (
+                                <span
+                                  className={cn(
+                                    'font-bold uppercase tracking-wider rounded bg-white/90 shrink-0 shadow-2xs text-slate-800',
+                                    isNarrow ? 'text-[9px] px-1 py-0.2' : 'text-[10px] px-1.5 py-0.5',
+                                  )}
+                                >
+                                  {isNarrow ? `${booking.volumeYards}y` : `${booking.volumeYards} yd³`}
+                                </span>
+                              )}
                             </div>
 
                             {/* Row 2: Operator • Job Site • Duration */}
@@ -505,11 +597,9 @@ export function TimelineGrid({
                                       : 'No op'}
                                   </span>
                                 </div>
-                                {booking.durationHours > 1 && (
-                                  <span className="text-[9px] font-bold text-slate-600 bg-white/80 px-1 py-0.2 rounded shrink-0">
-                                    {booking.durationHours}h
-                                  </span>
-                                )}
+                                <span className="text-[9px] font-bold text-slate-600 bg-white/80 px-1 py-0.2 rounded shrink-0">
+                                  {timeRangeLabel(booking).replace(' - ', '–')}
+                                </span>
                               </div>
                             ) : (
                               /* Standard wide card row */
@@ -533,11 +623,6 @@ export function TimelineGrid({
                                       <span className="text-[8px] opacity-75 font-normal">Draft</span>
                                     </span>
                                   )}
-
-                                  <span className="text-slate-400 shrink-0">·</span>
-                                  <span className="truncate text-slate-600 min-w-0 font-medium">
-                                    {booking.jobSiteName}
-                                  </span>
                                 </div>
 
                                 <span className="shrink-0 flex items-center gap-0.5 text-[9.5px] font-semibold text-slate-600 bg-white/70 px-1 rounded">
@@ -545,6 +630,18 @@ export function TimelineGrid({
                                   {timeRangeLabel(booking)}
                                 </span>
                               </div>
+                            )}
+                            {!isNarrow && (
+                              <span className="mt-0.5 truncate text-[10.5px] font-medium text-slate-600">{booking.jobSiteName}</span>
+                            )}
+                            </div>
+                            {cleanupPercent > 0 && (
+                              <StripLabel
+                                kind="Clean-up"
+                                range={hourRangeLabel(booking.pourHour + booking.pourHours, booking.startHour + booking.durationHours)}
+                                percent={cleanupPercent}
+                                className="rounded-r-lg"
+                              />
                             )}
                           </DraggableCard>
                         );

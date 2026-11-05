@@ -26,8 +26,10 @@ import { removeCompanyLogo, uploadCompanyLogo } from '@/features/company/server/
 import { LOGO_ACCEPT, LOGO_MAX_BYTES } from '@/features/company/logo';
 import { LOGO_SOURCE_MAX_BYTES, readImage } from '@/features/company/crop-logo';
 import { LogoCropDialog } from '@/components/settings/logo-crop-dialog';
+import { YardsCard } from '@/components/settings/yards-card';
+import type { YardItem } from '@/features/yards/types';
 
-export function CompanySettingsTab({ logoUrl }: { logoUrl: string | null }) {
+export function CompanySettingsTab({ logoUrl, yards }: { logoUrl: string | null; yards: YardItem[] }) {
   const router = useRouter();
   const [isLogoBusy, setIsLogoBusy] = useState(false);
   // The picture just chosen, waiting in the crop box.
@@ -473,6 +475,8 @@ export function CompanySettingsTab({ logoUrl }: { logoUrl: string | null }) {
               </div>
             ))}
           </div>
+
+          <YardsCard yards={yards} />
 
           {isAddBranchOpen && (
             <div className="rounded-xl border border-brand/30 bg-brand-light/30 p-4 space-y-3">

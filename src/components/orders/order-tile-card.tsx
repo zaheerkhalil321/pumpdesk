@@ -95,10 +95,12 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
         <div className="flex-1 flex flex-col justify-between gap-1.5 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Concrete Volume */}
-            <div className="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1 flex items-center gap-1.5 text-xs font-bold text-slate-800 shadow-2xs shrink-0">
-              <Layers className="h-3 w-3 text-brand shrink-0" />
-              <span>{volume} yd³</span>
-            </div>
+            {!!volume && volume > 0 && (
+              <div className="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1 flex items-center gap-1.5 text-xs font-bold text-slate-800 shadow-2xs shrink-0">
+                <Layers className="h-3 w-3 text-brand shrink-0" />
+                <span>{volume} yd³</span>
+              </div>
+            )}
 
             {/* Pour Time */}
             <div className="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1 flex items-center gap-1.5 text-xs font-semibold text-slate-700 shadow-2xs shrink-0">

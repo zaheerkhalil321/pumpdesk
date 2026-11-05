@@ -30,6 +30,7 @@ import {
 import { useSettings } from '@/components/providers/settings-provider';
 import { useIsTablet } from '@/hooks/use-mobile';
 import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { NavCounts } from '@/features/orders/types';
 
 interface YardLocation {
@@ -363,6 +364,7 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
         {/* Section Divider / Label */}
 
         {/* 3. NAVIGATION LINKS */}
+        <TooltipProvider delay={150}>
         <nav
           className={cn(
             'space-y-1 transition-all duration-300 py-1',
@@ -379,34 +381,40 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
             if (isCollapsed) {
               /* Collapsed Rail Item with Tooltip */
               return (
-                <div key={item.title} className="relative group">
-                  <Link
-                    href={item.href}
-                    onClick={handleNavClick}
-                    className={cn(
-                      'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
-                      isActive
-                        ? 'bg-brand-light text-brand font-semibold shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80',
-                    )}
+                <Tooltip key={item.title}>
+                  <TooltipTrigger
+                    render={
+                      <Link
+                        href={item.href}
+                        onClick={handleNavClick}
+                        aria-label={item.title}
+                        className={cn(
+                          'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
+                          isActive
+                            ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80',
+                        )}
+                      />
+                    }
                   >
                     <Icon className="h-4.5 w-4.5 shrink-0" />
                     {item.badge && (
                       <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-brand border border-white" />
                     )}
-                  </Link>
-
-                  {/* Tooltip on hover */}
-                  <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-medium whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 flex items-center gap-1.5">
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    sideOffset={14}
+                    className="rounded-lg border border-white/10 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
+                  >
                     <span>{item.title}</span>
                     {item.badge && (
-                      <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded">
+                      <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
                         {item.badge}
                       </span>
                     )}
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
-                  </div>
-                </div>
+                  </TooltipContent>
+                </Tooltip>
               );
             }
 
@@ -455,6 +463,7 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
             );
           })}
         </nav>
+        </TooltipProvider>
       </div>
 
       {/* ── Bottom Portion: User Profile Dock & Quick Settings ── */}
