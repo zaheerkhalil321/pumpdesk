@@ -2,6 +2,8 @@ import 'server-only';
 
 import { createClient } from '@/server/supabase';
 import { requireSession } from '@/server/session';
+import { formatE164 } from '@/lib/phone';
+import type { CompanyProfile } from '@/features/company/types';
 
 /** The public link to the company logo, or null when none is uploaded. */
 export async function getCompanyLogoUrl(): Promise<string | null> {
@@ -42,4 +44,34 @@ export async function getShopAddress(): Promise<string | null> {
   if (error) throw error;
   if (!company) return null;
   return join([company.address_line_1, company.city, join([company.state, company.postal_code]).replace(', ', ' ')]) || null;
+}
+
+/** The company profile shown in Settings > Company. Read through the user client, so RLS applies. */
+export async function getCompanyProfile(): Promise<CompanyProfile> {
+  const session = await requireSession();
+  const supabase = await createClient();
+  const [company, settings] = await Promise.all([
+    supabase
+      .from('companies')
+      .select('display_name, legal_name, phone, email, website, address_line_1, address_line_2, city, state, postal_code, logo_text')
+      .eq('id', session.companyId)
+      .single(),
+    supabase.from('company_settings').select('use_address_on_invoices').eq('company_id', session.companyId).maybeSingle(),
+  ]);
+  if (company.error) throw company.error;
+  const c = company.data;
+  return {
+    companyName: c.display_name,
+    legalBusinessName: c.legal_name,
+    phone: formatE164(c.phone),
+    email: c.email ?? '',
+    website: c.website ?? '',
+    logoText: c.logo_text ?? '',
+    streetAddress: c.address_line_1 ?? '',
+    suiteUnit: c.address_line_2 ?? '',
+    city: c.city ?? '',
+    state: c.state ?? '',
+    zipCode: c.postal_code ?? '',
+    useAddressOnInvoices: settings.data?.use_address_on_invoices ?? false,
+  };
 }

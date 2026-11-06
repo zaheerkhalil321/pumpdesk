@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Upload,
   MapPin,
@@ -28,8 +28,19 @@ import { LOGO_SOURCE_MAX_BYTES, readImage } from '@/features/company/crop-logo';
 import { LogoCropDialog } from '@/components/settings/logo-crop-dialog';
 import { YardsCard } from '@/components/settings/yards-card';
 import type { YardItem } from '@/features/yards/types';
+import type { CompanyProfile } from '@/features/company/types';
+import { updateCompanyProfile } from '@/features/company/server/actions';
+import { US_STATES } from '@/features/company/states';
 
-export function CompanySettingsTab({ logoUrl, yards }: { logoUrl: string | null; yards: YardItem[] }) {
+export function CompanySettingsTab({
+  logoUrl,
+  yards,
+  profile,
+}: {
+  logoUrl: string | null;
+  yards: YardItem[];
+  profile: CompanyProfile;
+}) {
   const router = useRouter();
   const [isLogoBusy, setIsLogoBusy] = useState(false);
   // The picture just chosen, waiting in the crop box.
@@ -51,14 +62,37 @@ export function CompanySettingsTab({ logoUrl, yards }: { logoUrl: string | null;
     updateCompanyDetails({ [field]: value });
   };
 
-  const handleSaveProfile = () => {
+  // The form edits the shared settings store; start it from what is saved in the database.
+  useEffect(() => {
+    updateCompanyDetails({ ...profile, country: 'United States' });
+  }, [profile]);
+
+  const handleSaveProfile = async () => {
     setIsSavingProfile(true);
-    setTimeout(() => {
-      setIsSavingProfile(false);
-      toast.success('Company profile saved', {
-        description: 'Your business details and address have been successfully updated.',
-      });
-    }, 350);
+    const result = await updateCompanyProfile({
+      companyName: company.companyName,
+      legalBusinessName: company.legalBusinessName,
+      phone: company.phone,
+      email: company.email,
+      website: company.website,
+      streetAddress: company.streetAddress,
+      suiteUnit: company.suiteUnit,
+      city: company.city,
+      state: company.state,
+      zipCode: company.zipCode,
+      useAddressOnInvoices: company.useAddressOnInvoices,
+    });
+    setIsSavingProfile(false);
+    if (!result.ok) {
+      const first = result.fieldErrors ? Object.values(result.fieldErrors)[0]?.[0] : undefined;
+      if (first) toast.error(first);
+      else reportAction(result, { entity: 'company profile' });
+      return;
+    }
+    toast.success('Company profile saved', {
+      description: 'Your business details and address have been updated.',
+    });
+    router.refresh();
   };
 
   const handleLogoChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -342,12 +376,7 @@ export function CompanySettingsTab({ logoUrl, yards }: { logoUrl: string | null;
                   <AppSelect
                     value={company.state}
                     onChange={(val) => handleFieldChange('state', val)}
-                    options={[
-                      { value: 'Maine', label: 'Maine' },
-                      { value: 'New Hampshire', label: 'New Hampshire' },
-                      { value: 'Massachusetts', label: 'Massachusetts' },
-                      { value: 'Vermont', label: 'Vermont' },
-                    ]}
+                    options={[...US_STATES]}
                     className="w-full h-10 rounded-lg text-xs sm:text-sm"
                   />
                 </div>

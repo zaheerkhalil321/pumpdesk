@@ -14,14 +14,16 @@ import { ListsSettingsTab } from '@/components/settings/lists-settings-tab';
 import { IntegrationsSettingsTab } from '@/components/settings/integrations-settings-tab';
 import type { SupplierItem } from '@/features/suppliers/types';
 import type { YardItem } from '@/features/yards/types';
+import type { CompanyProfile } from '@/features/company/types';
 
 interface SettingsPageProps {
   suppliers: SupplierItem[];
   logoUrl: string | null;
   yards: YardItem[];
+  profile: CompanyProfile;
 }
 
-function SettingsContent({ suppliers, logoUrl, yards }: SettingsPageProps) {
+function SettingsContent({ suppliers, logoUrl, yards, profile }: SettingsPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -53,7 +55,7 @@ function SettingsContent({ suppliers, logoUrl, yards }: SettingsPageProps) {
           <SettingsHub onSelectTab={handleTabChange} />
         )}
 
-        {currentTab === 'company' && <CompanySettingsTab logoUrl={logoUrl} yards={yards} />}
+        {currentTab === 'company' && <CompanySettingsTab logoUrl={logoUrl} yards={yards} profile={profile} />}
 
         {currentTab === 'pricing' && <PricingSettingsTab />}
 
@@ -67,7 +69,7 @@ function SettingsContent({ suppliers, logoUrl, yards }: SettingsPageProps) {
   );
 }
 
-export function SettingsPage({ suppliers, logoUrl, yards }: SettingsPageProps) {
+export function SettingsPage({ suppliers, logoUrl, yards, profile }: SettingsPageProps) {
   return (
     <Suspense
       fallback={
@@ -76,7 +78,7 @@ export function SettingsPage({ suppliers, logoUrl, yards }: SettingsPageProps) {
         </div>
       }
     >
-      <SettingsContent suppliers={suppliers} logoUrl={logoUrl} yards={yards} />
+      <SettingsContent suppliers={suppliers} logoUrl={logoUrl} yards={yards} profile={profile} />
     </Suspense>
   );
 }

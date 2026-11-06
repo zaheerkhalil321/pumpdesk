@@ -3,7 +3,9 @@
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 
+import { authedAction } from '@/server/action';
 import { actionError, mapError } from '@/server/errors';
+import { updateCompanyProfileSchema } from '@/features/company/schemas';
 import type { ActionResult } from '@/server/action';
 import { getSession } from '@/server/session';
 import { createClient } from '@/server/supabase';
@@ -95,3 +97,36 @@ export async function removeCompanyLogo(): Promise<ActionResult<null>> {
     return { ok: false, ...mapError(error) };
   }
 }
+
+/** Saves the company profile from Settings > Company. Owners and admins only. */
+export const updateCompanyProfile = authedAction({
+  schema: updateCompanyProfileSchema,
+  roles: LOGO_EDITORS,
+  run: async ({ input, session, supabase }) => {
+    const { error } = await supabase
+      .from('companies')
+      .update({
+        display_name: input.companyName,
+        legal_name: input.legalBusinessName,
+        phone: input.phone,
+        email: input.email,
+        website: input.website,
+        address_line_1: input.streetAddress,
+        address_line_2: input.suiteUnit,
+        city: input.city,
+        state: input.state,
+        postal_code: input.zipCode,
+      })
+      .eq('id', session.companyId);
+    if (error) throw error;
+
+    const settings = await supabase
+      .from('company_settings')
+      .update({ use_address_on_invoices: input.useAddressOnInvoices })
+      .eq('company_id', session.companyId);
+    if (settings.error) throw settings.error;
+
+    revalidatePath('/settings');
+    return { saved: true };
+  },
+});
