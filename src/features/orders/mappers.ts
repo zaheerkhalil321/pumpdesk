@@ -99,6 +99,7 @@ export function toOrderItem(h: HydratedJob): OrderItem {
     pumpModel: h.pump?.model ?? 'Unassigned',
     operator: h.operator?.name ?? 'Operator needed',
     operatorPhone: h.operator?.phone ?? '',
+    operatorId: h.operator?.id ?? null,
     isUnassigned: !h.pump && job.booking_status !== 'cancelled',
     status: orderStatus(job),
     invoiceStatus: 'Not created',

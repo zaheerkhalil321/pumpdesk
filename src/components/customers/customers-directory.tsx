@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { CustomerTileCard } from '@/components/customers/customer-tile-card';
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import { createCustomer } from '@/features/crm/server/actions';
 import { createCustomerSchema } from '@/features/crm/schemas';
 import { reportAction } from '@/lib/action-feedback';
@@ -42,7 +42,7 @@ type ViewLayout = 'table' | 'tiles';
 
 export function CustomersDirectory({ customers }: { customers: CustomerItem[] }) {
   const router = useRouter();
-  const { openText, textDialog } = useSendText();
+  const { openText, openCall, reachDialogs } = useReachOut();
   const [isSaving, startSaving] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
@@ -177,9 +177,12 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
     });
   };
 
-  const handleCall = (name: string, phone: string) => {
-    toast.info(`Calling ${name}`, {
-      description: `Dialing ${phone} via office telephony link`,
+  const handleCall = (cust: CustomerItem) => {
+    openCall({
+      recipient: 'customer',
+      recipientId: cust.id,
+      name: cust.contactName || cust.name,
+      phone: cust.phone,
     });
   };
 
@@ -530,7 +533,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCall(cust.contactName, cust.phone)}
+                            onClick={() => handleCall(cust)}
                             className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
                             title={`Call ${cust.phone}`}
                           >
@@ -721,7 +724,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
         </DialogContent>
       </Dialog>
 
-      {textDialog}
+      {reachDialogs}
     </div>
   );
 }

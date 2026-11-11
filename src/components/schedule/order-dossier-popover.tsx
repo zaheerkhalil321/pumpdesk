@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import { useRouter } from 'next/navigation';
 import { format, parse } from 'date-fns';
 import {
@@ -72,7 +72,7 @@ export function OrderDossierModal({
     setIsChangingOperator(false);
   }
 
-  const { openText, textDialog } = useSendText(booking?.jobId);
+  const { openText, openCall, reachDialogs } = useReachOut(booking?.jobId);
 
   if (!booking) return null;
 
@@ -115,18 +115,13 @@ export function OrderDossierModal({
     ? 'Operator assigned • Not dispatched yet'
     : 'Needs operator';
 
-  // Opens the phone's dialer or messages app (on a computer, whatever app handles phone links).
-  const handleCall = (_name: string, phone: string) => {
-    window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
-  };
-
-  const handleText = (recipient: 'contact' | 'operator') => {
-    if (recipient === 'contact') {
-      openText({ recipient, recipientId: booking.contactId ?? '', name: contactName, phone: contactPhone });
-    } else {
-      openText({ recipient, recipientId: matchedOperator?.id ?? '', name: operatorDisplayName, phone: operatorPhone });
-    }
-  };
+  // Texts and calls go through Twilio, from small dialogs.
+  const personFor = (recipient: 'contact' | 'operator') =>
+    recipient === 'contact'
+      ? { recipient, recipientId: booking.contactId ?? '', name: contactName, phone: contactPhone }
+      : { recipient, recipientId: matchedOperator?.id ?? '', name: operatorDisplayName, phone: operatorPhone };
+  const handleText = (recipient: 'contact' | 'operator') => openText(personFor(recipient));
+  const handleCall = (recipient: 'contact' | 'operator') => openCall(personFor(recipient));
 
   /** Saves an operator or dispatch change, then refreshes the schedule. */
   const saveChange = (
@@ -333,7 +328,7 @@ export function OrderDossierModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCall(contactName, contactPhone)}
+                      onClick={() => handleCall('contact')}
                       className="h-8 px-2.5 sm:px-3 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 sm:gap-1.5 transition-colors cursor-pointer"
                     >
                       <Phone className="h-3.5 w-3.5 text-brand" />
@@ -396,7 +391,7 @@ export function OrderDossierModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCall(operatorDisplayName, operatorPhone)}
+                      onClick={() => handleCall('operator')}
                       className="h-8 px-2.5 sm:px-3 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 sm:gap-1.5 transition-colors cursor-pointer"
                     >
                       <Phone className="h-3.5 w-3.5 text-brand" />
@@ -567,7 +562,7 @@ export function OrderDossierModal({
           </div>
         </DialogContent>
       </Dialog>
-      {textDialog}
+      {reachDialogs}
     </>
   );
 }

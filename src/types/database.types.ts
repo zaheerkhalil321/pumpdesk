@@ -83,6 +83,56 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"call_logs": {
+                  Row: {
+                    "company_id": string,"contact_id": string | null,"created_at": string,"customer_id": string | null,"employee_id": string | null,"error_code": string | null,"error_message": string | null,"from_phone": string,"id": string,"job_id": string | null,"placed_by": string | null,"provider_sid": string | null,"recipient_kind": string,"status": string,"to_phone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"from_phone": string,"id"?: string,"job_id"?: string | null,"placed_by"?: string | null,"provider_sid"?: string | null,"recipient_kind": string,"status": string,"to_phone": string
+                  }
+                  Update: {
+                    "company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"from_phone"?: string,"id"?: string,"job_id"?: string | null,"placed_by"?: string | null,"provider_sid"?: string | null,"recipient_kind"?: string,"status"?: string,"to_phone"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "call_logs_company_id_contact_id_fkey"
+      columns: ["company_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "call_logs_company_id_customer_id_fkey"
+      columns: ["company_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "call_logs_company_id_employee_id_fkey"
+      columns: ["company_id","employee_id"]
+isOneToOne: false
+      referencedRelation: "employees"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "call_logs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "call_logs_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "call_logs_placed_by_fkey"
+      columns: ["placed_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"companies": {
                   Row: {
                     "address_line_1": string | null,"address_line_2": string | null,"city": string | null,"country_code": string,"created_at": string,"currency": string,"display_name": string,"email": string | null,"id": string,"is_active": boolean,"legal_name": string,"logo_path": string | null,"logo_text": string | null,"phone": string | null,"postal_code": string | null,"slug": string,"state": string | null,"tax_id_last4": string | null,"timezone": string,"updated_at": string,"website": string | null

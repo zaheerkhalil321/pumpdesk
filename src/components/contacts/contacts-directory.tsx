@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import type { ContactItem, CustomerOption } from '@/features/crm/types';
 import { ContactTileCard } from '@/components/contacts/contact-tile-card';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import { NewContactModal } from '@/components/contacts/new-contact-modal';
 
 type StatusTab = 'all' | 'active' | 'inactive';
@@ -51,6 +52,7 @@ export function ContactsDirectory({
   customerOptions: CustomerOption[];
 }) {
   const router = useRouter();
+  const { openText, openCall, reachDialogs } = useReachOut();
   const customerFilterOptions = [{ value: 'all', label: 'Customer: All' }, ...customerOptions];
 
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -146,16 +148,16 @@ export function ContactsDirectory({
       });
   }, [contacts, statusTab, customerFilter, roleFilter, searchQuery, sortBy]);
 
-  const handleCall = (e: React.MouseEvent, phone: string, name: string) => {
+  const handleCall = (e: React.MouseEvent, id: string, phone: string, name: string) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.info(`Calling ${name}`, { description: phone });
+    openCall({ recipient: 'contact', recipientId: id, name, phone });
   };
 
-  const handleText = (e: React.MouseEvent, phone: string, name: string) => {
+  const handleText = (e: React.MouseEvent, id: string, phone: string, name: string) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.info(`Opening SMS with ${name}`, { description: phone });
+    openText({ recipient: 'contact', recipientId: id, name, phone });
   };
 
   const handleCopyPhone = (e: React.MouseEvent, phone: string, name: string) => {
@@ -532,7 +534,7 @@ export function ContactsDirectory({
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={(e) => handleCall(e, contact.phone, contact.name)}
+                              onClick={(e) => handleCall(e, contact.id, contact.phone, contact.name)}
                               className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
                               title={`Call ${contact.phone}`}
                             >
@@ -546,7 +548,7 @@ export function ContactsDirectory({
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={(e) => handleText(e, contact.phone, contact.name)}
+                              onClick={(e) => handleText(e, contact.id, contact.phone, contact.name)}
                               className="h-8 px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1.5 transition-all"
                               title={`Text ${contact.phone}`}
                             >
@@ -579,6 +581,7 @@ export function ContactsDirectory({
         onOpenChange={setIsNewContactOpen}
         customerOptions={customerOptions}
       />
+      {reachDialogs}
     </div>
   );
 }

@@ -18,7 +18,7 @@ import type { CustomerItem } from '@/features/crm/types';
 interface CustomerTileCardProps {
   customer: CustomerItem;
   onClick: () => void;
-  onCall: (name: string, phone: string) => void;
+  onCall: (customer: CustomerItem) => void;
   onText: (customer: CustomerItem) => void;
   onCopyPhone: (phone: string, company: string) => void;
   onCopyEmail?: (email: string, company: string) => void;
@@ -181,7 +181,7 @@ export function CustomerTileCard({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => onCall(customer.contactName, customer.phone)}
+              onClick={() => onCall(customer)}
               className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
             >
               <Phone className="h-3 w-3 text-brand" />

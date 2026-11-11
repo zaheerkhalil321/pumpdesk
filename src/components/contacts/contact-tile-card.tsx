@@ -12,7 +12,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ContactItem } from '@/features/crm/types';
@@ -24,7 +24,7 @@ interface ContactTileCardProps {
 
 export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
   const router = useRouter();
-  const { openText, textDialog } = useSendText();
+  const { openText, openCall, reachDialogs } = useReachOut();
   const isInactive = contact.status === 'Inactive';
 
   // Prefetch contact details for instant navigation on click
@@ -60,7 +60,7 @@ export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
   const handleCall = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.info(`Calling ${contact.name}`, { description: contact.phone });
+    openCall({ recipient: 'contact', recipientId: contact.id, name: contact.name, phone: contact.phone });
   };
 
   const handleText = (e: React.MouseEvent) => {
@@ -221,7 +221,7 @@ export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
           </div>
         </div>
       </div>
-      {textDialog}
+      {reachDialogs}
     </>
   );
 }

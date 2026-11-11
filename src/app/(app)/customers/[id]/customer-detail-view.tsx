@@ -1,6 +1,6 @@
 'use client';
 
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { CustomerNotificationPreferences } from '@/components/customers/customer-notification-preferences';
@@ -118,13 +118,12 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
     toast.success(`${label} copied`, { description: value });
   };
 
-  const handleCall = (phone: string, targetName: string) => {
-    toast.info(`Calling ${targetName}`, { description: phone });
-  };
-
-  const { openText, textDialog } = useSendText();
+  const { openText, openCall, reachDialogs } = useReachOut();
   const handleText = (recipient: 'customer' | 'contact', recipientId: string, phone: string, name: string) => {
     openText({ recipient, recipientId, name, phone });
+  };
+  const handleCall = (recipient: 'customer' | 'contact', recipientId: string, phone: string, name: string) => {
+    openCall({ recipient, recipientId, name, phone });
   };
 
   const handleEmail = (email: string) => {
@@ -443,7 +442,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleCall(customer.phone, customer.name)}
+                          onClick={() => handleCall('customer', customer.id, customer.phone, customer.name)}
                           className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
                         >
                           <Phone className="h-3 w-3 text-brand" />
@@ -763,7 +762,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => handleCall(contact.phone, contact.name)}
+                              onClick={() => handleCall('contact', contact.id, contact.phone, contact.name)}
                               className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
                             >
                               <Phone className="h-3 w-3 text-brand" />
@@ -875,7 +874,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleCall(contact.phone, contact.name)}
+                                onClick={() => handleCall('contact', contact.id, contact.phone, contact.name)}
                                 className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
                               >
                                 <Phone className="h-3 w-3 text-brand" />
@@ -1392,7 +1391,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
           </form>
         </DialogContent>
       </Dialog>
-      {textDialog}
+      {reachDialogs}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -59,11 +59,11 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
   const isInactive = contact.status === 'Inactive';
-  const { openText, textDialog } = useSendText();
+  const { openText, openCall, reachDialogs } = useReachOut();
 
   const handleCall = () => {
     if (!contact) return;
-    toast.info(`Calling ${contact.name}`, { description: contact.phone });
+    openCall({ recipient: 'contact', recipientId: contact.id, name: contact.name, phone: contact.phone });
   };
 
   const handleText = () => {
@@ -481,7 +481,7 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
           (c) => !contact.linkedAccounts.some((a) => a.customerId === c.value),
         )}
       />
-      {textDialog}
+      {reachDialogs}
     </div>
   );
 }

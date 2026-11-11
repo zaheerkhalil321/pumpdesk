@@ -1,6 +1,6 @@
 'use client';
 
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -31,7 +31,7 @@ interface OperatorDetailViewProps {
 export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorDetailViewProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('profile');
-  const { openText, textDialog } = useSendText();
+  const { openText, openCall, reachDialogs } = useReachOut();
 
   const handleCopy = (text: string, label: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -41,7 +41,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
   };
 
   const handleCall = () => {
-    toast.info(`Calling ${operator.name}`, { description: operator.phone });
+    openCall({ recipient: 'operator', recipientId: operator.id, name: operator.name, phone: operator.phone });
   };
 
   const handleText = () => {
@@ -357,7 +357,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
         pumps={pumps}
         branchOptions={branchOptions}
       />
-      {textDialog}
+      {reachDialogs}
     </div>
   );
 }

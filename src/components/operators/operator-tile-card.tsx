@@ -12,7 +12,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSendText } from '@/components/orders/use-send-text';
+import { useReachOut } from '@/components/orders/use-reach-out';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { OperatorItem } from '@/features/fleet/types';
@@ -24,7 +24,7 @@ interface OperatorTileCardProps {
 
 export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
   const router = useRouter();
-  const { openText, textDialog } = useSendText();
+  const { openText, openCall, reachDialogs } = useReachOut();
   const isInactive = operator.status === 'Inactive';
 
   // Prefetch for zero-lag instant navigation
@@ -57,11 +57,10 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
     }
   };
 
-  const handleCall = (e: React.MouseEvent, phone: string, name: string) => {
+  const handleCall = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.info(`Calling ${name}`, { description: phone });
-    window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
+    openCall({ recipient: 'operator', recipientId: operator.id, name: operator.name, phone: operator.phone });
   };
 
   const handleText = (e: React.MouseEvent) => {
@@ -180,7 +179,7 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={(e) => handleCall(e, operator.phone, operator.name)}
+                onClick={handleCall}
                 className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
               >
                 <Phone className="h-3 w-3 text-brand" />
@@ -207,7 +206,7 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
           </div>
         </div>
       </div>
-      {textDialog}
+      {reachDialogs}
     </>
   );
 }

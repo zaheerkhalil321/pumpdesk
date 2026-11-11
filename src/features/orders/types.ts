@@ -115,6 +115,8 @@ export interface OrderItem {
   operator: string;
   /** The operator's phone, or empty when they have none. */
   operatorPhone: string;
+  /** Database id of the assigned operator, for calling them from the list. */
+  operatorId: string | null;
   isUnassigned?: boolean;
   status: OrderStatus;
   invoiceStatus: 'Not created' | 'Create invoice' | 'Paid';

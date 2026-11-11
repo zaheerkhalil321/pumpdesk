@@ -23,3 +23,16 @@ export const PHONE_ERROR = 'Enter a 10-digit US phone number';
 export function phoneProblem(value: string): string | null {
   return value.trim() && !toE164(value) ? PHONE_ERROR : null;
 }
+
+/**
+ * A phone number someone typed, as E.164: a US number in any common format, or an international
+ * one that starts with "+" (for example +923001234567). Null when it is neither.
+ */
+export function toDialable(input: string): string | null {
+  const trimmed = input.trim();
+  if (trimmed.startsWith('+')) {
+    const digits = trimmed.replace(/\D/g, '');
+    return /^[1-9]\d{6,14}$/.test(digits) ? `+${digits}` : null;
+  }
+  return toE164(trimmed);
+}
