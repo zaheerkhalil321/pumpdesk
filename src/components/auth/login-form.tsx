@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,6 @@ import { loginSchema, type LoginValues } from '@/lib/auth/schemas';
 import { loadWorkspace, signIn } from '@/lib/auth/auth-service';
 
 export function LoginForm() {
-  const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -41,14 +39,14 @@ export function LoginForm() {
       return;
     }
     setIsRedirecting(true);
-    router.prefetch('/schedule');
     const workspace = await loadWorkspace();
     if (!workspace.ok) {
       setIsRedirecting(false);
       setFormError(workspace.error);
       return;
     }
-    router.push('/schedule');
+    // A full page load, so pages cached for a previous user are never shown to this one.
+    window.location.assign('/schedule');
   };
 
   return (

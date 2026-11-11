@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,6 @@ interface LogoutDialogProps {
 }
 
 export function LogoutDialog({ isOpen, onOpenChange }: LogoutDialogProps) {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const handleConfirmLogout = async () => {
@@ -33,7 +31,8 @@ export function LogoutDialog({ isOpen, onOpenChange }: LogoutDialogProps) {
           'You have been safely logged out of Midcoast Pumping workspace.',
       });
       onOpenChange(false);
-      router.push('/login');
+      // A full page load, so no page of this user stays in the browser's navigation cache.
+      window.location.assign('/login');
     } catch {
       toast.error('Failed to log out. Please try again.');
       setIsLoggingOut(false);
