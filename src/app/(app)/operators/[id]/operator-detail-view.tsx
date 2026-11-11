@@ -1,5 +1,6 @@
 'use client';
 
+import { useSendText } from '@/components/orders/use-send-text';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -30,6 +31,7 @@ interface OperatorDetailViewProps {
 export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorDetailViewProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('profile');
+  const { openText, textDialog } = useSendText();
 
   const handleCopy = (text: string, label: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -43,7 +45,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
   };
 
   const handleText = () => {
-    toast.info(`Opening SMS with ${operator.name}`, { description: operator.phone });
+    openText({ recipient: 'operator', recipientId: operator.id, name: operator.name, phone: operator.phone });
   };
 
   const isActive = operator.status === 'Active';
@@ -355,6 +357,7 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
         pumps={pumps}
         branchOptions={branchOptions}
       />
+      {textDialog}
     </div>
   );
 }

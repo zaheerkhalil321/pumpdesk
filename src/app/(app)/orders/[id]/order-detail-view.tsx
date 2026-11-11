@@ -44,7 +44,9 @@ import type {
   OrderFormOptions,
 } from '@/features/orders/types';
 import { QuickCustomerDialog } from '@/components/schedule/quick-customer-dialog';
+import { SendTextDialog, type TextTarget } from '@/components/orders/send-text-dialog';
 import { QuickContactDialog } from '@/components/schedule/quick-contact-dialog';
+import { draftOrderText } from '@/features/sms/templates';
 import { shiftClock } from '@/features/orders/mappers';
 import { pumpMinutesFor } from '@/features/orders/duration';
 import {
@@ -300,8 +302,26 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
     window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   };
 
-  const handleText = (_name: string, phone: string) => {
-    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}`;
+  // Texts go out through Twilio from a small dialog, so the dispatcher can edit the message first.
+  const [textTarget, setTextTarget] = useState<TextTarget | null>(null);
+  const openText = (recipient: 'contact' | 'operator') => {
+    const recipientId = recipient === 'contact' ? order.contactId : order.operatorId;
+    if (!recipientId) return;
+    const name = recipient === 'contact' ? order.customerContact : order.assignedOperator;
+    const phone = recipient === 'contact' ? order.customerPhone : order.operatorPhone;
+    setTextTarget({
+      recipient,
+      recipientId,
+      name,
+      phone,
+      draft: draftOrderText(recipient, name, {
+        orderNumber: order.id,
+        customer: order.customer,
+        serviceDate: order.serviceDate,
+        pourTime: order.pourTime,
+        siteAddress: order.jobSiteAddress,
+      }),
+    });
   };
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -1019,7 +1039,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleText(order.customerContact, order.customerPhone)}
+                          onClick={() => openText('contact')}
                           className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
                         >
                           <MessageSquare className="h-3 w-3 text-brand" />
@@ -1181,7 +1201,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleText(order.assignedOperator, order.operatorPhone)}
+                          onClick={() => openText('operator')}
                           className="h-8 px-3 text-xs font-semibold text-slate-700 hover:bg-brand-light hover:text-brand hover:border-brand/30 gap-1.5 rounded-lg border-slate-200 cursor-pointer shadow-2xs transition-colors shrink-0"
                         >
                           <MessageSquare className="h-3.5 w-3.5 text-brand" />
@@ -1262,6 +1282,8 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <SendTextDialog target={textTarget} jobId={order.jobId} onClose={() => setTextTarget(null)} />
     </div>
   );
 }

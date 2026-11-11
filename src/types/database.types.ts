@@ -541,6 +541,56 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"sms_messages": {
+                  Row: {
+                    "body": string,"company_id": string,"contact_id": string | null,"created_at": string,"customer_id": string | null,"employee_id": string | null,"error_code": string | null,"error_message": string | null,"id": string,"job_id": string | null,"provider_sid": string | null,"recipient_kind": string,"sent_by": string | null,"status": string,"to_phone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"job_id"?: string | null,"provider_sid"?: string | null,"recipient_kind": string,"sent_by"?: string | null,"status": string,"to_phone": string
+                  }
+                  Update: {
+                    "body"?: string,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"job_id"?: string | null,"provider_sid"?: string | null,"recipient_kind"?: string,"sent_by"?: string | null,"status"?: string,"to_phone"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sms_messages_company_id_contact_id_fkey"
+      columns: ["company_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "sms_messages_company_id_employee_id_fkey"
+      columns: ["company_id","employee_id"]
+isOneToOne: false
+      referencedRelation: "employees"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "sms_messages_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "sms_messages_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "sms_messages_customer_fkey"
+      columns: ["company_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "sms_messages_sent_by_fkey"
+      columns: ["sent_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"yards": {
                   Row: {
                     "address": string,"branch_id": string | null,"company_id": string,"created_at": string,"id": string,"is_active": boolean,"name": string,"updated_at": string

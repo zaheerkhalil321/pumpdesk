@@ -1,5 +1,6 @@
 'use client';
 
+import { useSendText } from '@/components/orders/use-send-text';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { CustomerNotificationPreferences } from '@/components/customers/customer-notification-preferences';
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +35,7 @@ import {
 import { AppSelect } from '@/components/ui/app-select';
 import { StatusSwitch } from '@/components/ui/status-switch';
 import { toast } from 'sonner';
-import { cn, formatUSPhone } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import {
   deleteJobSite,
   createContact,
@@ -120,8 +122,9 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
     toast.info(`Calling ${targetName}`, { description: phone });
   };
 
-  const handleText = (phone: string, targetName: string) => {
-    toast.info(`Opening SMS with ${targetName}`, { description: phone });
+  const { openText, textDialog } = useSendText();
+  const handleText = (recipient: 'customer' | 'contact', recipientId: string, phone: string, name: string) => {
+    openText({ recipient, recipientId, name, phone });
   };
 
   const handleEmail = (email: string) => {
@@ -451,7 +454,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleText(customer.phone, customer.name)}
+                          onClick={() => handleText('customer', customer.id, customer.phone, customer.name)}
                           className="h-7 px-2 text-[11px] font-medium gap-1 text-slate-700 border-slate-200 hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs transition-colors"
                         >
                           <MessageSquare className="h-3 w-3 text-brand" />
@@ -773,7 +776,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => handleText(contact.phone, contact.name)}
+                              onClick={() => handleText('contact', contact.id, contact.phone, contact.name)}
                               className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
                             >
                               <MessageSquare className="h-3 w-3 text-brand" />
@@ -884,7 +887,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleText(contact.phone, contact.name)}
+                                onClick={() => handleText('contact', contact.id, contact.phone, contact.name)}
                                 className="h-7.5 px-2 text-[11px] font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 shadow-2xs gap-1 transition-colors"
                               >
                                 <MessageSquare className="h-3 w-3 text-brand" />
@@ -1046,12 +1049,10 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">Phone number *</label>
-              <Input
-                type="tel"
+              <PhoneInput
                 value={newContactPhone}
-                onChange={(e) => setNewContactPhone(formatUSPhone(e.target.value))}
+                onValueChange={setNewContactPhone}
                 placeholder="(207) 555-0188"
-                maxLength={14}
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white placeholder:text-slate-400 focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs transition-colors"
                 required
               />
@@ -1208,11 +1209,9 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 block">Main phone</label>
-              <Input
-                type="tel"
+              <PhoneInput
                 value={editCustPhone}
-                onChange={(e) => setEditCustPhone(formatUSPhone(e.target.value))}
-                maxLength={14}
+                onValueChange={setEditCustPhone}
                 className="h-10 text-xs sm:text-sm font-medium text-slate-900 border-slate-200 bg-white focus-visible:border-brand focus:border-brand outline-none rounded-lg shadow-2xs"
               />
             </div>
@@ -1393,6 +1392,7 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
           </form>
         </DialogContent>
       </Dialog>
+      {textDialog}
     </div>
   );
 }

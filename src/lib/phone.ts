@@ -16,3 +16,10 @@ export function formatE164(e164: string | null | undefined): string {
   if (!match) return e164;
   return `(${match[1]}) ${match[2]}-${match[3]}`;
 }
+
+export const PHONE_ERROR = 'Enter a 10-digit US phone number';
+
+/** The problem with a typed phone number, or null when it is empty or a valid US number. */
+export function phoneProblem(value: string): string | null {
+  return value.trim() && !toE164(value) ? PHONE_ERROR : null;
+}

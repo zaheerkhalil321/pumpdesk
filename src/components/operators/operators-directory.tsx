@@ -15,6 +15,7 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSendText } from '@/components/orders/use-send-text';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { AppSelect } from '@/components/ui/app-select';
@@ -43,6 +44,7 @@ export function OperatorsDirectory({
   todayLabel: string;
 }) {
   const router = useRouter();
+  const { openText, textDialog } = useSendText();
 
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -146,10 +148,9 @@ export function OperatorsDirectory({
     window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   };
 
-  const handleText = (e: React.MouseEvent, phone: string, name: string) => {
+  const handleText = (e: React.MouseEvent, id: string, phone: string, name: string) => {
     e.stopPropagation();
-    toast.info(`Opening SMS with ${name}`, { description: phone });
-    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}`;
+    openText({ recipient: 'operator', recipientId: id, name, phone });
   };
 
   if (operators.length === 0) {
@@ -472,7 +473,7 @@ export function OperatorsDirectory({
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={(e) => handleText(e, op.phone, op.name)}
+                              onClick={(e) => handleText(e, op.id, op.phone, op.name)}
                               className="h-8 px-2 sm:px-2.5 text-xs font-medium text-slate-700 border-slate-200 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 cursor-pointer shadow-2xs gap-1 sm:gap-1.5 transition-all"
                               title={`Text ${op.phone}`}
                             >
@@ -506,6 +507,7 @@ export function OperatorsDirectory({
         pumps={pumps}
         branchOptions={branchOptions}
       />
+      {textDialog}
     </div>
   );
 }

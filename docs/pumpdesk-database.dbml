@@ -1214,6 +1214,30 @@ Table notification_rules {
 
 // ── Platform ────────────────────────────────────────────────────
 
+Table sms_messages {
+  id uuid [pk, note: 'gen_random_uuid()']
+  company_id uuid [not null, ref: > companies.id, note: 'tenant']
+  job_id uuid [ref: > jobs.id, note: 'the order the text was sent from, empty when sent from a customer, contact or operator page']
+  customer_id uuid [ref: > customers.id]
+  contact_id uuid [ref: > contacts.id]
+  employee_id uuid [ref: > employees.id]
+  recipient_kind text [not null, note: 'customer | contact | operator']
+  to_phone text [not null, note: 'E.164']
+  body text [not null, note: 'max 1000 characters']
+  status text [not null, note: 'queued | failed | dry_run']
+  provider_sid text [note: 'Twilio message SID']
+  error_code text
+  error_message text
+  sent_by uuid [ref: > app_users.id]
+  created_at timestamptz [not null, note: 'now()']
+
+  indexes {
+    (company_id, job_id, created_at)
+  }
+
+  Note: 'Append-only log of texts sent from an order. Delivery status updates come later with the Twilio status callback.'
+}
+
 Table activity_log {
   id uuid [pk, note: 'gen_random_uuid(); order by created_at (Postgres 17 has no uuidv7)']
   company_id uuid [not null, ref: > companies.id, note: 'tenant']

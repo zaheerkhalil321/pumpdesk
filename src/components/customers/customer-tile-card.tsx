@@ -19,7 +19,7 @@ interface CustomerTileCardProps {
   customer: CustomerItem;
   onClick: () => void;
   onCall: (name: string, phone: string) => void;
-  onText: (name: string, phone: string) => void;
+  onText: (customer: CustomerItem) => void;
   onCopyPhone: (phone: string, company: string) => void;
   onCopyEmail?: (email: string, company: string) => void;
 }
@@ -194,7 +194,7 @@ export function CustomerTileCard({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => onText(customer.contactName, customer.phone)}
+              onClick={() => onText(customer)}
               className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-brand-light hover:text-brand hover:border-brand/30 border-slate-200 cursor-pointer shadow-2xs gap-1.5 transition-colors"
             >
               <MessageSquare className="h-3 w-3 text-brand" />

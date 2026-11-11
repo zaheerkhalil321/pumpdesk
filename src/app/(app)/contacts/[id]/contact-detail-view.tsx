@@ -1,5 +1,6 @@
 'use client';
 
+import { useSendText } from '@/components/orders/use-send-text';
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -58,6 +59,7 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
   const isInactive = contact.status === 'Inactive';
+  const { openText, textDialog } = useSendText();
 
   const handleCall = () => {
     if (!contact) return;
@@ -66,7 +68,7 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
 
   const handleText = () => {
     if (!contact) return;
-    toast.info(`Opening SMS with ${contact.name}`, { description: contact.phone });
+    openText({ recipient: 'contact', recipientId: contact.id, name: contact.name, phone: contact.phone });
   };
 
   const handleEmail = () => {
@@ -479,6 +481,7 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
           (c) => !contact.linkedAccounts.some((a) => a.customerId === c.value),
         )}
       />
+      {textDialog}
     </div>
   );
 }
