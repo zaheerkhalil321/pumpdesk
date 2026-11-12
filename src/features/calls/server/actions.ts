@@ -2,6 +2,7 @@
 
 import { authedAction } from '@/server/action';
 import { NotFoundError } from '@/server/errors';
+import { assertUnderLimit, CALL_LIMIT } from '@/server/rate-limit';
 import { callerPhoneSchema, placeCallSchema } from '@/features/calls/schemas';
 import { placeBridgedCall } from '@/features/calls/server/twilio';
 import { toDialable } from '@/lib/phone';
@@ -28,6 +29,8 @@ export const placeCall = authedAction({
   schema: placeCallSchema,
   roles: CALLERS,
   run: async ({ input, session, supabase }) => {
+    await assertUnderLimit(supabase, 'call_logs', session.userId, CALL_LIMIT);
+
     const table = { customer: 'customers', contact: 'contacts', operator: 'employees' } as const;
     const { data: person, error: lookupError } = await supabase
       .from(table[input.recipient])

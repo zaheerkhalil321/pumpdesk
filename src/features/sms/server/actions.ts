@@ -2,6 +2,7 @@
 
 import { authedAction } from '@/server/action';
 import { NotFoundError } from '@/server/errors';
+import { assertUnderLimit, TEXT_LIMIT } from '@/server/rate-limit';
 import { sendTextSchema } from '@/features/sms/schemas';
 import { sendSms } from '@/features/sms/server/twilio';
 
@@ -14,7 +15,9 @@ const TEXT_SENDERS = ['owner', 'admin', 'dispatcher', 'office'] as const;
 export const sendOrderText = authedAction({
   schema: sendTextSchema,
   roles: TEXT_SENDERS,
-  run: async ({ input, supabase }) => {
+  run: async ({ input, session, supabase }) => {
+    await assertUnderLimit(supabase, 'sms_messages', session.userId, TEXT_LIMIT);
+
     const table = { customer: 'customers', contact: 'contacts', operator: 'employees' } as const;
     const { data: person, error: lookupError } = await supabase
       .from(table[input.recipient])

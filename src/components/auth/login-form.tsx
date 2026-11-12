@@ -46,6 +46,7 @@ export function LoginForm() {
       return;
     }
     // A full page load, so pages cached for a previous user are never shown to this one.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the full load is the point
     window.location.assign('/schedule');
   };
 

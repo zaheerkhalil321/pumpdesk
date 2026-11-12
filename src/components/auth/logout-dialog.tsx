@@ -32,6 +32,7 @@ export function LogoutDialog({ isOpen, onOpenChange }: LogoutDialogProps) {
       });
       onOpenChange(false);
       // A full page load, so no page of this user stays in the browser's navigation cache.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the full load is the point
       window.location.assign('/login');
     } catch {
       toast.error('Failed to log out. Please try again.');
