@@ -13,7 +13,6 @@ import {
   UserCheck,
   Settings,
   ChevronDown,
-  Check,
   MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,54 +22,11 @@ import {
   SheetContent,
 } from '@/components/ui/sheet';
 import { ModalCloseButton } from '@/components/ui/modal-close-button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
 import type { NavCounts } from '@/features/orders/types';
-
-interface YardLocation {
-  id: string;
-  companyName: string;
-  yardName: string;
-  code: string;
-  location: string;
-  isHQ?: boolean;
-  pumpCount: number;
-}
-
-const DUMMY_YARDS: YardLocation[] = [
-  {
-    id: 'yard-1',
-    companyName: 'Midcoast Pumping',
-    yardName: 'Warren Yard (HQ)',
-    code: 'MC',
-    location: 'Warren, Maine',
-    isHQ: true,
-    pumpCount: 4,
-  },
-  {
-    id: 'yard-2',
-    companyName: 'Midcoast South',
-    yardName: 'Portland Terminal',
-    code: 'MS',
-    location: 'Portland, Maine',
-    pumpCount: 2,
-  },
-  {
-    id: 'yard-3',
-    companyName: 'Midcoast North',
-    yardName: 'Bangor Staging',
-    code: 'MN',
-    location: 'Bangor, Maine',
-    pumpCount: 1,
-  },
-];
+import type { Workspace } from '@/features/branches/types';
+import { WorkspaceMenuContent, mainBranchLabel } from '@/components/layout/workspace-menu';
 
 interface NavItem {
   title: string;
@@ -135,11 +91,10 @@ function withBadge(item: NavItem, counts: NavCounts): NavItem {
   return item;
 }
 
-export function MobileNavbar({ navCounts }: { navCounts: NavCounts }) {
+export function MobileNavbar({ navCounts, workspace }: { navCounts: NavCounts; workspace: Workspace }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedYard, setSelectedYard] = useState<YardLocation>(DUMMY_YARDS[0]);
   const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
 
 
@@ -185,7 +140,7 @@ export function MobileNavbar({ navCounts }: { navCounts: NavCounts }) {
             className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50/80 text-[11px] font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-            <span className="truncate max-w-[90px]">{selectedYard.code} HQ</span>
+            <span className="truncate max-w-[90px]">{workspace.branches[0]?.code ?? workspace.monogram}</span>
           </button>
 
           {/* User Profile Avatar (Taps to open Settings) */}
@@ -236,61 +191,22 @@ export function MobileNavbar({ navCounts }: { navCounts: NavCounts }) {
                 <DropdownMenuTrigger className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200/90 bg-slate-50/80 hover:bg-slate-100 transition-colors cursor-pointer text-left shadow-2xs outline-none">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="h-7 w-7 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                      {selectedYard.code}
+                      {workspace.monogram}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-xs text-slate-900 truncate">
-                        {selectedYard.companyName}
+                        {workspace.companyName}
                       </p>
                       <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        {selectedYard.yardName}
+                        {mainBranchLabel(workspace)}
                       </p>
                     </div>
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0 ml-1" />
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent
-                  align="start"
-                  className="w-64 p-1.5 rounded-xl shadow-lg border-slate-200"
-                >
-                  <DropdownMenuLabel className="text-[11px] font-semibold text-slate-400 px-2 py-1">
-                    Dispatch yards
-                  </DropdownMenuLabel>
-                  {DUMMY_YARDS.map((yard) => {
-                    const isSelected = selectedYard.id === yard.id;
-                    return (
-                      <DropdownMenuItem
-                        key={yard.id}
-                        onClick={() => {
-                          setSelectedYard(yard);
-                          toast.success(`Active yard: ${yard.yardName}`, {
-                            description: `${yard.companyName} • ${yard.pumpCount} pumps`,
-                          });
-                        }}
-                        className={cn(
-                          'flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition-colors',
-                          isSelected
-                            ? 'bg-slate-100 font-medium text-slate-900'
-                            : 'hover:bg-slate-50 text-slate-600',
-                        )}
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {yard.companyName}
-                          </p>
-                          <p className="text-[10.5px] text-slate-500">
-                            {yard.yardName}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <Check className="h-4 w-4 text-brand shrink-0 ml-2" />
-                        )}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
+                <WorkspaceMenuContent workspace={workspace} onNavigate={() => setIsOpen(false)} />
               </DropdownMenu>
             </div>
 

@@ -59,6 +59,8 @@ const pumpFields = {
   hourlyRate: boundedNumber('Hourly rate', 0, 5000),
   minHours: boundedNumber('Minimum callout', 1, 24),
   defaultOperatorId: uuid.nullable(),
+  /** The branch the pump works out of; its pump count shows in Settings > Branches. */
+  branchId: uuid.nullable(),
   status: z.enum(['available', 'maintenance']),
   maintenanceNote: optionalText(200),
   availableAgainOn: isoDate,

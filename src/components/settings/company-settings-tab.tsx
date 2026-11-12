@@ -3,10 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Upload,
-  MapPin,
   Check,
-  Plus,
-  Truck,
   Sparkles,
   Loader2,
 } from 'lucide-react';
@@ -27,32 +24,41 @@ import { LOGO_ACCEPT, LOGO_MAX_BYTES } from '@/features/company/logo';
 import { LOGO_SOURCE_MAX_BYTES, readImage } from '@/features/company/crop-logo';
 import { LogoCropDialog } from '@/components/settings/logo-crop-dialog';
 import { YardsCard } from '@/components/settings/yards-card';
+import { BranchesCard } from '@/components/settings/branches-card';
+import type { BranchItem } from '@/features/branches/types';
 import type { YardItem } from '@/features/yards/types';
 import type { CompanyProfile } from '@/features/company/types';
 import { updateCompanyProfile } from '@/features/company/server/actions';
 import { US_STATES } from '@/features/company/states';
+import { PhoneInput, phoneProblem } from '@/components/ui/phone-input';
+
+export type CompanySubTab = 'profile' | 'branches' | 'preferences';
 
 export function CompanySettingsTab({
   logoUrl,
   yards,
+  branches,
+  canEditBranches,
   profile,
+  initialSubTab = 'profile',
 }: {
   logoUrl: string | null;
   yards: YardItem[];
+  branches: BranchItem[];
+  canEditBranches: boolean;
   profile: CompanyProfile;
+  /** The sub-tab to open on, e.g. "branches" from the sidebar's branch menu. */
+  initialSubTab?: CompanySubTab;
 }) {
   const router = useRouter();
   const [isLogoBusy, setIsLogoBusy] = useState(false);
   // The picture just chosen, waiting in the crop box.
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const settings = useSettingsStore();
-  const { company, branches } = settings;
+  const { company } = settings;
   const { brandTheme, setBrandTheme, themes } = useBrandTheme();
 
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'branches' | 'preferences'>('profile');
-  const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
-  const [newBranchName, setNewBranchName] = useState('');
-  const [newBranchCity, setNewBranchCity] = useState('');
+  const [activeSubTab, setActiveSubTab] = useState<CompanySubTab>(initialSubTab);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const handleFieldChange = <K extends keyof CompanyDetails>(
@@ -68,6 +74,11 @@ export function CompanySettingsTab({
   }, [profile]);
 
   const handleSaveProfile = async () => {
+    const phoneIssue = phoneProblem(company.phone);
+    if (phoneIssue) {
+      toast.error(phoneIssue);
+      return;
+    }
     setIsSavingProfile(true);
     const result = await updateCompanyProfile({
       companyName: company.companyName,
@@ -291,11 +302,10 @@ export function CompanySettingsTab({
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Phone
                 </label>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={company.phone}
-                  onChange={(e) => handleFieldChange('phone', e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-brand shadow-2xs"
+                  onValueChange={(value) => handleFieldChange('phone', value)}
+                  className="h-10 px-3.5 rounded-lg border-slate-300 bg-white text-xs sm:text-sm text-slate-900"
                 />
               </div>
 
@@ -451,107 +461,8 @@ export function CompanySettingsTab({
       {/* ────────────────────────────────────────────────────────── */}
       {activeSubTab === 'branches' && (
         <div className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-base text-slate-900">
-                Dispatch Yards & Branches
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Staging terminals where pumps and operators report for dispatch.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsAddBranchOpen(true)}
-              className="px-3.5 py-2 rounded-lg bg-brand hover:bg-brand-hover text-xs font-semibold text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add branch
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {branches.map((b) => (
-              <div
-                key={b.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="h-7 w-7 rounded-lg bg-brand-light text-brand font-bold text-xs flex items-center justify-center border border-brand/20">
-                      {b.code}
-                    </span>
-                    {b.isHQ && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        Main HQ
-                      </span>
-                    )}
-                  </div>
-                  <h4 className="font-bold text-sm text-slate-900">{b.name}</h4>
-                  <p className="text-xs text-slate-500 mt-1 flex items-start gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span>{b.address}</span>
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                  <span className="flex items-center gap-1 font-medium">
-                    <Truck className="h-3.5 w-3.5 text-brand" />
-                    {b.pumpCount} pumps assigned
-                  </span>
-                  <span className="text-slate-400">{b.phone}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
+          <BranchesCard branches={branches} canEdit={canEditBranches} />
           <YardsCard yards={yards} />
-
-          {isAddBranchOpen && (
-            <div className="rounded-xl border border-brand/30 bg-brand-light/30 p-4 space-y-3">
-              <h4 className="font-bold text-xs text-brand">
-                Add staging branch
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Branch name (e.g. Midcoast East)"
-                  value={newBranchName}
-                  onChange={(e) => setNewBranchName(e.target.value)}
-                  className="h-9 px-3 rounded-lg border border-slate-300 bg-white text-xs text-slate-900"
-                />
-                <input
-                  type="text"
-                  placeholder="City, State"
-                  value={newBranchCity}
-                  onChange={(e) => setNewBranchCity(e.target.value)}
-                  className="h-9 px-3 rounded-lg border border-slate-300 bg-white text-xs text-slate-900"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddBranchOpen(false)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!newBranchName) return;
-                    toast.success(`Branch ${newBranchName} added`);
-                    setIsAddBranchOpen(false);
-                    setNewBranchName('');
-                    setNewBranchCity('');
-                  }}
-                  className="px-3.5 py-1.5 rounded-lg bg-brand text-white text-xs font-semibold"
-                >
-                  Create Branch
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

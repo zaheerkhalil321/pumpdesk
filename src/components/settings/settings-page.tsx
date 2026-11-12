@@ -7,7 +7,7 @@ import {
   SettingsMainTab,
 } from '@/components/settings/settings-theme-bar';
 import { SettingsHub } from '@/components/settings/settings-hub';
-import { CompanySettingsTab } from '@/components/settings/company-settings-tab';
+import { CompanySettingsTab, type CompanySubTab } from '@/components/settings/company-settings-tab';
 import { PricingSettingsTab } from '@/components/settings/pricing-settings-tab';
 import { NotificationsSettingsTab } from '@/components/settings/notifications-settings-tab';
 import { ListsSettingsTab } from '@/components/settings/lists-settings-tab';
@@ -15,15 +15,19 @@ import { IntegrationsSettingsTab } from '@/components/settings/integrations-sett
 import type { SupplierItem } from '@/features/suppliers/types';
 import type { YardItem } from '@/features/yards/types';
 import type { CompanyProfile } from '@/features/company/types';
+import type { BranchItem } from '@/features/branches/types';
 
 interface SettingsPageProps {
   suppliers: SupplierItem[];
   logoUrl: string | null;
   yards: YardItem[];
+  branches: BranchItem[];
+  /** Owners and admins only; others see the branches without the edit buttons. */
+  canEditBranches: boolean;
   profile: CompanyProfile;
 }
 
-function SettingsContent({ suppliers, logoUrl, yards, profile }: SettingsPageProps) {
+function SettingsContent({ suppliers, logoUrl, yards, branches, canEditBranches, profile }: SettingsPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -35,6 +39,11 @@ function SettingsContent({ suppliers, logoUrl, yards, profile }: SettingsPagePro
     )
       ? tabParam
       : 'overview';
+
+  // "?tab=company&section=branches" opens the Branches sub-tab, e.g. from the sidebar's branch menu.
+  const section = searchParams.get('section');
+  const companySubTab: CompanySubTab =
+    section === 'branches' || section === 'preferences' ? section : 'profile';
 
   const handleTabChange = (newTab: SettingsMainTab) => {
     const url = newTab === 'overview' ? '/settings' : `/settings?tab=${newTab}`;
@@ -55,7 +64,18 @@ function SettingsContent({ suppliers, logoUrl, yards, profile }: SettingsPagePro
           <SettingsHub onSelectTab={handleTabChange} />
         )}
 
-        {currentTab === 'company' && <CompanySettingsTab logoUrl={logoUrl} yards={yards} profile={profile} />}
+        {currentTab === 'company' && (
+          <CompanySettingsTab
+            // A new section in the link reopens the tab on that section.
+            key={companySubTab}
+            logoUrl={logoUrl}
+            yards={yards}
+            branches={branches}
+            canEditBranches={canEditBranches}
+            profile={profile}
+            initialSubTab={companySubTab}
+          />
+        )}
 
         {currentTab === 'pricing' && <PricingSettingsTab />}
 
@@ -69,7 +89,7 @@ function SettingsContent({ suppliers, logoUrl, yards, profile }: SettingsPagePro
   );
 }
 
-export function SettingsPage({ suppliers, logoUrl, yards, profile }: SettingsPageProps) {
+export function SettingsPage({ suppliers, logoUrl, yards, branches, canEditBranches, profile }: SettingsPageProps) {
   return (
     <Suspense
       fallback={
@@ -78,7 +98,14 @@ export function SettingsPage({ suppliers, logoUrl, yards, profile }: SettingsPag
         </div>
       }
     >
-      <SettingsContent suppliers={suppliers} logoUrl={logoUrl} yards={yards} profile={profile} />
+      <SettingsContent
+        suppliers={suppliers}
+        logoUrl={logoUrl}
+        yards={yards}
+        branches={branches}
+        canEditBranches={canEditBranches}
+        profile={profile}
+      />
     </Suspense>
   );
 }

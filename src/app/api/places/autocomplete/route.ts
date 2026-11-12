@@ -5,6 +5,8 @@ import { getSession } from '@/server/session';
 const AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const MIN_LENGTH = 3;
 const MAX_LENGTH = 120;
+/** "?kind=street" asks for street addresses only, for a form's street box (no towns or counties). */
+const STREET_TYPES = ['street_address', 'premise', 'subpremise', 'route'];
 
 type AutocompleteResponse = {
   suggestions?: { placePrediction?: { text?: { text?: string } } }[];
@@ -21,6 +23,7 @@ export async function GET(request: NextRequest) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   const input = (request.nextUrl.searchParams.get('q') ?? '').trim().slice(0, MAX_LENGTH);
   const sessionToken = request.nextUrl.searchParams.get('token')?.slice(0, 64);
+  const streetsOnly = request.nextUrl.searchParams.get('kind') === 'street';
   if (!apiKey || input.length < MIN_LENGTH) return NextResponse.json({ suggestions: [] });
 
   try {
@@ -30,6 +33,7 @@ export async function GET(request: NextRequest) {
       body: JSON.stringify({
         input,
         includedRegionCodes: ['us'],
+        ...(streetsOnly ? { includedPrimaryTypes: STREET_TYPES } : {}),
         ...(sessionToken ? { sessionToken } : {}),
       }),
       cache: 'no-store',

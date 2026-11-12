@@ -110,6 +110,7 @@ export function PumpDetailDialog({
   const [editMinHours, setEditMinHours] = useState('');
   const [editStatus, setEditStatus] = useState<PumpItem['status']>('available');
   const [editOperatorId, setEditOperatorId] = useState('none');
+  const [editBranchId, setEditBranchId] = useState('none');
   const [editMaintenanceNote, setEditMaintenanceNote] = useState('');
   const [editAvailableAgainOn, setEditAvailableAgainOn] = useState('');
   const [editInspectionDate, setEditInspectionDate] = useState('');
@@ -172,6 +173,7 @@ export function PumpDetailDialog({
         ? currentPump.defaultOperator.id
         : 'none'
     );
+    setEditBranchId(currentPump.branchId ?? 'none');
     setEditMaintenanceNote(currentPump.maintenanceNote || '');
     setEditAvailableAgainOn(currentPump.availableAgainOn || '');
     setEditInspectionDate(currentPump.nextInspection?.iso || '');
@@ -195,6 +197,7 @@ export function PumpDetailDialog({
       hourlyRate: parse(editHourlyRate),
       minHours: parse(editMinHours),
       defaultOperatorId: editOperatorId === 'none' ? null : editOperatorId,
+      branchId: editBranchId === 'none' ? null : editBranchId,
       status: editStatus,
       maintenanceNote: editMaintenanceNote,
       availableAgainOn: editAvailableAgainOn,
@@ -279,6 +282,18 @@ export function PumpDetailDialog({
       value: op.id,
       label: `${op.name} (${op.role})`,
     })),
+  ];
+
+  // The list holds active branches only; a pump on a switched-off branch still shows it.
+  const branchName = currentPump.branchId
+    ? (branchOptions.find((b) => b.value === currentPump.branchId)?.label ?? 'Inactive branch')
+    : '';
+  const branchSelectOptions = [
+    { value: 'none', label: 'No branch' },
+    ...branchOptions,
+    ...(currentPump.branchId && branchName === 'Inactive branch'
+      ? [{ value: currentPump.branchId, label: branchName }]
+      : []),
   ];
 
   return (
@@ -670,6 +685,15 @@ export function PumpDetailDialog({
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 block">Branch</label>
+                  <AppSelect
+                    value={editBranchId}
+                    onChange={setEditBranchId}
+                    options={branchSelectOptions}
+                  />
+                </div>
+
                 {/* Equipment Status */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 block">Equipment Status</label>
@@ -751,7 +775,7 @@ export function PumpDetailDialog({
                       </h5>
                       <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
                         <strong>{currentPump.unitNumber}</strong> is scheduled for mandatory DOT inspection on{' '}
-                        <strong>{currentPump.nextInspection?.date || 'Upcoming'}</strong>. Ensure rig is available at Warren Yard.
+                        <strong>{currentPump.nextInspection?.date || 'Upcoming'}</strong>. Ensure the rig is available{branchName && branchName !== 'Inactive branch' ? ` at ${branchName}` : ''}.
                       </p>
                     </div>
                   </div>
@@ -815,6 +839,10 @@ export function PumpDetailDialog({
                     <div>
                       <span className="text-slate-400 block text-[11px]">Minimum Callout</span>
                       <span className="font-semibold text-slate-800">{formatMinHours(currentPump.minHours)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Branch</span>
+                      <span className="font-semibold text-slate-800">{branchName || 'Not set'}</span>
                     </div>
                   </div>
                 </div>

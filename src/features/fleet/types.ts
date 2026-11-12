@@ -35,6 +35,8 @@ export interface PumpItem {
   horizontalReach?: number;
   boomLength: string;
   defaultOperator: DefaultOperatorInfo;
+  /** The branch the pump works out of, or null when none is set. */
+  branchId: string | null;
   todayStatus: TodayAvailability;
   nextInspection: NextInspectionInfo;
   status: 'available' | 'maintenance';

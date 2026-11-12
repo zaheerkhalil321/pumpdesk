@@ -7,6 +7,7 @@ import { SettingsProvider, useSettings } from "@/components/providers/settings-p
 import { SettingsOverlay } from "@/components/settings/settings-overlay";
 import { cn } from "@/lib/utils";
 import type { NavCounts } from "@/features/orders/types";
+import type { Workspace } from "@/features/branches/types";
 
 import { usePathname } from "next/navigation";
 
@@ -14,10 +15,12 @@ function AppShellInner({
   children,
   navCounts,
   logoUrl,
+  workspace,
 }: {
   children: React.ReactNode;
   navCounts: NavCounts;
   logoUrl: string | null;
+  workspace: Workspace;
 }) {
   const { isOpen } = useSettings();
   const pathname = usePathname();
@@ -26,10 +29,10 @@ function AppShellInner({
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-background">
       {/* Mobile top navigation & drawer (visible on mobile < md) */}
-      <MobileNavbar navCounts={navCounts} />
+      <MobileNavbar navCounts={navCounts} workspace={workspace} />
 
       {/* Desktop sidebar (visible on desktop md+) */}
-      <AppSidebar navCounts={navCounts} logoUrl={logoUrl} />
+      <AppSidebar navCounts={navCounts} logoUrl={logoUrl} workspace={workspace} />
 
       {/* Main workspace container */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0 relative">
@@ -55,14 +58,16 @@ export function AppShell({
   children,
   navCounts,
   logoUrl,
+  workspace,
 }: {
   children: React.ReactNode;
   navCounts: NavCounts;
   logoUrl: string | null;
+  workspace: Workspace;
 }) {
   return (
     <SettingsProvider>
-      <AppShellInner navCounts={navCounts} logoUrl={logoUrl}>{children}</AppShellInner>
+      <AppShellInner navCounts={navCounts} logoUrl={logoUrl} workspace={workspace}>{children}</AppShellInner>
     </SettingsProvider>
   );
 }

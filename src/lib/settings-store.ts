@@ -72,16 +72,6 @@ export interface TagSetting {
   status: 'Active' | 'Inactive';
 }
 
-export interface BranchSetting {
-  id: string;
-  name: string;
-  code: string;
-  address: string;
-  phone: string;
-  pumpCount: number;
-  isHQ: boolean;
-}
-
 export interface InvoiceSettings {
   paymentTerms: string;
   stateTaxRate: string;
@@ -96,7 +86,6 @@ export interface PaymentSettings {
 
 export interface SettingsState {
   company: CompanyDetails;
-  branches: BranchSetting[];
   services: PricingService[];
   charges: AdditionalCharge[];
   customerNotifications: CustomerNotificationRule[];
@@ -133,35 +122,6 @@ export const INITIAL_SETTINGS: SettingsState = {
     remitChecksTo: 'Midcoast Concrete Pumping LLC, PO Box 412, Warren, ME 04864',
     acceptedPaymentMethods: 'ACH Direct Deposit, Check, Wire Transfer',
   },
-  branches: [
-    {
-      id: 'branch-1',
-      name: 'Midcoast HQ (Warren Yard)',
-      code: 'MC',
-      address: '54 Montgomery Ave, Warren, ME 04864',
-      phone: '(207) 555-0100',
-      pumpCount: 4,
-      isHQ: true,
-    },
-    {
-      id: 'branch-2',
-      name: 'Midcoast South (Portland Terminal)',
-      code: 'MS',
-      address: '120 Commercial St, Portland, ME 04101',
-      phone: '(207) 555-0105',
-      pumpCount: 2,
-      isHQ: false,
-    },
-    {
-      id: 'branch-3',
-      name: 'Midcoast North (Bangor Staging)',
-      code: 'MN',
-      address: '88 Target Industrial Cir, Bangor, ME 04401',
-      phone: '(207) 555-0108',
-      pumpCount: 1,
-      isHQ: false,
-    },
-  ],
   services: [
     {
       id: 'srv-1',

@@ -12,64 +12,18 @@ import {
   UserCheck,
   Settings,
   ChevronDown,
-  Check,
-  Plus,
   ChevronsLeftRight,
   MapPin,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSettings } from '@/components/providers/settings-provider';
 import { useIsTablet } from '@/hooks/use-mobile';
 import { PumpDeskLogo } from '@/components/ui/pumpdesk-logo';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { NavCounts } from '@/features/orders/types';
-
-interface YardLocation {
-  id: string;
-  companyName: string;
-  yardName: string;
-  code: string;
-  location: string;
-  isHQ?: boolean;
-  pumpCount: number;
-}
-
-const dummyYards: YardLocation[] = [
-  {
-    id: 'yard-1',
-    companyName: 'Midcoast Pumping',
-    yardName: 'Warren Yard (HQ)',
-    code: 'MC',
-    location: 'Warren, Maine',
-    isHQ: true,
-    pumpCount: 4,
-  },
-  {
-    id: 'yard-2',
-    companyName: 'Midcoast South',
-    yardName: 'Portland Terminal',
-    code: 'MS',
-    location: 'Portland, Maine',
-    pumpCount: 2,
-  },
-  {
-    id: 'yard-3',
-    companyName: 'Midcoast North',
-    yardName: 'Bangor Staging',
-    code: 'MN',
-    location: 'Bangor, Maine',
-    pumpCount: 1,
-  },
-];
+import type { Workspace } from '@/features/branches/types';
+import { WorkspaceMenuContent, mainBranchLabel } from '@/components/layout/workspace-menu';
 
 interface NavItem {
   title: string;
@@ -132,13 +86,20 @@ function withBadge(item: NavItem, counts: NavCounts): NavItem {
   return item;
 }
 
-export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoUrl: string | null }) {
+export function AppSidebar({
+  navCounts,
+  logoUrl,
+  workspace,
+}: {
+  navCounts: NavCounts;
+  logoUrl: string | null;
+  workspace: Workspace;
+}) {
   const pathname = usePathname();
   const isTablet = useIsTablet();
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState<boolean | null>(null);
   const isCollapsed = isManuallyCollapsed !== null ? isManuallyCollapsed : isTablet;
   const router = useRouter();
-  const [selectedYard, setSelectedYard] = useState<YardLocation>(dummyYards[0]);
   const [isYardMenuOpen, setIsYardMenuOpen] = useState(false);
   const { isOpen: isSettingsOpen, closeSettings } = useSettings();
   const isSettingsActive = isSettingsOpen || pathname === '/settings' || pathname.startsWith('/settings');
@@ -262,7 +223,7 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
               )}
               title={
                 isCollapsed
-                  ? `${selectedYard.companyName} (${selectedYard.yardName})`
+                  ? `${workspace.companyName} (${mainBranchLabel(workspace)})`
                   : undefined
               }
             >
@@ -278,18 +239,18 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={logoUrl} alt="" className="h-full w-full object-contain bg-white" />
                   ) : (
-                    selectedYard.code
+                    workspace.monogram
                   )}
                 </div>
 
                 {!isCollapsed && (
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-xs text-slate-800 truncate group-hover:text-brand transition-colors leading-tight">
-                      {selectedYard.companyName}
+                      {workspace.companyName}
                     </p>
                     <p className="text-[10.5px] text-slate-500 truncate leading-tight mt-0.5 flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      {selectedYard.yardName}
+                      {mainBranchLabel(workspace)}
                     </p>
                   </div>
                 )}
@@ -305,59 +266,7 @@ export function AppSidebar({ navCounts, logoUrl }: { navCounts: NavCounts; logoU
               )}
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent
-              align="start"
-              className="w-60 p-1.5 rounded-xl shadow-lg border-slate-200"
-            >
-              <DropdownMenuLabel className="text-[11px] font-semibold text-slate-400 px-2 py-1">
-                Dispatch yards
-              </DropdownMenuLabel>
-              {dummyYards.map((yard) => {
-                const isSelected = selectedYard.id === yard.id;
-                return (
-                  <DropdownMenuItem
-                    key={yard.id}
-                    onClick={() => {
-                      setSelectedYard(yard);
-                      toast.success(`Active yard: ${yard.yardName}`, {
-                        description: `${yard.companyName} (${yard.location}) • ${yard.pumpCount} pumps assigned`,
-                      });
-                    }}
-                    className={cn(
-                      'flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition-colors',
-                      isSelected
-                        ? 'bg-slate-100/90 font-medium text-slate-900'
-                        : 'hover:bg-slate-100/60 text-slate-600 hover:text-slate-900',
-                    )}
-                  >
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        {yard.companyName}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {yard.yardName} {yard.isHQ && '• Main HQ'}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <Check className="h-4 w-4 text-brand shrink-0 ml-2" />
-                    )}
-                  </DropdownMenuItem>
-                );
-              })}
-              <DropdownMenuSeparator className="my-1" />
-              <DropdownMenuItem
-                onClick={() => {
-                  toast.info('Add Yard Location', {
-                    description:
-                      'Yard terminal management is configured in Company Settings.',
-                  });
-                }}
-                className="flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs text-brand font-medium hover:bg-brand-light"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Yard Location
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+            <WorkspaceMenuContent workspace={workspace} onNavigate={handleNavClick} />
           </DropdownMenu>
         </div>
 

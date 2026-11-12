@@ -33,6 +33,7 @@ type PumpInput = {
   hourlyRate: number | null;
   minHours: number | null;
   defaultOperatorId: string | null;
+  branchId: string | null;
   status: 'available' | 'maintenance';
   maintenanceNote: string | null;
   availableAgainOn: string | null;
@@ -51,6 +52,7 @@ function pumpRecord(input: PumpInput) {
     hourly_rate_override: input.hourlyRate,
     min_hours_override: input.minHours,
     default_operator_id: input.defaultOperatorId,
+    branch_id: input.branchId,
     status: input.status,
     notes: input.status === 'maintenance' ? input.maintenanceNote : null,
     available_again_on: input.status === 'maintenance' ? input.availableAgainOn : null,

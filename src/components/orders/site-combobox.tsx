@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
 
 import type { OrderFormSite } from '@/features/orders/types';
 import { cn } from '@/lib/utils';
+import { usePlaceSuggestions } from '@/hooks/use-place-suggestions';
 
 interface SiteComboboxProps {
   value: string;
@@ -18,38 +19,6 @@ interface SiteComboboxProps {
   onBlur?: () => void;
 }
 
-/** One box for the job site: type a town or address, or pick one of the customer's saved sites. */
-/** Address suggestions from Google Places, through our own route so the key stays private. */
-function usePlaceSuggestions(query: string, enabled: boolean): string[] {
-  const [result, setResult] = useState<{ query: string; suggestions: string[] }>({ query: '', suggestions: [] });
-  // One token per typing session lets Google bill the whole search as a single request.
-  const [sessionToken] = useState(() => crypto.randomUUID());
-
-  useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `/api/places/autocomplete?q=${encodeURIComponent(query)}&token=${sessionToken}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok) return;
-        const data = (await response.json()) as { suggestions: string[] };
-        setResult({ query, suggestions: data.suggestions });
-      } catch {
-        // Offline or aborted: typed addresses still work.
-      }
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query, enabled, sessionToken]);
-
-  return enabled && result.query === query ? result.suggestions : [];
-}
-
 interface SiteOption {
   key: string;
   /** What fills the field when picked. */
@@ -59,6 +28,7 @@ interface SiteOption {
   source: 'saved' | 'place';
 }
 
+/** One box for the job site: type a town or address, or pick one of the customer's saved sites. */
 export function SiteCombobox({ value, onChange, sites, placeholder, error, className, onBlur }: SiteComboboxProps) {
   const listId = useId();
   const [open, setOpen] = useState(false);
@@ -88,6 +58,8 @@ export function SiteCombobox({ value, onChange, sites, placeholder, error, class
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
+      // An open list closes first; the popup this box sits in closes on the next Escape.
+      if (open && options.length > 0) e.stopPropagation();
       setOpen(false);
       return;
     }

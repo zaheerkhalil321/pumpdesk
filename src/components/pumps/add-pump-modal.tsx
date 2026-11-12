@@ -39,6 +39,9 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
   const [boomSize, setBoomSize] = useState<string>('38'); // in meters
   const [horizontalReach, setHorizontalReach] = useState<string>('124'); // in feet
   const [operatorId, setOperatorId] = useState('none');
+  // A company with one branch gets it picked already.
+  const onlyBranch = branchOptions.length === 1 ? branchOptions[0].value : 'none';
+  const [branchId, setBranchId] = useState(onlyBranch);
   const [isAddOperatorOpen, setIsAddOperatorOpen] = useState(false);
   const [hourlyRate, setHourlyRate] = useState<string>('195'); // number only
   const [minHours, setMinHours] = useState<string>('4.0'); // number of hours
@@ -121,6 +124,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
       hourlyRate: parse(hourlyRate),
       minHours: parse(minHours),
       defaultOperatorId: operatorId === 'none' ? null : operatorId,
+      branchId: branchId === 'none' ? null : branchId,
       status: 'available' as const,
       maintenanceNote: '',
       availableAgainOn: '',
@@ -151,6 +155,7 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
       setHourlyRate('195');
       setMinHours('4.0');
       setOperatorId('none');
+      setBranchId(onlyBranch);
       setError(null);
       onOpenChange(false);
     });
@@ -367,6 +372,16 @@ export function AddPumpModal({ open, onOpenChange, pumps, operators, branchOptio
               value={operatorId}
               onChange={setOperatorId}
               options={operatorOptions}
+            />
+          </div>
+
+          {/* Branch */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700">Branch</label>
+            <AppSelect
+              value={branchId}
+              onChange={setBranchId}
+              options={[{ value: 'none', label: 'No branch' }, ...branchOptions]}
             />
           </div>
 

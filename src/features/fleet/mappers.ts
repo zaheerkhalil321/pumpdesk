@@ -165,6 +165,7 @@ export function mapPump(
     defaultOperator: operator
       ? { id: operator.id, name: fullName(operator), role: operator.job_title ?? 'Operator', badge: null }
       : { id: 'unassigned', name: 'Unassigned', role: 'None', badge: null },
+    branchId: row.branch_id,
     todayStatus: inMaintenance
       ? { type: 'maintenance', label: availableAgainIso ? `Maintenance · Back ${formatDateOnly(availableAgainIso)}` : 'Maintenance · Unavailable' }
       : { type: 'available', label: operator ? 'Available · Yard ready' : 'Available · Assign operator' },

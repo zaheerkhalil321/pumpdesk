@@ -138,7 +138,7 @@ describe("mapOperator", () => {
 describe("schemas", () => {
   const validPump = {
     unitNumber: "05", make: "", model: "", year: 2024, type: "boom_pump" as const, boomSize: 38,
-    horizontalReach: 124, hourlyRate: 195, minHours: 4, defaultOperatorId: null,
+    horizontalReach: 124, hourlyRate: 195, minHours: 4, defaultOperatorId: null, branchId: null,
     status: "available" as const, maintenanceNote: "", availableAgainOn: "", inspectionDate: "",
   };
 
@@ -152,6 +152,12 @@ describe("schemas", () => {
     expect(createPumpSchema.safeParse({ ...validPump, hourlyRate: 6000 }).success).toBe(false);
     expect(createPumpSchema.safeParse({ ...validPump, boomSize: null }).success).toBe(false);
     expect(createPumpSchema.safeParse({ ...validPump, type: "line_pump", boomSize: null }).success).toBe(true);
+  });
+  it("takes a branch id or no branch, and nothing else", () => {
+    const branchId = "b0000000-0000-4000-8000-000000000001";
+    expect(createPumpSchema.parse({ ...validPump, branchId }).branchId).toBe(branchId);
+    expect(createPumpSchema.parse(validPump).branchId).toBeNull();
+    expect(createPumpSchema.safeParse({ ...validPump, branchId: "warren" }).success).toBe(false);
   });
   it("normalises an operator phone to E.164 and rejects a bad one", () => {
     const base = { firstName: "A", lastName: "B", role: "", email: "", branchId: null, homeYardId: null, cdlExpiresOn: "", medicalCertExpiresOn: "", defaultPumpId: null };
