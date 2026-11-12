@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { createContact } from '@/features/crm/server/actions';
 import type { OrderFormContact } from '@/features/orders/types';
 import { reportAction } from '@/lib/action-feedback';
@@ -48,7 +49,7 @@ export function QuickContactDialog({
     register,
     handleSubmit,
     reset,
-    setValue,
+    control,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<QuickContactValues>({
@@ -114,12 +115,19 @@ export function QuickContactDialog({
             <Input id="quick-contact-title" placeholder="e.g. Superintendent" className="h-10 text-sm" {...register('jobTitle')} />
           </FormField>
           <FormField id="quick-contact-phone" label="Phone" error={errors.phone?.message}>
-            <Input
-              id="quick-contact-phone"
-              type="tel"
-              maxLength={14}
-              className="h-10 text-sm"
-              {...register('phone', { onChange: (e) => setValue('phone', formatUSPhone(e.target.value)) })}
+            <Controller
+              control={control}
+              name="phone"
+              render={({ field }) => (
+                <PhoneInput
+                  id="quick-contact-phone"
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  error={errors.phone?.message}
+                  className="h-10 text-sm"
+                />
+              )}
             />
           </FormField>
           <FormField id="quick-contact-email" label="Email" error={errors.email?.message}>

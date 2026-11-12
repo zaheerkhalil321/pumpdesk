@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { createSupplier, updateSupplier } from '@/features/suppliers/server/actions';
+import { PhoneInput, phoneProblem } from '@/components/ui/phone-input';
 import type { SupplierItem } from '@/features/suppliers/types';
 import { reportAction } from '@/lib/action-feedback';
 
@@ -851,12 +852,11 @@ export function ListsSettingsTab({ suppliers }: { suppliers: SupplierItem[] }) {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Dispatch Phone</label>
-                <input
-                  type="tel"
+                <PhoneInput
                   placeholder="(207) 555-0199"
                   value={supplierPhone}
-                  onChange={(e) => setSupplierPhone(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-300 text-xs text-slate-900"
+                  onValueChange={setSupplierPhone}
+                  className="h-9 px-3 rounded-lg border-slate-300 text-xs text-slate-900"
                 />
               </div>
             </div>
@@ -873,6 +873,11 @@ export function ListsSettingsTab({ suppliers }: { suppliers: SupplierItem[] }) {
                 disabled={isSavingSupplier}
                 onClick={async () => {
                   if (!supplierName.trim()) return;
+                  const phoneIssue = phoneProblem(supplierPhone);
+                  if (phoneIssue) {
+                    toast.error(phoneIssue);
+                    return;
+                  }
                   setIsSavingSupplier(true);
                   const result = await createSupplier({
                     name: supplierName.trim(),
@@ -916,11 +921,10 @@ export function ListsSettingsTab({ suppliers }: { suppliers: SupplierItem[] }) {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Dispatch Phone</label>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={editingSupplier.phone}
-                  onChange={(e) => setEditingSupplier({ ...editingSupplier, phone: e.target.value })}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-300 text-xs text-slate-900"
+                  onValueChange={(phone) => setEditingSupplier({ ...editingSupplier, phone })}
+                  className="h-9 px-3 rounded-lg border-slate-300 text-xs text-slate-900"
                 />
               </div>
               <StatusSwitch
@@ -945,6 +949,11 @@ export function ListsSettingsTab({ suppliers }: { suppliers: SupplierItem[] }) {
                 type="button"
                 disabled={isSavingSupplier}
                 onClick={async () => {
+                  const phoneIssue = phoneProblem(editingSupplier.phone);
+                  if (phoneIssue) {
+                    toast.error(phoneIssue);
+                    return;
+                  }
                   setIsSavingSupplier(true);
                   const result = await updateSupplier({
                     id: editingSupplier.id,

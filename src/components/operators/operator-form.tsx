@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { AppSelect } from '@/components/ui/app-select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { StatusSwitch } from '@/components/ui/status-switch';
@@ -16,7 +17,7 @@ import { getYardOptions } from '@/features/yards/server/actions';
 import { getPumpDisplayName } from '@/features/fleet/format';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { reportAction } from '@/lib/action-feedback';
-import { cn, formatUSPhone } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 const ROLE_OPTIONS = ['Operator', 'Lead operator', 'Relief operator'];
 const NO_PUMP = 'none';
@@ -193,12 +194,11 @@ export function OperatorForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-semibold text-slate-700 block">Phone number</label>
-          <Input
-            type="tel"
+          <PhoneInput
             value={phone}
-            onChange={(e) => edit('phone', setPhone)(formatUSPhone(e.target.value))}
+            onValueChange={edit('phone', setPhone)}
             placeholder="(207) 555-0168"
-            maxLength={14}
+            error={errors.phone}
             className={inputClass('phone')}
           />
           <FieldError message={errors.phone} />

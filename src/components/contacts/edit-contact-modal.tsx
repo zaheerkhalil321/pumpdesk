@@ -10,11 +10,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput, phoneProblem } from '@/components/ui/phone-input';
 import { AppSelect } from '@/components/ui/app-select';
 import { StatusSwitch } from '@/components/ui/status-switch';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toast } from 'sonner';
-import { cn, formatUSPhone } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { updateContact, updateContactLink } from '@/features/crm/server/actions';
 import { updateContactSchema } from '@/features/crm/schemas';
 import { reportAction } from '@/lib/action-feedback';
@@ -50,7 +51,7 @@ export function EditContactModal({
 
   const [firstNameError, setFirstNameError] = useState(false);
   const [lastNameError, setLastNameError] = useState(false);
-  const [phoneError, setPhoneError] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const toggleRole = (role: string) => {
     setSelectedRoles((prev) =>
@@ -76,12 +77,9 @@ export function EditContactModal({
       setLastNameError(false);
     }
 
-    if (!phone.trim()) {
-      setPhoneError(true);
-      hasError = true;
-    } else {
-      setPhoneError(false);
-    }
+    const phoneIssue = phone.trim() ? phoneProblem(phone) : 'Phone number is required';
+    setPhoneError(phoneIssue);
+    if (phoneIssue) hasError = true;
 
     if (hasError) return;
 
@@ -263,13 +261,13 @@ export function EditContactModal({
               <label className="text-xs font-semibold text-slate-700 block mb-1">
                 Phone number <span className="text-red-500">*</span>
               </label>
-              <Input
+              <PhoneInput
                 value={phone}
-                onChange={(e) => {
-                  const formatted = formatUSPhone(e.target.value);
+                onValueChange={(formatted) => {
                   setPhone(formatted);
-                  if (phoneError && formatted.trim()) setPhoneError(false);
+                  if (phoneError) setPhoneError(null);
                 }}
+                error={phoneError ?? undefined}
                 className={cn(
                   'h-9 text-xs font-mono rounded-lg transition-colors',
                   phoneError
@@ -278,9 +276,7 @@ export function EditContactModal({
                 )}
               />
               {phoneError && (
-                <p className="text-[11px] text-red-500 font-medium mt-1">
-                  Phone number is required
-                </p>
+                <p className="text-[11px] text-red-500 font-medium mt-1">{phoneError}</p>
               )}
             </div>
 

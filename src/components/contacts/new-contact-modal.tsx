@@ -10,10 +10,11 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput, phoneProblem } from '@/components/ui/phone-input';
 import { AppSelect } from '@/components/ui/app-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toast } from 'sonner';
-import { cn, formatUSPhone } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { createContact, findContactsByPhone } from '@/features/crm/server/actions';
 import { createContactSchema } from '@/features/crm/schemas';
 import { reportAction } from '@/lib/action-feedback';
@@ -58,7 +59,7 @@ export function NewContactModal({
   // Validation error states
   const [firstNameError, setFirstNameError] = useState(false);
   const [lastNameError, setLastNameError] = useState(false);
-  const [phoneError, setPhoneError] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const toggleRole = (role: string) => {
     setSelectedRoles((prev) =>
@@ -79,7 +80,7 @@ export function NewContactModal({
     setEmail('');
     setFirstNameError(false);
     setLastNameError(false);
-    setPhoneError(false);
+    setPhoneError(null);
     setDuplicates([]);
   };
 
@@ -102,12 +103,9 @@ export function NewContactModal({
       setLastNameError(false);
     }
 
-    if (!phone.trim()) {
-      setPhoneError(true);
-      hasError = true;
-    } else {
-      setPhoneError(false);
-    }
+    const phoneIssue = phone.trim() ? phoneProblem(phone) : 'Phone number is required';
+    setPhoneError(phoneIssue);
+    if (phoneIssue) hasError = true;
 
     if (hasError) return;
 
@@ -280,15 +278,14 @@ export function NewContactModal({
               <label className="text-xs font-semibold text-slate-700 block mb-1">
                 Phone number <span className="text-red-500">*</span>
               </label>
-              <Input
+              <PhoneInput
                 value={phone}
-                onChange={(e) => {
-                  const formatted = formatUSPhone(e.target.value);
+                onValueChange={(formatted) => {
                   setPhone(formatted);
                   setDuplicates([]);
-                  if (phoneError && formatted.trim()) setPhoneError(false);
+                  if (phoneError) setPhoneError(null);
                 }}
-                placeholder="(207) 555-0100"
+                error={phoneError ?? undefined}
                 className={cn(
                   'h-9 text-xs font-mono rounded-lg transition-colors',
                   phoneError
@@ -297,9 +294,7 @@ export function NewContactModal({
                 )}
               />
               {phoneError && (
-                <p className="text-[11px] text-red-500 font-medium mt-1">
-                  Phone number is required
-                </p>
+                <p className="text-[11px] text-red-500 font-medium mt-1">{phoneError}</p>
               )}
             </div>
 

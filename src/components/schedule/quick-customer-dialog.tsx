@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { createCustomer } from '@/features/crm/server/actions';
 import { reportAction } from '@/lib/action-feedback';
-import { formatUSPhone } from '@/lib/utils';
 
 const quickCustomerSchema = z.object({
   businessName: z.string().trim().min(1, 'Company name is required').max(120, 'Keep this under 120 characters'),
@@ -36,7 +36,7 @@ export function QuickCustomerDialog({ open, onOpenChange, onCreated, onReload }:
     register,
     handleSubmit,
     reset,
-    setValue,
+    control,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<QuickCustomerValues>({
@@ -90,12 +90,19 @@ export function QuickCustomerDialog({ open, onOpenChange, onCreated, onReload }:
             <Input id="quick-customer-name" autoFocus className="h-10 text-sm" {...register('businessName')} />
           </FormField>
           <FormField id="quick-customer-phone" label="Phone" error={errors.phone?.message}>
-            <Input
-              id="quick-customer-phone"
-              type="tel"
-              maxLength={14}
-              className="h-10 text-sm"
-              {...register('phone', { onChange: (e) => setValue('phone', formatUSPhone(e.target.value)) })}
+            <Controller
+              control={control}
+              name="phone"
+              render={({ field }) => (
+                <PhoneInput
+                  id="quick-customer-phone"
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  error={errors.phone?.message}
+                  className="h-10 text-sm"
+                />
+              )}
             />
           </FormField>
           <FormField id="quick-customer-email" label="Email" error={errors.email?.message}>
