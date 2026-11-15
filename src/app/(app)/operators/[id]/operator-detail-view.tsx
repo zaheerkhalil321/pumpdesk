@@ -1,6 +1,6 @@
 'use client';
 
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -31,7 +31,6 @@ interface OperatorDetailViewProps {
 export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorDetailViewProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('profile');
-  const { openText, openCall, reachDialogs } = useReachOut();
 
   const handleCopy = (text: string, label: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -357,7 +356,6 @@ export function OperatorDetailView({ operator, pumps, branchOptions }: OperatorD
         pumps={pumps}
         branchOptions={branchOptions}
       />
-      {reachDialogs}
     </div>
   );
 }

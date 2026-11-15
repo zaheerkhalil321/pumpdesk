@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import type { ContactItem, CustomerOption } from '@/features/crm/types';
 import { ContactTileCard } from '@/components/contacts/contact-tile-card';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { NewContactModal } from '@/components/contacts/new-contact-modal';
 
 type StatusTab = 'all' | 'active' | 'inactive';
@@ -52,7 +52,6 @@ export function ContactsDirectory({
   customerOptions: CustomerOption[];
 }) {
   const router = useRouter();
-  const { openText, openCall, reachDialogs } = useReachOut();
   const customerFilterOptions = [{ value: 'all', label: 'Customer: All' }, ...customerOptions];
 
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -581,7 +580,6 @@ export function ContactsDirectory({
         onOpenChange={setIsNewContactOpen}
         customerOptions={customerOptions}
       />
-      {reachDialogs}
     </div>
   );
 }

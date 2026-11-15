@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
+import { draftOrderText } from '@/features/sms/templates';
 import { useRouter } from 'next/navigation';
 import { format, parse } from 'date-fns';
 import {
@@ -72,7 +73,6 @@ export function OrderDossierModal({
     setIsChangingOperator(false);
   }
 
-  const { openText, openCall, reachDialogs } = useReachOut(booking?.jobId);
 
   if (!booking) return null;
 
@@ -115,12 +115,27 @@ export function OrderDossierModal({
     ? 'Operator assigned • Not dispatched yet'
     : 'Needs operator';
 
-  // Texts and calls go through Twilio, from small dialogs.
+  // Texts and calls open the phone's own apps.
   const personFor = (recipient: 'contact' | 'operator') =>
     recipient === 'contact'
       ? { recipient, recipientId: booking.contactId ?? '', name: contactName, phone: contactPhone }
       : { recipient, recipientId: matchedOperator?.id ?? '', name: operatorDisplayName, phone: operatorPhone };
-  const handleText = (recipient: 'contact' | 'operator') => openText(personFor(recipient));
+  // The text starts with the order's details, like the order page's.
+  const handleText = (recipient: 'contact' | 'operator') => {
+    const person = personFor(recipient);
+    openText({
+      ...person,
+      draft: draftOrderText(recipient, person.name, {
+        orderNumber: booking.orderNumber ?? '',
+        customer: booking.customerName ?? '',
+        serviceDate: serviceDateLabel,
+        pourTime: pourTimeStr,
+        siteAddress: [booking.jobSiteName, booking.address !== booking.jobSiteName ? booking.address : '']
+          .filter(Boolean)
+          .join(', '),
+      }),
+    });
+  };
   const handleCall = (recipient: 'contact' | 'operator') => openCall(personFor(recipient));
 
   /** Saves an operator or dispatch change, then refreshes the schedule. */
@@ -562,7 +577,6 @@ export function OrderDossierModal({
           </div>
         </DialogContent>
       </Dialog>
-      {reachDialogs}
     </>
   );
 }

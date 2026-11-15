@@ -1,6 +1,6 @@
 'use client';
 
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -59,7 +59,6 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
   const isInactive = contact.status === 'Inactive';
-  const { openText, openCall, reachDialogs } = useReachOut();
 
   const handleCall = () => {
     if (!contact) return;
@@ -481,7 +480,6 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
           (c) => !contact.linkedAccounts.some((a) => a.customerId === c.value),
         )}
       />
-      {reachDialogs}
     </div>
   );
 }

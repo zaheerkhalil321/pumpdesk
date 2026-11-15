@@ -12,7 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { ORDER_STATUS_STYLE } from '@/features/orders/statuses';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall } from '@/lib/reach-out';
 import { cn } from '@/lib/utils';
 import type { OrderItem } from '@/features/orders/types';
 
@@ -26,7 +26,6 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
   const hasOperator = order.operator && order.operator !== 'Operator needed' && !isUnassigned;
   const operatorPhone = hasOperator ? order.operatorPhone : '';
   const volume = order.volumeYards;
-  const { openCall, reachDialogs } = useReachOut(order.jobId);
 
   // Extract clean boom label (e.g. "34M", "28M", "47M", "Line")
   const boomMatch = order.pump.match(/(\d+M|Line)/i);
@@ -163,7 +162,6 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
           </div>
         </div>
       </div>
-      {reachDialogs}
     </>
   );
 }

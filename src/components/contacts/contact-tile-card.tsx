@@ -12,7 +12,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ContactItem } from '@/features/crm/types';
@@ -24,7 +24,6 @@ interface ContactTileCardProps {
 
 export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
   const router = useRouter();
-  const { openText, openCall, reachDialogs } = useReachOut();
   const isInactive = contact.status === 'Inactive';
 
   // Prefetch contact details for instant navigation on click
@@ -221,7 +220,6 @@ export function ContactTileCard({ contact, onClick }: ContactTileCardProps) {
           </div>
         </div>
       </div>
-      {reachDialogs}
     </>
   );
 }

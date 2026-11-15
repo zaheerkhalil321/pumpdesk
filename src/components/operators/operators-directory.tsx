@@ -15,7 +15,7 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { AppSelect } from '@/components/ui/app-select';
@@ -44,7 +44,6 @@ export function OperatorsDirectory({
   todayLabel: string;
 }) {
   const router = useRouter();
-  const { openText, openCall, reachDialogs } = useReachOut();
 
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -506,7 +505,6 @@ export function OperatorsDirectory({
         pumps={pumps}
         branchOptions={branchOptions}
       />
-      {reachDialogs}
     </div>
   );
 }

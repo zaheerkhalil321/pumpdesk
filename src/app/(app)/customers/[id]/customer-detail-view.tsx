@@ -1,6 +1,6 @@
 'use client';
 
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { CustomerNotificationPreferences } from '@/components/customers/customer-notification-preferences';
@@ -118,7 +118,6 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
     toast.success(`${label} copied`, { description: value });
   };
 
-  const { openText, openCall, reachDialogs } = useReachOut();
   const handleText = (recipient: 'customer' | 'contact', recipientId: string, phone: string, name: string) => {
     openText({ recipient, recipientId, name, phone });
   };
@@ -1391,7 +1390,6 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
           </form>
         </DialogContent>
       </Dialog>
-      {reachDialogs}
     </div>
   );
 }

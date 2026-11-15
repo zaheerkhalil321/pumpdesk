@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { CustomerTileCard } from '@/components/customers/customer-tile-card';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { createCustomer } from '@/features/crm/server/actions';
 import { createCustomerSchema } from '@/features/crm/schemas';
 import { reportAction } from '@/lib/action-feedback';
@@ -42,7 +42,6 @@ type ViewLayout = 'table' | 'tiles';
 
 export function CustomersDirectory({ customers }: { customers: CustomerItem[] }) {
   const router = useRouter();
-  const { openText, openCall, reachDialogs } = useReachOut();
   const [isSaving, startSaving] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
@@ -724,7 +723,6 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
         </DialogContent>
       </Dialog>
 
-      {reachDialogs}
     </div>
   );
 }

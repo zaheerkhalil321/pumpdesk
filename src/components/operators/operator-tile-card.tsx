@@ -12,7 +12,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { OperatorItem } from '@/features/fleet/types';
@@ -24,7 +24,6 @@ interface OperatorTileCardProps {
 
 export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
   const router = useRouter();
-  const { openText, openCall, reachDialogs } = useReachOut();
   const isInactive = operator.status === 'Inactive';
 
   // Prefetch for zero-lag instant navigation
@@ -206,7 +205,6 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
           </div>
         </div>
       </div>
-      {reachDialogs}
     </>
   );
 }

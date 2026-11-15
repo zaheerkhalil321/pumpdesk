@@ -44,7 +44,7 @@ import type {
   OrderFormOptions,
 } from '@/features/orders/types';
 import { QuickCustomerDialog } from '@/components/schedule/quick-customer-dialog';
-import { useReachOut } from '@/components/orders/use-reach-out';
+import { openCall, openText } from '@/lib/reach-out';
 import { QuickContactDialog } from '@/components/schedule/quick-contact-dialog';
 import { draftOrderText } from '@/features/sms/templates';
 import { shiftClock } from '@/features/orders/mappers';
@@ -297,8 +297,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
     });
   };
 
-  // Texts and calls go through Twilio, from small dialogs.
-  const { openText, openCall, reachDialogs } = useReachOut(order.jobId);
+  // Texts and calls open the phone's own apps.
   const contactPerson = {
     recipient: 'contact' as const,
     recipientId: order.contactId ?? '',
@@ -1279,7 +1278,6 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
         </DialogContent>
       </Dialog>
 
-      {reachDialogs}
     </div>
   );
 }
