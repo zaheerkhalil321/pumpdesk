@@ -267,6 +267,34 @@ body[data-brand-theme="slate"] {
   }
 }
 
+/* Loading skeletons: a soft highlight sweeps left to right over a muted block. */
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@utility skeleton-shimmer {
+  background-color: color-mix(in oklab, var(--foreground) 7%, var(--card));
+  background-image: linear-gradient(
+    90deg,
+    transparent 35%,
+    color-mix(in oklab, var(--card) 70%, transparent) 50%,
+    transparent 65%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+  }
+}
+
 /*
  * Popup readability: dialogs and side sheets use small, light text that is hard to read on
  * desktop. This bumps the small sizes by one step and darkens the lightest greys, in one place,

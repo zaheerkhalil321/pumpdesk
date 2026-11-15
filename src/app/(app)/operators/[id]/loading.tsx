@@ -1,17 +1,18 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonPage } from '@/components/skeletons/skeleton-page';
+import { BreadcrumbSkeleton, DetailHeaderSkeleton } from '@/components/skeletons/detail-header-skeleton';
+import { UnderlineTabsSkeleton } from '@/components/skeletons/tabs-skeleton';
+import { SectionCardSkeleton } from '@/components/skeletons/section-card-skeleton';
 
 export default function Loading() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-72" />
-      </div>
-      <Skeleton className="h-10 w-full" />
+    <SkeletonPage label="Loading operator" className="space-y-5 sm:space-y-6 max-w-6xl">
+      <BreadcrumbSkeleton />
+      <DetailHeaderSkeleton titleWidth="w-56" badgeWidth="w-20" actions={['w-20', 'w-20', 'w-32']} />
+      <UnderlineTabsSkeleton widths={['w-12', 'w-20']} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
+        <SectionCardSkeleton roomy titleRule trailing="pill" titleWidth="w-44" rows={5} />
+        <SectionCardSkeleton roomy titleRule trailing="icon" titleWidth="w-40" rows={3} />
       </div>
-    </div>
+    </SkeletonPage>
   );
 }

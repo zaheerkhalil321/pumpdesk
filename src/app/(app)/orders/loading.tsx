@@ -1,24 +1,26 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonPage } from '@/components/skeletons/skeleton-page';
+import { PageHeaderSkeleton } from '@/components/skeletons/page-header-skeleton';
+import { OrdersControlsSkeleton } from '@/components/skeletons/orders-controls-skeleton';
+import { ListBodySkeleton } from '@/components/skeletons/list-body-skeleton';
+import { OrderTileSkeleton } from '@/components/skeletons/tile-skeleton';
+import type { TableColumnSkeleton } from '@/components/skeletons/table-skeleton';
+
+const COLUMNS: TableColumnSkeleton[] = [
+  { cell: 'text', header: 'w-12', className: 'px-4 sm:px-6', widths: ['w-16'] },
+  { cell: 'twoLine', header: 'w-28', widths: ['w-24', 'w-14'] },
+  { cell: 'twoLine', header: 'w-32', widths: ['w-36', 'w-48'] },
+  { cell: 'twoLine', header: 'w-24', widths: ['w-20', 'w-24'] },
+  { cell: 'pill', header: 'w-16', widths: ['w-24'] },
+  { cell: 'text', header: 'w-14', widths: ['w-20'] },
+  { cell: 'chevron', className: 'sm:pr-6' },
+];
 
 export default function Loading() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 w-full">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-7 w-40" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        <Skeleton className="h-10 w-32" />
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-10 flex-1" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-36 w-full" />
-        ))}
-      </div>
-    </div>
+    <SkeletonPage label="Loading orders">
+      <PageHeaderSkeleton titleWidth="w-24" descriptionWidth="w-80" actionWidth="w-32" />
+      <OrdersControlsSkeleton />
+      <ListBodySkeleton columns={COLUMNS} tile={<OrderTileSkeleton />} footer />
+    </SkeletonPage>
   );
 }
