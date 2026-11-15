@@ -9,6 +9,8 @@ import {
   AlertCircle,
   HardHat,
 } from 'lucide-react';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { PumpLane, ScheduleBooking } from './schedule-types';
 import { clockFromHour } from '@/features/orders/mappers';
@@ -89,11 +91,13 @@ export function MobileRigCardView({
                   const endFormatted = clockFromHour(booking.pourHour + booking.pourHours);
 
                   return (
-                    <div
+                    <m.div
                       key={booking.id}
+                      // Cards fade in when the day changes.
+                      {...listItemMotion()}
                       onClick={() => onBookingClick(booking)}
                       className={cn(
-                        'p-3.5 rounded-xl border transition-all cursor-pointer group hover:shadow-xs active:scale-99',
+                        'p-3.5 rounded-xl border transition-[border-color,box-shadow,scale] cursor-pointer group hover:shadow-xs active:scale-99',
                         'w-[84%] sm:w-[320px] shrink-0 snap-start',
                         isDispatched
                           ? 'border-emerald-200/80 bg-emerald-50/20 hover:border-emerald-300'
@@ -168,7 +172,7 @@ export function MobileRigCardView({
                           )}
                         </div>
                       </div>
-                    </div>
+                    </m.div>
                   );
                 })
               ) : (

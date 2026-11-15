@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useId } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,8 +19,11 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { AppSelect } from '@/components/ui/app-select';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { OrderTileCard } from '@/components/orders/order-tile-card';
+import { ActivePill } from '@/components/ui/active-pill';
 import { ORDER_STATUSES, ORDER_STATUS_STYLE, type OrderStatus } from '@/features/orders/statuses';
 import { OrdersFilterSheet, OrderTab } from '@/components/orders/orders-filter-sheet';
 
@@ -32,6 +35,7 @@ const PAGE_SIZE = 8;
 
 export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
   const router = useRouter();
+  const statusPillId = useId();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Filter & Search State
@@ -277,12 +281,13 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                 type="button"
                 onClick={() => handleTabChange('all')}
                 className={cn(
-                  'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5',
+                  'px-3.5 py-1.5 rounded-lg text-xs font-semibold relative isolate transition-colors cursor-pointer select-none flex items-center gap-1.5',
                   activeTab === 'all'
-                    ? 'bg-white text-slate-900 shadow-2xs'
+                    ? 'text-slate-900'
                     : 'text-slate-600 hover:text-slate-900'
                 )}
               >
+                {activeTab === 'all' && <ActivePill layoutId={statusPillId} />}
                 <span>All orders</span>
                 <span className="px-1.5 py-0.2 rounded-md bg-slate-200/70 text-[10.5px] font-bold text-slate-700">
                   {orders.length}
@@ -295,12 +300,13 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                   type="button"
                   onClick={() => handleTabChange(status)}
                   className={cn(
-                    'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap',
+                    'px-3.5 py-1.5 rounded-lg text-xs font-semibold relative isolate transition-colors cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap',
                     activeTab === status
-                      ? 'bg-white text-slate-900 shadow-2xs'
+                      ? 'text-slate-900'
                       : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
+                  {activeTab === status && <ActivePill layoutId={statusPillId} />}
                   <span className={cn('h-1.5 w-1.5 rounded-full', ORDER_STATUS_STYLE[status].dot)} />
                   <span>{status}</span>
                   <span className="px-1.5 py-0.2 rounded-md bg-slate-200/70 text-[10.5px] font-bold text-slate-700">
@@ -313,12 +319,13 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                 type="button"
                 onClick={() => handleTabChange('needs_assignment')}
                 className={cn(
-                  'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5',
+                  'px-3.5 py-1.5 rounded-lg text-xs font-semibold relative isolate transition-colors cursor-pointer select-none flex items-center gap-1.5',
                   activeTab === 'needs_assignment'
-                    ? 'bg-white text-slate-900 shadow-2xs'
+                    ? 'text-slate-900'
                     : 'text-slate-600 hover:text-slate-900'
                 )}
               >
+                {activeTab === 'needs_assignment' && <ActivePill layoutId={statusPillId} />}
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                 <span>Needs assignment</span>
                 <span className="px-1.5 py-0.2 rounded-md bg-slate-200/70 text-[10.5px] font-bold text-slate-700">
@@ -499,8 +506,9 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
 
               <tbody className="divide-y divide-slate-100">
                 {currentOrders.map((order) => (
-                  <tr
+                  <m.tr
                     key={order.id}
+                    {...listItemMotion()}
                     onClick={() => router.push(`/orders/${order.id}`)}
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                   >
@@ -596,7 +604,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                     <td className="py-3.5 px-4 text-right sm:pr-6">
                       <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all inline-block" />
                     </td>
-                  </tr>
+                  </m.tr>
                 ))}
               </tbody>
             </table>

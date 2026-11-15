@@ -14,6 +14,8 @@ import {
 import { ORDER_STATUS_STYLE } from '@/features/orders/statuses';
 import { openCall } from '@/lib/reach-out';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import type { OrderItem } from '@/features/orders/types';
 
 interface OrderTileCardProps {
@@ -33,9 +35,10 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
 
   return (
     <>
-      <div
+      <m.div
+        {...listItemMotion()}
         onClick={onClick}
-        className="rounded-2xl border border-slate-200/90 bg-white hover:border-brand/40 shadow-2xs hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col justify-between group cursor-pointer active:scale-99"
+        className="rounded-2xl border border-slate-200/90 bg-white hover:border-brand/40 shadow-2xs hover:shadow-md transition-[border-color,box-shadow,scale] duration-200 overflow-hidden flex flex-col justify-between group cursor-pointer active:scale-99"
       >
         {/* ── 1. Top Header Row: Order # | Customer Name + Status Pill ── */}
         <div className="p-3.5 pb-3 border-b border-slate-100 flex items-center justify-between gap-2.5">
@@ -161,7 +164,7 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
             <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform shrink-0" />
           </div>
         </div>
-      </div>
+      </m.div>
     </>
   );
 }

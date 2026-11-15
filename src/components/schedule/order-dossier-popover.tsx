@@ -567,7 +567,7 @@ export function OrderDossierModal({
             </Button>
 
             <Link
-              href={`/orders/${booking.orderNumber || 'ORD-1518'}`}
+              href={`/orders/${booking.orderNumber || 'ORD-1518'}?from=schedule`}
               onClick={() => onOpenChange(false)}
               className="flex-1 h-10 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >

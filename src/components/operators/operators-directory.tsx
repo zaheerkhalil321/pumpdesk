@@ -22,6 +22,8 @@ import { AppSelect } from '@/components/ui/app-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import type { BranchOption, OperatorItem, PumpItem } from '@/features/fleet/types';
 import { AddOperatorModal } from '@/components/operators/add-operator-modal';
@@ -364,13 +366,14 @@ export function OperatorsDirectory({
                   const isInactive = op.status === 'Inactive';
 
                   return (
-                    <tr
+                    <m.tr
                       key={op.id}
+                      {...listItemMotion(isInactive ? 0.7 : 1)}
                       onClick={() => router.push(`/operators/${op.id}`)}
                       className={cn(
                         'hover:bg-slate-50/80 transition-colors group cursor-pointer',
                         isChecked ? 'bg-slate-50/60' : '',
-                        isInactive ? 'opacity-70 bg-slate-50/30' : ''
+                        isInactive ? 'bg-slate-50/30' : ''
                       )}
                     >
                       {/* 1. Checkbox */}
@@ -489,7 +492,7 @@ export function OperatorsDirectory({
                           </Link>
                         </div>
                       </td>
-                    </tr>
+                    </m.tr>
                   );
                 })}
               </tbody>

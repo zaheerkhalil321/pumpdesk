@@ -20,6 +20,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { AppSelect } from '@/components/ui/app-select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import type { ContactItem, CustomerOption } from '@/features/crm/types';
 import { ContactTileCard } from '@/components/contacts/contact-tile-card';
@@ -419,12 +421,13 @@ export function ContactsDirectory({
                   const isInactive = contact.status === 'Inactive';
 
                   return (
-                    <tr
+                    <m.tr
                       key={contact.id}
+                      {...listItemMotion(isInactive ? 0.7 : 1)}
                       onClick={() => router.push(`/contacts/${contact.id}`)}
                       className={cn(
                         'hover:bg-slate-50/80 transition-colors group cursor-pointer',
-                        isInactive ? 'opacity-70 bg-slate-50/30' : ''
+                        isInactive ? 'bg-slate-50/30' : ''
                       )}
                     >
                       {/* 1. Contact (Name & Title with Monogram Avatar) */}
@@ -565,7 +568,7 @@ export function ContactsDirectory({
                           </Link>
                         </div>
                       </td>
-                    </tr>
+                    </m.tr>
                   );
                 })}
               </tbody>

@@ -28,6 +28,8 @@ import { AppSelect } from '@/components/ui/app-select';
 import { StatusSwitch } from '@/components/ui/status-switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { CustomerTileCard } from '@/components/customers/customer-tile-card';
 import { openCall, openText } from '@/lib/reach-out';
@@ -434,8 +436,9 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredCustomers.map((cust) => (
-                  <tr
+                  <m.tr
                     key={cust.id}
+                    {...listItemMotion()}
                     className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                     onClick={() => router.push(`/customers/${cust.id}`)}
                   >
@@ -564,7 +567,7 @@ export function CustomersDirectory({ customers }: { customers: CustomerItem[] })
                         </Link>
                       </div>
                     </td>
-                  </tr>
+                  </m.tr>
                 ))}
               </tbody>
             </table>

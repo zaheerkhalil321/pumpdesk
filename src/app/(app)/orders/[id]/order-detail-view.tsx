@@ -13,6 +13,7 @@ import {
   Truck,
   User,
   ChevronLeft,
+  CalendarDays,
   X,
   Plus,
   Save,
@@ -33,6 +34,7 @@ import { Switch } from '@/components/ui/switch';
 import { SiteCombobox } from '@/components/orders/site-combobox';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
 import { CopyButton } from '@/components/ui/copy-button';
 import { reportAction } from '@/lib/action-feedback';
 import { cancelOrder, updateOrder } from '@/features/orders/server/actions';
@@ -68,6 +70,8 @@ const editableStatusOf = (status: OrderStatus): EditableOrderStatus =>
 interface OrderDetailViewProps {
   order: FullOrderData;
   options: OrderFormOptions;
+  /** Opened from the schedule board, so Back goes to the schedule instead of the orders list. */
+  cameFromSchedule: boolean;
 }
 
 const UNASSIGNED = 'unassigned';
@@ -81,7 +85,7 @@ const toRows = (items: { name: string; quantity: number }[]): ItemRow[] =>
 const withValue = (list: string[], value: string) =>
   value && !list.includes(value) ? [value, ...list] : list;
 
-export function OrderDetailView({ order, options }: OrderDetailViewProps) {
+export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetailViewProps) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -89,6 +93,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
   const [cancelReason, setCancelReason] = useState('');
 
   const isCancelled = order.status === 'Cancelled';
+  const scheduleHref = `/schedule?date=${order.serviceDateIso}`;
 
   // ── Edit Order Screen Form State (reset from the saved order each time it opens) ──
   const [editCustomer, setEditCustomer] = useState(order.customer);
@@ -828,27 +833,26 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
   // ═════════════════════════════════════════════════════════════════════════
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-5">
-      {/* ── 1. Top Link ── */}
+      {/* ── 1. Top Links: back to where the dispatcher came from, and the order's day on the schedule ── */}
       <div className="flex items-center justify-between text-xs">
+        <Link
+          href={cameFromSchedule ? scheduleHref : '/orders'}
+          className="text-brand hover:underline font-semibold inline-flex items-center gap-1 transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span>{cameFromSchedule ? 'Back to schedule' : 'Back to orders'}</span>
+        </Link>
+
         {/* A cancelled order is no longer on the schedule. */}
-        {isCancelled ? (
-          <span />
-        ) : (
+        {!isCancelled && !cameFromSchedule && (
           <Link
-            href={`/schedule?date=${order.serviceDateIso}`}
-            className="text-brand hover:underline font-semibold inline-flex items-center gap-1 transition-colors"
+            href={scheduleHref}
+            className="text-slate-500 hover:text-slate-900 transition-colors font-medium inline-flex items-center gap-1"
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
+            <CalendarDays className="h-3.5 w-3.5" />
             <span>View on schedule</span>
           </Link>
         )}
-
-        <Link
-          href="/orders"
-          className="text-slate-500 hover:text-slate-900 transition-colors font-medium"
-        >
-          Back to orders
-        </Link>
       </div>
 
       {/* ── 2. Header: Title + Status + Subtitle + Action Buttons ── */}
@@ -858,7 +862,12 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               {order.id} · {order.customer}
             </h1>
-            <span
+            {/* A new status pops in, so the dispatcher sees the change took. */}
+            <m.span
+              key={order.status}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 22 }}
               className={cn(
                 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border',
                 ORDER_STATUS_STYLE[order.status].badge
@@ -871,7 +880,7 @@ export function OrderDetailView({ order, options }: OrderDetailViewProps) {
                 )}
               />
               <span>{order.status}</span>
-            </span>
+            </m.span>
           </div>
 
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">

@@ -1,5 +1,8 @@
 'use client';
 
+import { useId } from 'react';
+
+import { ActivePill } from '@/components/ui/active-pill';
 import { cn } from '@/lib/utils';
 
 export interface SegmentedOption<T extends string> {
@@ -26,6 +29,7 @@ export function SegmentedControl<T extends string>({
   size = 'sm',
   className,
 }: SegmentedControlProps<T>) {
+  const pillId = useId();
   return (
     <div
       role="radiogroup"
@@ -46,12 +50,11 @@ export function SegmentedControl<T extends string>({
             aria-checked={isSelected}
             onClick={() => onChange(option.value)}
             className={cn(
-              'flex-1 cursor-pointer rounded-md px-3 text-xs font-semibold transition-all duration-150',
-              isSelected
-                ? 'bg-white text-slate-900 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+              'relative isolate flex-1 cursor-pointer rounded-md px-3 text-xs font-semibold transition-colors duration-150',
+              isSelected ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'
             )}
           >
+            {isSelected && <ActivePill layoutId={pillId} />}
             {option.label}
           </button>
         );

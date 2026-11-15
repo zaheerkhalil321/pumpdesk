@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import * as m from 'motion/react-m';
 import { cn } from '@/lib/utils';
 
 /**
@@ -33,20 +34,33 @@ export function DroppableLane({ pumpId, className, children }: DroppableLaneProp
 
 interface DraggableCardProps {
   bookingId: string;
+  /** True while this card is being dragged: it stays in place, faded. */
+  isDragging: boolean;
   className?: string;
   title?: string;
   onClick: () => void;
   children: ReactNode;
 }
 
-/** A job card that can be picked up. It stays in place, faded; a copy follows the pointer. */
-export function DraggableCard({ bookingId, className, title, onClick, children }: DraggableCardProps) {
+/**
+ * A job card that can be picked up. It stays in place, faded; a copy follows the pointer.
+ * It grows in when it appears, so a dropped card visibly lands in its new spot.
+ */
+export function DraggableCard({ bookingId, isDragging, className, title, onClick, children }: DraggableCardProps) {
   const { setNodeRef, listeners, attributes } = useDraggable({ id: bookingId });
   return (
-    <div
+    <m.div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      initial={{ opacity: 0, scale: 0.9, filter: 'blur(4px)' }}
+      animate={
+        isDragging
+          ? { opacity: 0.4, scale: 0.98 }
+          : { opacity: 1, scale: 1, filter: 'blur(0px)', transitionEnd: { filter: 'none' } }
+      }
+      // A little more bounce than elsewhere, so a dropped card visibly settles.
+      transition={{ type: 'spring', bounce: 0.3, duration: 0.4 }}
       data-booking-id={bookingId}
       title={title}
       onClick={(e) => {
@@ -57,6 +71,6 @@ export function DraggableCard({ bookingId, className, title, onClick, children }
       className={cn('touch-manipulation [-webkit-touch-callout:none]', className)}
     >
       {children}
-    </div>
+    </m.div>
   );
 }

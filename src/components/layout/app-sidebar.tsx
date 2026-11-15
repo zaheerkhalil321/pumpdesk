@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -16,6 +16,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ActivePill } from '@/components/ui/active-pill';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSettings } from '@/components/providers/settings-provider';
 import { useIsTablet } from '@/hooks/use-mobile';
@@ -96,6 +97,7 @@ export function AppSidebar({
   workspace: Workspace;
 }) {
   const pathname = usePathname();
+  const navPillId = useId();
   const isTablet = useIsTablet();
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState<boolean | null>(null);
   const isCollapsed = isManuallyCollapsed !== null ? isManuallyCollapsed : isTablet;
@@ -298,14 +300,15 @@ export function AppSidebar({
                         onClick={handleNavClick}
                         aria-label={item.title}
                         className={cn(
-                          'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-150 relative',
+                          'h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-colors duration-150 relative isolate',
                           isActive
-                            ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                            ? 'text-brand font-semibold'
                             : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80',
                         )}
                       />
                     }
                   >
+                    {isActive && <ActivePill layoutId={`${navPillId}-rail`} className="bg-brand-light" />}
                     <Icon className="h-4.5 w-4.5 shrink-0" />
                     {item.badge && (
                       <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-brand border border-white" />
@@ -334,15 +337,17 @@ export function AppSidebar({
                 href={item.href}
                 onClick={handleNavClick}
                 className={cn(
-                  'flex items-center rounded-lg font-medium transition-all duration-150 group relative px-3 py-2 text-sm overflow-hidden',
+                  'flex items-center rounded-lg font-medium transition-colors duration-150 group relative isolate px-3 py-2 text-sm',
                   isActive
-                    ? 'bg-brand-light text-brand font-semibold shadow-2xs'
+                    ? 'text-brand font-semibold'
                     : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/70',
                 )}
               >
-                {/* Left Active Indicator Bar with Center-Outward Expansion Animation */}
+                {/* The highlight and its left bar slide from the last page's item to this one. */}
                 {isActive && (
-                  <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-brand origin-center animate-expand-vertical" />
+                  <ActivePill layoutId={`${navPillId}-nav`} className="overflow-hidden bg-brand-light">
+                    <span className="absolute left-0 top-1 bottom-1 w-[4px] rounded-r-full bg-brand" />
+                  </ActivePill>
                 )}
 
                 <Icon

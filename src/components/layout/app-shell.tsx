@@ -4,6 +4,7 @@ import React from 'react';
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { MobileNavbar } from "@/components/layout/mobile-navbar";
 import { SettingsProvider, useSettings } from "@/components/providers/settings-provider";
+import { MotionProvider } from "@/components/providers/motion-provider";
 import { SettingsOverlay } from "@/components/settings/settings-overlay";
 import { cn } from "@/lib/utils";
 import type { NavCounts } from "@/features/orders/types";
@@ -66,8 +67,10 @@ export function AppShell({
   workspace: Workspace;
 }) {
   return (
-    <SettingsProvider>
-      <AppShellInner navCounts={navCounts} logoUrl={logoUrl} workspace={workspace}>{children}</AppShellInner>
-    </SettingsProvider>
+    <MotionProvider>
+      <SettingsProvider>
+        <AppShellInner navCounts={navCounts} logoUrl={logoUrl} workspace={workspace}>{children}</AppShellInner>
+      </SettingsProvider>
+    </MotionProvider>
   );
 }

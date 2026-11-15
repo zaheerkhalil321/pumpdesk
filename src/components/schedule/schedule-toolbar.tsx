@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +13,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { addDays, subDays } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { ActivePill } from "@/components/ui/active-pill";
 import { AppSelect } from "@/components/ui/app-select";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,8 @@ export function ScheduleToolbar({
   searchQuery = "",
   onSearchChange,
 }: ScheduleToolbarProps) {
+  // One id per toolbar, so each toggle's highlight slides only within its own buttons.
+  const pillId = useId();
   const [isMobileCalendarOpen, setIsMobileCalendarOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -163,24 +166,26 @@ export function ScheduleToolbar({
                 type="button"
                 onClick={() => onViewModeChange("list")}
                 className={cn(
-                  "px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap",
+                  "relative isolate px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap",
                   viewMode === "list"
-                    ? "bg-brand text-white shadow-2xs"
+                    ? "text-white"
                     : "text-slate-600 hover:text-slate-900"
                 )}
               >
+                {viewMode === "list" && <ActivePill layoutId={`${pillId}-cards`} className="bg-brand" />}
                 Cards
               </button>
               <button
                 type="button"
                 onClick={() => onViewModeChange("day")}
                 className={cn(
-                  "px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap",
+                  "relative isolate px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap",
                   viewMode !== "list"
-                    ? "bg-brand text-white shadow-2xs"
+                    ? "text-white"
                     : "text-slate-600 hover:text-slate-900"
                 )}
               >
+                {viewMode !== "list" && <ActivePill layoutId={`${pillId}-cards`} className="bg-brand" />}
                 Grid
               </button>
             </div>
@@ -316,12 +321,13 @@ export function ScheduleToolbar({
                   type="button"
                   onClick={() => onViewModeChange(mode)}
                   className={cn(
-                    "px-3 py-1 text-xs font-semibold rounded-md capitalize transition-all cursor-pointer",
+                    "relative isolate px-3 py-1 text-xs font-semibold rounded-md capitalize transition-colors cursor-pointer",
                     isActive
-                      ? "bg-brand text-white shadow-2xs"
+                      ? "text-white"
                       : "text-slate-600 hover:text-slate-950 hover:bg-white/60"
                   )}
                 >
+                  {isActive && <ActivePill layoutId={`${pillId}-mode`} className="bg-brand" />}
                   {mode}
                 </button>
               );

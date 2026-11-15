@@ -499,18 +499,19 @@ export function TimelineGrid({
 
                         return (
                           <DraggableCard
-                            key={booking.id}
+                            // A new start time gives a new card, so a card moved along its own row lands too.
+                            key={`${booking.id}-${booking.startHour}`}
                             bookingId={booking.id}
+                            isDragging={isBeingDragged}
                             onClick={() => {
                               if (!justDragged.current) onBookingClick(booking);
                             }}
                             className={cn(
                               'pointer-events-auto group',
-                              'h-full flex items-stretch transition-all cursor-grab active:cursor-grabbing select-none max-w-full min-w-0',
+                              'h-full flex items-stretch cursor-grab active:cursor-grabbing select-none max-w-full min-w-0',
                               ROW_STARTS[trackOf.get(booking.id) ?? 0],
                               startColClass,
                               spanColClass,
-                              isBeingDragged && 'opacity-40 scale-98',
                             )}
                             title={cardTooltip}
                           >

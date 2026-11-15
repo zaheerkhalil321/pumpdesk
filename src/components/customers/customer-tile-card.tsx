@@ -12,6 +12,8 @@ import {
   Copy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import type { CustomerItem } from '@/features/crm/types';
 
@@ -43,11 +45,12 @@ export function CustomerTileCard({
   const isActive = customer.status === 'Active';
 
   return (
-    <div
+    <m.div
+      {...listItemMotion(isActive ? 1 : 0.9)}
       onClick={onClick}
       className={cn(
-        'group relative bg-white rounded-2xl border transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-brand/40',
-        isActive ? 'border-slate-200/90' : 'border-slate-200/60 bg-slate-50/40 opacity-90'
+        'group relative bg-white rounded-2xl border transition-[border-color,box-shadow,scale] duration-200 cursor-pointer overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-brand/40',
+        isActive ? 'border-slate-200/90' : 'border-slate-200/60 bg-slate-50/40'
       )}
     >
       {/* ── 1. Top Header Row: Monogram + Company + Status Badge ── */}
@@ -213,6 +216,6 @@ export function CustomerTileCard({
           <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
-    </div>
+    </m.div>
   );
 }

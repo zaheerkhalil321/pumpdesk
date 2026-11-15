@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { openCall, openText } from '@/lib/reach-out';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import * as m from 'motion/react-m';
+import { listItemMotion } from '@/lib/motion';
 import type { OperatorItem } from '@/features/fleet/types';
 
 interface OperatorTileCardProps {
@@ -70,12 +72,13 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
 
   return (
     <>
-      <div
+      <m.div
+        {...listItemMotion(isInactive ? 0.9 : 1)}
         onClick={handleCardClick}
         className={cn(
-          'group relative bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-brand/40 cursor-pointer overflow-hidden active:scale-[0.99]',
+          'group relative bg-white rounded-2xl border transition-[border-color,box-shadow,scale] duration-200 flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-brand/40 cursor-pointer overflow-hidden active:scale-[0.99]',
           isInactive
-            ? 'border-slate-200/60 bg-slate-50/40 opacity-90'
+            ? 'border-slate-200/60 bg-slate-50/40'
             : 'border-slate-200/90'
         )}
       >
@@ -204,7 +207,7 @@ export function OperatorTileCard({ operator, onClick }: OperatorTileCardProps) {
             <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
-      </div>
+      </m.div>
     </>
   );
 }
