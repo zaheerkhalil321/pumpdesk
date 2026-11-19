@@ -181,14 +181,14 @@ isOneToOne: false
                   ]
                 },"company_settings": {
                   Row: {
-                    "accepted_payment_methods": string | null,"billing_email": string | null,"company_id": string,"default_cancellation_fee": number | null,"default_job_minutes": number,"default_minimum_hours": number,"default_tax_rate": number,"invoice_due_days": number,"remit_to": string | null,"require_operator_ticket_approval": boolean,"require_ticket_signature": boolean,"updated_at": string,"use_address_on_invoices": boolean
+                    "accepted_payment_methods": string | null,"billing_email": string | null,"company_id": string,"default_cancellation_fee": number | null,"default_job_minutes": number,"default_minimum_hours": number,"default_tax_rate": number,"invoice_due_days": number,"remit_to": string | null,"require_operator_ticket_approval": boolean,"require_ticket_signature": boolean,"terms_url": string | null,"updated_at": string,"use_address_on_invoices": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_payment_methods"?: string | null,"billing_email"?: string | null,"company_id": string,"default_cancellation_fee"?: number | null,"default_job_minutes"?: number,"default_minimum_hours"?: number,"default_tax_rate"?: number,"invoice_due_days"?: number,"remit_to"?: string | null,"require_operator_ticket_approval"?: boolean,"require_ticket_signature"?: boolean,"updated_at"?: string,"use_address_on_invoices"?: boolean
+                    "accepted_payment_methods"?: string | null,"billing_email"?: string | null,"company_id": string,"default_cancellation_fee"?: number | null,"default_job_minutes"?: number,"default_minimum_hours"?: number,"default_tax_rate"?: number,"invoice_due_days"?: number,"remit_to"?: string | null,"require_operator_ticket_approval"?: boolean,"require_ticket_signature"?: boolean,"terms_url"?: string | null,"updated_at"?: string,"use_address_on_invoices"?: boolean
                   }
                   Update: {
-                    "accepted_payment_methods"?: string | null,"billing_email"?: string | null,"company_id"?: string,"default_cancellation_fee"?: number | null,"default_job_minutes"?: number,"default_minimum_hours"?: number,"default_tax_rate"?: number,"invoice_due_days"?: number,"remit_to"?: string | null,"require_operator_ticket_approval"?: boolean,"require_ticket_signature"?: boolean,"updated_at"?: string,"use_address_on_invoices"?: boolean
+                    "accepted_payment_methods"?: string | null,"billing_email"?: string | null,"company_id"?: string,"default_cancellation_fee"?: number | null,"default_job_minutes"?: number,"default_minimum_hours"?: number,"default_tax_rate"?: number,"invoice_due_days"?: number,"remit_to"?: string | null,"require_operator_ticket_approval"?: boolean,"require_ticket_signature"?: boolean,"terms_url"?: string | null,"updated_at"?: string,"use_address_on_invoices"?: boolean
                   }
                   Relationships: [
                     {
@@ -415,14 +415,14 @@ isOneToOne: false
                   ]
                 },"job_employee_assignments": {
                   Row: {
-                    "acknowledged_at": string | null,"assigned_at": string,"assigned_by": string | null,"assignment_type": Database["public"]['Enums']["assignment_type"],"company_id": string,"employee_id": string,"id": string,"job_id": string,"released_at": string | null
+                    "acknowledged_at": string | null,"assigned_at": string,"assigned_by": string | null,"assignment_type": Database["public"]['Enums']["assignment_type"],"changed_at": string | null,"company_id": string,"employee_id": string,"id": string,"job_id": string,"released_at": string | null,"seen_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "acknowledged_at"?: string | null,"assigned_at"?: string,"assigned_by"?: string | null,"assignment_type"?: Database["public"]['Enums']["assignment_type"],"company_id"?: string,"employee_id": string,"id"?: string,"job_id": string,"released_at"?: string | null
+                    "acknowledged_at"?: string | null,"assigned_at"?: string,"assigned_by"?: string | null,"assignment_type"?: Database["public"]['Enums']["assignment_type"],"changed_at"?: string | null,"company_id"?: string,"employee_id": string,"id"?: string,"job_id": string,"released_at"?: string | null,"seen_at"?: string | null
                   }
                   Update: {
-                    "acknowledged_at"?: string | null,"assigned_at"?: string,"assigned_by"?: string | null,"assignment_type"?: Database["public"]['Enums']["assignment_type"],"company_id"?: string,"employee_id"?: string,"id"?: string,"job_id"?: string,"released_at"?: string | null
+                    "acknowledged_at"?: string | null,"assigned_at"?: string,"assigned_by"?: string | null,"assignment_type"?: Database["public"]['Enums']["assignment_type"],"changed_at"?: string | null,"company_id"?: string,"employee_id"?: string,"id"?: string,"job_id"?: string,"released_at"?: string | null,"seen_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -547,6 +547,38 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"job_step_events": {
+                  Row: {
+                    "at": string,"company_id": string,"edited_at": string | null,"employee_id": string,"id": string,"job_id": string,"recorded_at": string,"step": Database["public"]['Enums']["job_step"],"undone_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "at": string,"company_id"?: string,"edited_at"?: string | null,"employee_id": string,"id"?: string,"job_id": string,"recorded_at"?: string,"step": Database["public"]['Enums']["job_step"],"undone_at"?: string | null
+                  }
+                  Update: {
+                    "at"?: string,"company_id"?: string,"edited_at"?: string | null,"employee_id"?: string,"id"?: string,"job_id"?: string,"recorded_at"?: string,"step"?: Database["public"]['Enums']["job_step"],"undone_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "job_step_events_company_id_employee_id_fkey"
+      columns: ["company_id","employee_id"]
+isOneToOne: false
+      referencedRelation: "employees"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "job_step_events_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "job_step_events_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"jobs": {
                   Row: {
                     "arrive_by": string | null,"billing_service": string | null,"booking_status": Database["public"]['Enums']["booking_status"],"cancellation_reason": string | null,"cancelled_at": string | null,"cleanup_minutes": number,"collect_on_delivery": boolean,"company_id": string,"completed_at": string | null,"confirmed_at": string | null,"created_at": string,"created_by": string | null,"customer_id": string,"customer_notes": string | null,"dispatch_status": Database["public"]['Enums']["dispatch_status"],"dispatched_at": string | null,"estimated_yards": number,"extra_items": NonNullable<Json>,"field_status": Database["public"]['Enums']["field_status"],"id": string,"internal_note": string | null,"job_name": string | null,"job_number": string,"job_site_id": string | null,"lines_on_site": boolean,"linked_to_previous": boolean,"max_pump_size": string | null,"min_pump_size": string | null,"pour_type": string | null,"prep_minutes": number,"priority": Database["public"]['Enums']["job_priority"],"pump_minutes": number,"purchase_order_number": string | null,"scheduled_end": string,"scheduled_start": string,"service_date": string,"site_instructions": string | null,"site_label": string,"supplier_name": string | null,"timezone": string,"travel_minutes": number,"updated_at": string,"updated_by": string | null,"version": number
@@ -641,6 +673,96 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"ticket_extras": {
+                  Row: {
+                    "code": string,"company_id": string,"created_at": string,"id": string,"is_active": boolean,"label": string,"sort_order": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code": string,"company_id"?: string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"label": string,"sort_order"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "code"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"label"?: string,"sort_order"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ticket_extras_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"work_ticket_extras": {
+                  Row: {
+                    "company_id": string,"extra_code": string,"ticket_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string,"extra_code": string,"ticket_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"extra_code"?: string,"ticket_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "work_ticket_extras_company_id_extra_code_fkey"
+      columns: ["company_id","extra_code"]
+isOneToOne: false
+      referencedRelation: "ticket_extras"
+      referencedColumns: ["company_id","code"]
+    },{
+      foreignKeyName: "work_ticket_extras_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "work_ticket_extras_company_id_ticket_id_fkey"
+      columns: ["company_id","ticket_id"]
+isOneToOne: false
+      referencedRelation: "work_tickets"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"work_tickets": {
+                  Row: {
+                    "arrived_on_site_at": string | null,"comments": string,"company_id": string,"created_at": string,"departed_site_at": string | null,"employee_id": string,"finished_pour_at": string | null,"hose_3in_ft": number | null,"hose_4in_ft": number | null,"id": string,"job_id": string,"signature_path": string | null,"signed_at": string | null,"signer_name": string | null,"started_pour_at": string | null,"status": Database["public"]['Enums']["work_ticket_status"],"submitted_at": string | null,"submitted_by": string | null,"updated_at": string,"yards_pumped": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "arrived_on_site_at"?: string | null,"comments"?: string,"company_id"?: string,"created_at"?: string,"departed_site_at"?: string | null,"employee_id": string,"finished_pour_at"?: string | null,"hose_3in_ft"?: number | null,"hose_4in_ft"?: number | null,"id"?: string,"job_id": string,"signature_path"?: string | null,"signed_at"?: string | null,"signer_name"?: string | null,"started_pour_at"?: string | null,"status"?: Database["public"]['Enums']["work_ticket_status"],"submitted_at"?: string | null,"submitted_by"?: string | null,"updated_at"?: string,"yards_pumped"?: number | null
+                  }
+                  Update: {
+                    "arrived_on_site_at"?: string | null,"comments"?: string,"company_id"?: string,"created_at"?: string,"departed_site_at"?: string | null,"employee_id"?: string,"finished_pour_at"?: string | null,"hose_3in_ft"?: number | null,"hose_4in_ft"?: number | null,"id"?: string,"job_id"?: string,"signature_path"?: string | null,"signed_at"?: string | null,"signer_name"?: string | null,"started_pour_at"?: string | null,"status"?: Database["public"]['Enums']["work_ticket_status"],"submitted_at"?: string | null,"submitted_by"?: string | null,"updated_at"?: string,"yards_pumped"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "work_tickets_company_id_employee_id_fkey"
+      columns: ["company_id","employee_id"]
+isOneToOne: false
+      referencedRelation: "employees"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "work_tickets_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "work_tickets_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "work_tickets_submitted_by_fkey"
+      columns: ["submitted_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"yards": {
                   Row: {
                     "address": string,"branch_id": string | null,"company_id": string,"created_at": string,"id": string,"is_active": boolean,"name": string,"updated_at": string
@@ -673,7 +795,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "book_job":
+            "acknowledge_assignment":
+{ Args: { "p_at": string,"p_job_id": string }; Returns: Json
+                           },
+"book_job":
 { Args: { "p": Json }; Returns: Json
                            },
 "cancel_job":
@@ -682,12 +807,51 @@ isOneToOne: false
 "delete_operator":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"edit_job_step_time":
+{ Args: { "p_at": string,"p_job_id": string,"p_step": Database["public"]['Enums']["job_step"] }; Returns: Json
+                           },
+"get_work_ticket":
+{ Args: { "p_job_id": string }; Returns: Json
+                           },
+"link_operator_login":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mark_job_seen":
+{ Args: { "p_job_id": string }; Returns: undefined
+                           },
+"operator_can_use_signature":
+{ Args: { "p_name": string,"p_write": boolean }; Returns: boolean
+                           },
+"operator_job":
+{ Args: { "p_job_id": string }; Returns: Json
+                           },
+"operator_jobs":
+{ Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
+                           },
+"operator_me":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"record_job_step":
+{ Args: { "p_at": string,"p_job_id": string,"p_step": Database["public"]['Enums']["job_step"] }; Returns: Json
+                           },
+"save_work_ticket":
+{ Args: { "p_draft": Json }; Returns: Json
+                           },
+"submit_work_ticket":
+{ Args: { "p_job_id": string }; Returns: Json
+                           },
+"ticket_extras":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"undo_job_step":
+{ Args: { "p_job_id": string,"p_step": Database["public"]['Enums']["job_step"] }; Returns: Json
+                           },
 "update_job":
 { Args: { "p": Json }; Returns: Json
                            }
           }
           Enums: {
-            "assignment_type": "primary_operator"|"second_operator"|"helper","booking_status": "pending"|"confirmed"|"cancelled"|"no_show"|"inspection_pending"|"turned_in"|"reviewed","customer_status": "lead"|"active"|"inactive"|"blocked","dispatch_status": "unassigned"|"assigned"|"dispatched"|"acknowledged","doc_type": "job"|"ticket"|"invoice"|"work_order","employee_status": "active"|"inactive"|"leave"|"terminated","equipment_status": "available"|"maintenance"|"out_of_service"|"retired","equipment_type": "boom_pump"|"line_pump"|"trailer_pump"|"placing_boom"|"service_truck"|"support_vehicle"|"other","field_status": "scheduled"|"en_route"|"on_site"|"pumping"|"washout"|"returning"|"done","job_priority": "low"|"normal"|"high"|"urgent","membership_role": "owner"|"admin"|"dispatcher"|"office"|"operator"|"mechanic"|"accountant"|"read_only","membership_status": "invited"|"active"|"suspended"
+            "assignment_type": "primary_operator"|"second_operator"|"helper","booking_status": "pending"|"confirmed"|"cancelled"|"no_show"|"inspection_pending"|"turned_in"|"reviewed","customer_status": "lead"|"active"|"inactive"|"blocked","dispatch_status": "unassigned"|"assigned"|"dispatched"|"acknowledged","doc_type": "job"|"ticket"|"invoice"|"work_order","employee_status": "active"|"inactive"|"leave"|"terminated","equipment_status": "available"|"maintenance"|"out_of_service"|"retired","equipment_type": "boom_pump"|"line_pump"|"trailer_pump"|"placing_boom"|"service_truck"|"support_vehicle"|"other","field_status": "scheduled"|"en_route"|"on_site"|"pumping"|"washout"|"returning"|"done","job_priority": "low"|"normal"|"high"|"urgent","job_step": "arrived_shop"|"departed_shop"|"arrived_site"|"departed_site","membership_role": "owner"|"admin"|"dispatcher"|"office"|"operator"|"mechanic"|"accountant"|"read_only","membership_status": "invited"|"active"|"suspended","work_ticket_status": "draft"|"submitted"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -807,7 +971,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "assignment_type": ["primary_operator", "second_operator", "helper"],"booking_status": ["pending", "confirmed", "cancelled", "no_show", "inspection_pending", "turned_in", "reviewed"],"customer_status": ["lead", "active", "inactive", "blocked"],"dispatch_status": ["unassigned", "assigned", "dispatched", "acknowledged"],"doc_type": ["job", "ticket", "invoice", "work_order"],"employee_status": ["active", "inactive", "leave", "terminated"],"equipment_status": ["available", "maintenance", "out_of_service", "retired"],"equipment_type": ["boom_pump", "line_pump", "trailer_pump", "placing_boom", "service_truck", "support_vehicle", "other"],"field_status": ["scheduled", "en_route", "on_site", "pumping", "washout", "returning", "done"],"job_priority": ["low", "normal", "high", "urgent"],"membership_role": ["owner", "admin", "dispatcher", "office", "operator", "mechanic", "accountant", "read_only"],"membership_status": ["invited", "active", "suspended"]
+            "assignment_type": ["primary_operator", "second_operator", "helper"],"booking_status": ["pending", "confirmed", "cancelled", "no_show", "inspection_pending", "turned_in", "reviewed"],"customer_status": ["lead", "active", "inactive", "blocked"],"dispatch_status": ["unassigned", "assigned", "dispatched", "acknowledged"],"doc_type": ["job", "ticket", "invoice", "work_order"],"employee_status": ["active", "inactive", "leave", "terminated"],"equipment_status": ["available", "maintenance", "out_of_service", "retired"],"equipment_type": ["boom_pump", "line_pump", "trailer_pump", "placing_boom", "service_truck", "support_vehicle", "other"],"field_status": ["scheduled", "en_route", "on_site", "pumping", "washout", "returning", "done"],"job_priority": ["low", "normal", "high", "urgent"],"job_step": ["arrived_shop", "departed_shop", "arrived_site", "departed_site"],"membership_role": ["owner", "admin", "dispatcher", "office", "operator", "mechanic", "accountant", "read_only"],"membership_status": ["invited", "active", "suspended"],"work_ticket_status": ["draft", "submitted"]
           }
         }
 } as const

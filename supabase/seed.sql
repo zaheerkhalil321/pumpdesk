@@ -174,3 +174,94 @@ insert into public.employees (id, company_id, first_name, last_name, phone, stat
   ('a2000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002', 'Omar', 'Test', '+13125550161', 'active', true, 'Operator');
 insert into public.equipment (id, company_id, equipment_number, type, status, make, model, boom_length_m, default_operator_id) values
   ('b2000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002', 'T1', 'boom_pump', 'available', 'Schwing', 'S 36', 36, 'a2000000-0000-4000-8000-000000000001');
+
+-- ── Operator app sample data (mirrors mobile/src/api/mock-seed.ts) ──
+-- Rob Black (a1..01, +12075550168, test code 123456) is NOT linked to a login here: he links himself when he
+-- signs in with his phone. Jobs are "today" and "+2/+4 days" in New York time, relative to when you reset.
+update public.branches set latitude = 44.1181, longitude = -69.2414
+ where company_id = 'a0000000-0000-4000-8000-000000000001' and code = 'WAR';
+
+update public.company_settings set terms_url = 'https://midcoastconcrete.com/terms'
+ where company_id = 'a0000000-0000-4000-8000-000000000001';
+
+insert into public.yards (company_id, branch_id, name, address)
+select 'a0000000-0000-4000-8000-000000000001', b.id, 'Midcoast Concrete Pumping', '142 Main St, Warren, ME'
+  from public.branches b where b.company_id = 'a0000000-0000-4000-8000-000000000001' and b.code = 'WAR';
+
+-- Customers reuse the ones above (the demo names differ: Coastal Foundations, Granite State, Harbor Builders...).
+insert into public.contacts (id, company_id, first_name, last_name, job_title, phone, phone_type) values
+  ('f1000000-0000-4000-8000-000000000101', 'a0000000-0000-4000-8000-000000000001', 'Dave', 'Miller', 'Superintendent', '+12075550211', 'Mobile'),
+  ('f1000000-0000-4000-8000-000000000102', 'a0000000-0000-4000-8000-000000000001', 'Dave', 'Stevens', 'Job Lead', '+12075550214', 'Mobile'),
+  ('f1000000-0000-4000-8000-000000000103', 'a0000000-0000-4000-8000-000000000001', 'Mike', 'Ross', 'Site Manager', '+12075550299', 'Mobile'),
+  ('f1000000-0000-4000-8000-000000000104', 'a0000000-0000-4000-8000-000000000001', 'Karen', 'Doyle', 'Homeowner', '+12075550377', 'Mobile'),
+  ('f1000000-0000-4000-8000-000000000105', 'a0000000-0000-4000-8000-000000000001', 'Sarah', 'King', 'Project Manager', '+12075550341', 'Mobile'),
+  ('f1000000-0000-4000-8000-000000000106', 'a0000000-0000-4000-8000-000000000001', 'Tom', 'Vance', 'Superintendent', '+12075550412', 'Mobile');
+
+insert into public.job_sites (id, company_id, customer_id, name, address_line_1, city, state, latitude, longitude) values
+  ('a4000000-0000-4000-8000-000000000101', 'a0000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000104', 'Main St Footings', '24 Main St', 'Rockland', 'ME', 44.1037, -69.1089),
+  ('a4000000-0000-4000-8000-000000000102', 'a0000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000101', 'Camden St Slab', '18 Camden St', 'Rockport', 'ME', 44.1856, -69.0764),
+  ('a4000000-0000-4000-8000-000000000103', 'a0000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000106', 'Atlantic Ave Pour', '65 Atlantic Ave', 'Camden', 'ME', 44.2098, -69.0648),
+  ('a4000000-0000-4000-8000-000000000104', 'a0000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000107', 'Union St Garage', '31 Union St', 'Rockland', 'ME', 44.1019, -69.1076),
+  ('a4000000-0000-4000-8000-000000000105', 'a0000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000105', 'Thomaston Pier', '10 Industrial Way', 'Thomaston', 'ME', 44.0792, -69.1834);
+
+do $seed$
+declare
+  co constant uuid := 'a0000000-0000-4000-8000-000000000001';
+  rob constant uuid := 'a1000000-0000-4000-8000-000000000001';
+  pump constant uuid := 'b1000000-0000-4000-8000-000000000002';
+  tz constant text := 'America/New_York';
+  d0 date := (now() at time zone tz)::date;
+  j record;
+  jid uuid;
+  tid uuid;
+begin
+  for j in
+    select * from (values
+      -- n, number, customer, site, name, label, day, arrive_by h:m, start h:m, end h, yards, notes, contact, dispatch, field, ack h:m
+      (1, 'ORD-1524', 'e1000000-0000-4000-8000-000000000104'::uuid, 'a4000000-0000-4000-8000-000000000101'::uuid, 'Main St Footings', '24 Main St, Rockland, ME', 0, '06:00', '07:00', 11, 35, 'Pour footings behind main garage. Watch out for overhead tree branches.', 'f1000000-0000-4000-8000-000000000101'::uuid, 'acknowledged'::public.dispatch_status, 'done'::public.field_status, '05:30'),
+      (2, 'ORD-1525', 'e1000000-0000-4000-8000-000000000101', 'a4000000-0000-4000-8000-000000000102', 'Camden St Slab', '18 Camden St, Rockport, ME', 0, '08:00', '10:30', 14, 45, 'Call Dave 30 mins before arrival. Soft shoulder near the driveway entrance.', 'f1000000-0000-4000-8000-000000000102', 'acknowledged', 'scheduled', '07:45'),
+      (3, 'ORD-1526', 'e1000000-0000-4000-8000-000000000106', 'a4000000-0000-4000-8000-000000000103', 'Atlantic Ave Pour', '65 Atlantic Ave, Camden, ME', 0, null, '14:00', 17, 28, 'Interior basement slab pour. Have 100ft 3in hose ready.', 'f1000000-0000-4000-8000-000000000103', 'acknowledged', 'scheduled', '09:15'),
+      (4, 'ORD-1527', 'e1000000-0000-4000-8000-000000000107', 'a4000000-0000-4000-8000-000000000104', 'Union St Garage Slab', '31 Union St, Rockland, ME', 0, '11:00', '12:15', 15, 22, 'Residential garage slab. Narrow driveway, back the truck in.', 'f1000000-0000-4000-8000-000000000104', 'dispatched', 'scheduled', null),
+      (5, 'ORD-1530', 'e1000000-0000-4000-8000-000000000106', 'a4000000-0000-4000-8000-000000000103', 'Camden Harbor Retaining Wall', '65 Atlantic Ave, Camden, ME', 2, '12:30', '14:00', 18, 60, 'Tight parking lot. Flagman will meet you at entrance.', 'f1000000-0000-4000-8000-000000000105', 'dispatched', 'scheduled', null),
+      (6, 'ORD-1534', 'e1000000-0000-4000-8000-000000000105', 'a4000000-0000-4000-8000-000000000105', 'Thomaston Commercial Pier', '10 Industrial Way, Thomaston, ME', 4, '07:30', '09:00', 14, 85, 'High strength commercial mix. Two washouts on site.', 'f1000000-0000-4000-8000-000000000106', 'dispatched', 'scheduled', null)
+    ) as t(n, num, cust, site, name, label, day, arrive, start_t, end_h, yards, notes, contact, dispatch, field, ack)
+  loop
+    insert into public.jobs (company_id, job_number, customer_id, job_site_id, site_label, job_name, scheduled_start,
+      scheduled_end, arrive_by, timezone, service_date, estimated_yards, site_instructions, booking_status,
+      dispatch_status, field_status, confirmed_at, dispatched_at, completed_at)
+    values (co, j.num, j.cust, j.site, j.label, j.name,
+      ((d0 + j.day) + j.start_t::time) at time zone tz,
+      ((d0 + j.day) + make_time(j.end_h, 0, 0)) at time zone tz,
+      case when j.arrive is null then null else ((d0 + j.day) + j.arrive::time) at time zone tz end,
+      tz, d0 + j.day, j.yards, j.notes, 'confirmed', j.dispatch, j.field, now(), now(),
+      case when j.field = 'done' then ((d0 + j.day) + time '09:45') at time zone tz end)
+    returning id into jid;
+
+    insert into public.job_contacts (company_id, job_id, contact_id) values (co, jid, j.contact);
+    insert into public.job_equipment_assignments (company_id, job_id, equipment_id) values (co, jid, pump);
+    insert into public.job_employee_assignments (company_id, job_id, employee_id, acknowledged_at)
+    values (co, jid, rob, case when j.ack is null then null else ((d0 + j.day) + j.ack::time) at time zone tz end);
+    insert into public.job_status_history (company_id, job_id, dimension, old_value, new_value)
+    values (co, jid, 'booking', null, 'confirmed');
+    insert into public.job_status_history (company_id, job_id, dimension, old_value, new_value)
+    values (co, jid, 'dispatch', 'assigned', 'dispatched');
+
+    if j.n = 1 then
+      -- the finished job: all four steps, a submitted ticket with a washout extra
+      insert into public.job_step_events (company_id, job_id, employee_id, step, at)
+      select co, jid, rob, s.step::public.job_step, ((d0) + s.t::time) at time zone tz
+        from (values ('arrived_shop', '06:02'), ('departed_shop', '06:25'), ('arrived_site', '06:50'), ('departed_site', '09:45')) as s(step, t);
+      insert into public.work_tickets (company_id, job_id, employee_id, status, arrived_on_site_at, started_pour_at,
+        finished_pour_at, departed_site_at, yards_pumped, hose_3in_ft, hose_4in_ft, comments, signer_name,
+        signature_path, signed_at, submitted_at)
+      values (co, jid, rob, 'submitted',
+        (d0 + time '06:50') at time zone tz, (d0 + time '07:10') at time zone tz,
+        (d0 + time '09:20') at time zone tz, (d0 + time '09:45') at time zone tz,
+        36.5, 50, 0, 'Clean pour, no delays.', 'Dave Miller',
+        co::text || '/' || jid::text || '.png', (d0 + time '09:40') at time zone tz, (d0 + time '09:42') at time zone tz)
+      returning id into tid;
+      insert into public.work_ticket_extras (company_id, ticket_id, extra_code) values (co, tid, 'offsite_washout');
+    end if;
+  end loop;
+end
+$seed$;
