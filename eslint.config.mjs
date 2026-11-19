@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The operator phone app has its own lint setup (mobile/eslint.config.js).
+    "mobile/**",
   ]),
 ]);
 
