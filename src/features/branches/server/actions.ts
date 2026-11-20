@@ -6,6 +6,7 @@ import { authedAction } from '@/server/action';
 import { NotFoundError } from '@/server/errors';
 import { BRANCH_EDITORS, createBranchSchema, updateBranchSchema } from '@/features/branches/schemas';
 import { suggestBranchCode } from '@/features/branches/code';
+import { coordsColumns } from '@/features/places/coords';
 import type { Database } from '@/types/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -45,6 +46,7 @@ export const createBranch = authedAction({
         city: input.city,
         state: input.state,
         postal_code: input.zipCode,
+        ...coordsColumns(input.latitude, input.longitude),
         phone: input.phone,
         is_hq: input.isHq,
       })
@@ -71,6 +73,7 @@ export const updateBranch = authedAction({
         city: input.city,
         state: input.state,
         postal_code: input.zipCode,
+        ...coordsColumns(input.latitude, input.longitude),
         phone: input.phone,
         is_hq: input.isHq,
         is_active: input.isActive,

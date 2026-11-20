@@ -48,6 +48,7 @@ import { reportAction } from '@/lib/action-feedback';
 import { SiteCombobox } from '@/components/orders/site-combobox';
 import { SupplierCombobox } from '@/components/orders/supplier-combobox';
 import { ensureSupplier } from '@/features/suppliers/ensure';
+import { siteCoordsPayload, type Coords } from '@/features/places/coords';
 import { QuickCustomerDialog } from './quick-customer-dialog';
 import { QuickContactDialog } from './quick-contact-dialog';
 
@@ -154,6 +155,9 @@ function NewOrderModalForm({
     }
     return editingBooking.jobSiteName || editingBooking.address || '';
   });
+
+  // Google's map point for the typed address; null for a typed or saved address.
+  const [siteCoords, setSiteCoords] = useState<Coords | null>(null);
 
   // Pour Type & Estimated Volume States
   const [pourType, setPourType] = useState(
@@ -304,6 +308,7 @@ function NewOrderModalForm({
       customerId: customerRecord.id,
       jobSiteId: savedSite?.id ?? null,
       siteLabel: siteText,
+      ...siteCoordsPayload(savedSite ? null : siteCoords),
       pourType,
       supplierName: supplier,
       estimatedYards: Number(volumeYards) || 0,
@@ -600,6 +605,7 @@ function NewOrderModalForm({
                   address.trim() !== '' && !previousSites.some((site) => site.address === address);
                 setCustomer(val);
                 if (!typedOwnAddress) {
+                  setSiteCoords(null);
                   const nextAddress = customers.find((c) => c.name === val)?.sites[0]?.address ?? '';
                   setAddress(nextAddress);
                   if (nextAddress && formErrors.address) {
@@ -763,6 +769,7 @@ function NewOrderModalForm({
               setAddress(value);
               if (formErrors.address) setFormErrors((prev) => ({ ...prev, address: undefined }));
             }}
+            onCoordsChange={setSiteCoords}
             sites={selectedCustomer?.sites ?? []}
             error={Boolean(formErrors.address)}
             placeholder="Town, cross streets, or street address"

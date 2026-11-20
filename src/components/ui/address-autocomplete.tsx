@@ -3,7 +3,8 @@
 import { useId, useRef, useState } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
 
-import { usePlaceSuggestions } from '@/hooks/use-place-suggestions';
+import type { Coords } from '@/features/places/coords';
+import { usePlaceSuggestions, type PlaceSuggestion } from '@/hooks/use-place-suggestions';
 import { cn } from '@/lib/utils';
 
 interface AddressAutocompleteProps {
@@ -13,6 +14,11 @@ interface AddressAutocompleteProps {
   onChange: (value: string) => void;
   /** A Google suggestion was picked, such as "50 Niilo Hill Rd, Warren, ME, USA". */
   onPick: (text: string) => void;
+  /**
+   * The street's map point: null the moment the text is typed, cleared or edited, and the point
+   * Google gives once a suggestion is picked. A form saves what it was last told.
+   */
+  onCoordsChange?: (coords: Coords | null) => void;
   onBlur?: () => void;
   placeholder?: string;
   error?: boolean;
@@ -31,6 +37,7 @@ export function AddressAutocomplete({
   value,
   onChange,
   onPick,
+  onCoordsChange,
   onBlur,
   placeholder,
   error,
@@ -44,12 +51,25 @@ export function AddressAutocomplete({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const query = value.trim();
-  const suggestions = usePlaceSuggestions(query, open && !disabled && query.length >= 3, streetsOnly);
+  const { suggestions, fetchCoords } = usePlaceSuggestions(query, open && !disabled && query.length >= 3, streetsOnly);
+  // Counts edits, so a slow lookup never puts coordinates on text that was changed after the pick.
+  const edits = useRef(0);
 
-  const pick = (text: string) => {
-    onPick(text);
+  const edited = (next: string) => {
+    edits.current += 1;
+    onCoordsChange?.(null);
+    onChange(next);
+  };
+
+  const pick = (suggestion: PlaceSuggestion) => {
+    onPick(suggestion.text);
     setOpen(false);
     setActive(-1);
+    if (!onCoordsChange) return;
+    const editsAtPick = edits.current;
+    void fetchCoords(suggestion.placeId).then((coords) => {
+      if (edits.current === editsAtPick) onCoordsChange(coords);
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -100,7 +120,7 @@ export function AddressAutocomplete({
         value={value}
         placeholder={placeholder}
         onChange={(e) => {
-          onChange(e.target.value);
+          edited(e.target.value);
           setOpen(true);
           setActive(-1);
         }}
@@ -119,7 +139,7 @@ export function AddressAutocomplete({
           aria-label="Clear address"
           title="Clear address"
           onClick={() => {
-            onChange('');
+            edited('');
             setActive(-1);
             inputRef.current?.focus();
           }}
@@ -136,15 +156,15 @@ export function AddressAutocomplete({
           role="listbox"
           className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
         >
-          {suggestions.map((text, index) => (
+          {suggestions.map(({ text, placeId }, index) => (
             <li
-              key={text}
+              key={placeId ?? text}
               role="option"
               aria-selected={index === active}
               tabIndex={-1}
               // Keep focus in the input so the list does not close before the click lands.
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => pick(text)}
+              onClick={() => pick({ text, placeId })}
               onMouseEnter={() => setActive(index)}
               className={cn(
                 'flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-xs text-slate-800',

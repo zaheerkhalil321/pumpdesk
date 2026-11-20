@@ -52,7 +52,7 @@ async function saveSiteWhenConfirmed(
   try {
     const { data: job } = await supabase
       .from('jobs')
-      .select('booking_status, job_site_id, site_label, customer_id, version')
+      .select('booking_status, job_site_id, site_label, customer_id, version, site_latitude, site_longitude')
       .eq('id', result.id)
       .maybeSingle();
     if (!job || ['pending', 'inspection_pending', 'cancelled'].includes(job.booking_status) || job.job_site_id || !job.site_label) {
@@ -73,6 +73,14 @@ async function saveSiteWhenConfirmed(
       : existingQuery.is('address_line_1', null);
     const { data: existing } = await existingQuery.limit(1);
     let siteId = existing?.[0]?.id;
+    if (siteId && job.site_latitude != null && job.site_longitude != null) {
+      // A saved site that never had a map point gets the one picked on this order.
+      await supabase
+        .from('job_sites')
+        .update({ latitude: job.site_latitude, longitude: job.site_longitude })
+        .eq('id', siteId)
+        .is('latitude', null);
+    }
     if (!siteId) {
       const { data: created, error } = await supabase
         .from('job_sites')
@@ -82,6 +90,8 @@ async function saveSiteWhenConfirmed(
           city: address.city,
           state: address.state,
           postal_code: address.postalCode,
+          latitude: job.site_latitude,
+          longitude: job.site_longitude,
           timezone,
         })
         .select('id')
@@ -133,6 +143,31 @@ const FIELD_COLUMNS = {
   dispatch: 'dispatch',
 } as const;
 
+/** The order's map point for the RPC: both numbers when Google gave a point, otherwise nothing. */
+function siteCoordColumns(input: { siteLatitude?: number | null; siteLongitude?: number | null }) {
+  return input.siteLatitude != null && input.siteLongitude != null
+    ? { site_latitude: input.siteLatitude, site_longitude: input.siteLongitude }
+    : {};
+}
+
+/**
+ * The point to save when an order is edited. A point sent with the edit is saved. A new address
+ * sent without one clears the old point, which belonged to the previous address and would be wrong.
+ */
+async function updatedSiteCoords(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  fields: { siteLabel?: string; siteLatitude?: number | null; siteLongitude?: number | null },
+): Promise<{ site_latitude?: number | null; site_longitude?: number | null }> {
+  const given = siteCoordColumns(fields);
+  if (Object.keys(given).length > 0 || fields.siteLabel === undefined) return given;
+
+  const { data, error } = await supabase.from('jobs').select('site_label').eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data || data.site_label === fields.siteLabel) return {};
+  return { site_latitude: null, site_longitude: null };
+}
+
 export const createOrder = authedAction({
   schema: bookOrderSchema,
   roles: ORDER_EDITORS,
@@ -153,6 +188,7 @@ export const createOrder = authedAction({
     for (const [field, column] of Object.entries(FIELD_COLUMNS)) {
       if (field in input) payload[column] = input[field as keyof typeof input];
     }
+    Object.assign(payload, siteCoordColumns(input));
 
     const { data, error } = await supabase.rpc('book_job', { p: payload as Json });
     if (error) throw error;
@@ -173,6 +209,8 @@ export const updateOrder = authedAction({
       const value = fields[field as keyof typeof fields];
       if (value !== undefined) payload[column] = value;
     }
+
+    Object.assign(payload, await updatedSiteCoords(supabase, id, fields));
 
     // Moving the pour: work out the new start, end and arrival in the order's own timezone.
     if (date || pourTime || arriveBy || estimatedFinish || durationMinutes !== undefined) {

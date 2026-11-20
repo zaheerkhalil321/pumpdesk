@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { COORDS_PAIR_MESSAGE, coordsPairRule } from '@/features/places/coords';
 import { toE164 } from '@/lib/phone';
 
 /** Shared by the forms and the Server Actions. Only editable fields are listed. */
@@ -121,16 +122,15 @@ const jobSiteFields = {
   state: requiredText('State', 40),
   postalCode: text(12),
   timezone: timezone,
+  /** The address's map point from Google. Left out means "not given": see updateJobSite. */
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 };
 
-export const createJobSiteSchema = z.object({
-  customerId: uuid,
-  ...jobSiteFields,
-});
+const coordsPair = { message: COORDS_PAIR_MESSAGE, path: ['latitude'] };
 
-export const updateJobSiteSchema = z.object({
-  id: uuid,
-  ...jobSiteFields,
-});
+export const createJobSiteSchema = z.object({ customerId: uuid, ...jobSiteFields }).refine(coordsPairRule, coordsPair);
+
+export const updateJobSiteSchema = z.object({ id: uuid, ...jobSiteFields }).refine(coordsPairRule, coordsPair);
 
 export const deleteJobSiteSchema = z.object({ id: uuid });

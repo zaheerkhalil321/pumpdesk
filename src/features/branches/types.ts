@@ -8,6 +8,9 @@ export interface BranchItem {
   /** Two-letter code, e.g. "ME". */
   state: string;
   zipCode: string;
+  /** The map point saved from Google, or null when the address was typed by hand. */
+  latitude: number | null;
+  longitude: number | null;
   /** Shown as (207) 555-0100. */
   phone: string;
   isHq: boolean;

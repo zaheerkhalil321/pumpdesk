@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { optionalCoordsFields } from '@/features/places/coords';
+
 /** Shared by the order forms and the Server Actions. Times are what the forms show, e.g. "7:30 AM". */
 
 const uuid = z.string().uuid();
@@ -31,6 +33,8 @@ const orderFields = {
   customerId: uuid,
   jobSiteId: uuid.nullable().optional(),
   siteLabel: z.string().trim().min(2, 'Town or site address is required').max(200, 'Keep this under 200 characters'),
+  /** Google's map point for the typed address. Left out when the address was typed by hand or is a saved site. */
+  ...optionalCoordsFields,
   jobName: text(120).optional(),
   pourType: text(60).optional(),
   supplierName: text(120).optional(),

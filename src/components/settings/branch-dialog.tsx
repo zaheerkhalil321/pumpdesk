@@ -19,6 +19,7 @@ import { createBranchSchema, type BranchFormValues, type BranchFormOutput } from
 import type { BranchItem } from '@/features/branches/types';
 import { US_STATES } from '@/features/company/states';
 import { parseUsAddress } from '@/features/orders/address';
+import type { Coords } from '@/features/places/coords';
 import { reportAction } from '@/lib/action-feedback';
 
 interface BranchDialogProps {
@@ -38,6 +39,8 @@ const valuesOf = (branch: BranchItem | null, isFirst: boolean): BranchFormValues
   city: branch?.city ?? '',
   state: branch?.state ?? 'ME',
   zipCode: branch?.zipCode ?? '',
+  latitude: branch?.latitude ?? null,
+  longitude: branch?.longitude ?? null,
   phone: branch?.phone ?? '',
   isHq: branch?.isHq ?? isFirst,
 });
@@ -60,6 +63,12 @@ export function BranchDialog({ open, onOpenChange, branch, isFirst, onSaved }: B
   useEffect(() => {
     if (open) reset(valuesOf(branch, isFirst));
   }, [open, branch, isFirst, reset]);
+
+  /** The street's map point. Any hand edit of the address clears it, so a saved point always matches the address. */
+  const setCoords = (coords: Coords | null) => {
+    setValue('latitude', coords?.latitude ?? null, { shouldDirty: true });
+    setValue('longitude', coords?.longitude ?? null, { shouldDirty: true });
+  };
 
   /** A Google pick fills the street, town, state and ZIP (Google often leaves the ZIP out, so a typed one stays). */
   const fillFromGoogle = (text: string) => {
@@ -123,6 +132,7 @@ export function BranchDialog({ open, onOpenChange, branch, isFirst, onSaved }: B
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     onPick={fillFromGoogle}
+                    onCoordsChange={setCoords}
                     streetsOnly
                     placeholder="Start typing, e.g. 50 Niilo Hill Rd"
                     error={Boolean(errors.streetAddress)}
@@ -134,7 +144,12 @@ export function BranchDialog({ open, onOpenChange, branch, isFirst, onSaved }: B
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_9rem_6.5rem]">
               <FormField id="branch-city" label="Town or city" error={errors.city?.message}>
-                <Input id="branch-city" placeholder="Warren" className="h-10 text-sm" {...register('city')} />
+                <Input
+                  id="branch-city"
+                  placeholder="Warren"
+                  className="h-10 text-sm"
+                  {...register('city', { onChange: () => setCoords(null) })}
+                />
               </FormField>
               <FormField id="branch-state" label="State" error={errors.state?.message}>
                 <Controller
@@ -144,7 +159,10 @@ export function BranchDialog({ open, onOpenChange, branch, isFirst, onSaved }: B
                     <AppSelect
                       id="branch-state"
                       value={field.value}
-                      onChange={field.onChange}
+                      onChange={(next) => {
+                        field.onChange(next);
+                        setCoords(null);
+                      }}
                       options={US_STATES}
                       className="h-10 w-full text-sm"
                       contentClassName="max-h-64"

@@ -24,6 +24,8 @@ function job(overrides: Partial<JobRow> = {}): JobRow {
     customer_id: ID,
     job_site_id: null,
     site_label: "Rockland",
+    site_latitude: null,
+    site_longitude: null,
     job_name: null,
     pour_type: "Footings",
     supplier_name: null,

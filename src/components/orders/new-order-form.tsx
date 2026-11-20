@@ -39,6 +39,7 @@ const NEW_CUSTOMER = "__new_customer__";
 const NEW_CONTACT = "__new_contact__";
 import { AddSiteModal } from "@/components/customers/add-site-modal";
 import { SiteCombobox } from "@/components/orders/site-combobox";
+import { siteCoordsPayload, type Coords } from "@/features/places/coords";
 import { SupplierCombobox } from "@/components/orders/supplier-combobox";
 import { ensureSupplier } from "@/features/suppliers/ensure";
 import { QuickContactDialog } from "@/components/schedule/quick-contact-dialog";
@@ -203,6 +204,9 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
     return "";
   }, [paramSite, paramTown]);
 
+  // Google's map point for the typed address; null for a typed or saved address.
+  const [siteCoords, setSiteCoords] = useState<Coords | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -366,6 +370,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
     // A new customer means a new contact; offer the customer's first contact and site.
     setValue("jobContact", customer?.contacts[0]?.name ?? "");
     setValue("jobSite", customer?.sites[0]?.address ?? "", { shouldValidate: Boolean(customer?.sites[0]) });
+    setSiteCoords(null);
   };
 
   const [isSaving, startSaving] = useTransition();
@@ -426,6 +431,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
       customerId: selectedCustomer?.id ?? "",
       jobSiteId: savedSite?.id ?? null,
       siteLabel: data.jobSite,
+      ...siteCoordsPayload(savedSite ? null : siteCoords),
       jobName: data.jobName ?? "",
       pourType: pourTypeLabel,
       supplierName: data.supplier ?? "",
@@ -694,6 +700,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
                     <SiteCombobox
                       value={watch("jobSite")}
                       onChange={(value) => setValue("jobSite", value, { shouldValidate: true })}
+                      onCoordsChange={setSiteCoords}
                       sites={siteChoices}
                       error={Boolean(errors.jobSite)}
                       placeholder="Enter town, cross streets, or street address"
@@ -1346,6 +1353,7 @@ export function NewOrderForm({ options, todayIso }: NewOrderFormProps) {
           onCreated={(site) => {
             setAddedSites((prev) => [...prev, { customerId: selectedCustomer.id, site }]);
             setValue("jobSite", site.address, { shouldValidate: true });
+            setSiteCoords(null);
           }}
         />
       )}

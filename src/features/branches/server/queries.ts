@@ -13,7 +13,7 @@ export async function listBranches(): Promise<BranchItem[]> {
   const [branches, pumps] = await Promise.all([
     supabase
       .from('branches')
-      .select('id, name, code, address_line_1, city, state, postal_code, phone, is_hq, is_active')
+      .select('id, name, code, address_line_1, city, state, postal_code, latitude, longitude, phone, is_hq, is_active')
       .order('is_hq', { ascending: false })
       .order('is_active', { ascending: false })
       .order('name'),
@@ -34,6 +34,8 @@ export async function listBranches(): Promise<BranchItem[]> {
     city: b.city ?? '',
     state: b.state ?? '',
     zipCode: b.postal_code ?? '',
+    latitude: b.latitude === null ? null : Number(b.latitude),
+    longitude: b.longitude === null ? null : Number(b.longitude),
     phone: formatE164(b.phone),
     isHq: b.is_hq,
     isActive: b.is_active,

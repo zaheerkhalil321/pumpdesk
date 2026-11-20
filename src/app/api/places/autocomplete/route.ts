@@ -9,7 +9,7 @@ const MAX_LENGTH = 120;
 const STREET_TYPES = ['street_address', 'premise', 'subpremise', 'route'];
 
 type AutocompleteResponse = {
-  suggestions?: { placePrediction?: { text?: { text?: string } } }[];
+  suggestions?: { placePrediction?: { placeId?: string; text?: { text?: string } } }[];
 };
 
 /**
@@ -42,8 +42,9 @@ export async function GET(request: NextRequest) {
 
     const data = (await response.json()) as AutocompleteResponse;
     const suggestions = (data.suggestions ?? [])
-      .map((s) => s.placePrediction?.text?.text)
-      .filter((text): text is string => Boolean(text));
+      .map((s) => ({ text: s.placePrediction?.text?.text, placeId: s.placePrediction?.placeId }))
+      .filter((s): s is { text: string; placeId: string | undefined } => Boolean(s.text))
+      .map((s) => ({ text: s.text, placeId: s.placeId ?? null }));
     return NextResponse.json({ suggestions });
   } catch {
     return NextResponse.json({ suggestions: [] });

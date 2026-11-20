@@ -50,6 +50,7 @@ import { openCall, openText } from '@/lib/reach-out';
 import { QuickContactDialog } from '@/components/schedule/quick-contact-dialog';
 import { draftOrderText } from '@/features/sms/templates';
 import { shiftClock } from '@/features/orders/mappers';
+import { siteCoordsPayload, type Coords } from '@/features/places/coords';
 import { pumpMinutesFor } from '@/features/orders/duration';
 import { OrderTicketCard } from '@/components/tickets/order-ticket-card';
 import {
@@ -99,6 +100,8 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
   // ── Edit Order Screen Form State (reset from the saved order each time it opens) ──
   const [editCustomer, setEditCustomer] = useState(order.customer);
   const [editJobSite, setEditJobSite] = useState(order.jobSiteAddress);
+  // Google's map point when a suggestion was picked in this edit; otherwise the saved point stays.
+  const [editSiteCoords, setEditSiteCoords] = useState<Coords | null>(null);
   const [editContact, setEditContact] = useState(order.customerContact);
   const [editPO, setEditPO] = useState(order.purchaseOrder);
   const [editJobName, setEditJobName] = useState(order.jobName);
@@ -128,6 +131,7 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
   const openEditOrder = () => {
     setEditCustomer(order.customer);
     setEditJobSite(order.jobSiteAddress);
+    setEditSiteCoords(null);
     setEditContact(order.customerContact);
     setEditPO(order.purchaseOrder);
     setEditJobName(order.jobName);
@@ -257,6 +261,7 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
       customerId,
       jobSiteId: savedSite?.id ?? null,
       siteLabel: editJobSite,
+      ...siteCoordsPayload(savedSite ? null : editSiteCoords),
       contactId:
         selectedContact?.id ?? (editContact === order.customerContact ? order.contactId : null),
       purchaseOrder: editPO,
@@ -401,6 +406,7 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
                         // A different customer means a different contact and site.
                         setEditContact(next?.contacts[0]?.name ?? '');
                         setEditJobSite(next?.sites[0]?.address ?? '');
+                        setEditSiteCoords(null);
                         clearError('customer');
                       }}
                       options={[
@@ -429,6 +435,7 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
                         setEditJobSite(value);
                         clearError('jobSite');
                       }}
+                      onCoordsChange={setEditSiteCoords}
                       sites={selectedCustomer?.sites ?? []}
                       error={Boolean(errors.jobSite)}
                       placeholder="Town, cross streets, or street address"

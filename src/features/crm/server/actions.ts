@@ -17,6 +17,9 @@ import {
   updateCustomerSchema,
   updateJobSiteSchema,
 } from '@/features/crm/schemas';
+import { coordsColumns } from '@/features/places/coords';
+import type { Database } from '@/types/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const CRM_EDITORS = ['owner', 'admin', 'dispatcher', 'office', 'accountant'] as const;
 
@@ -275,6 +278,7 @@ export const createJobSite = authedAction({
         city: input.city,
         state: input.state,
         postal_code: input.postalCode,
+        ...coordsColumns(input.latitude, input.longitude),
         timezone: input.timezone,
       })
       .select('id')
@@ -284,6 +288,37 @@ export const createJobSite = authedAction({
     return { id: data.id };
   },
 });
+
+/**
+ * The map point to save when a job site is edited. A point sent with the edit is saved. An edited
+ * address sent without one clears the old point, which belonged to the previous address. An edit
+ * that leaves the address as it was keeps the point.
+ */
+async function siteCoordsToSave(
+  supabase: SupabaseClient<Database>,
+  input: {
+    id: string;
+    addressLine1: string | null;
+    city: string;
+    state: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  },
+) {
+  if (input.latitude != null && input.longitude != null) return coordsColumns(input.latitude, input.longitude);
+  const { data, error } = await supabase
+    .from('job_sites')
+    .select('address_line_1, city, state')
+    .eq('id', input.id)
+    .maybeSingle();
+  if (error) throw error;
+  const same =
+    data &&
+    (data.address_line_1 ?? null) === input.addressLine1 &&
+    data.city === input.city &&
+    data.state === input.state;
+  return same ? {} : coordsColumns(null, null);
+}
 
 export const updateJobSite = authedAction({
   schema: updateJobSiteSchema,
@@ -297,6 +332,7 @@ export const updateJobSite = authedAction({
         city: input.city,
         state: input.state,
         postal_code: input.postalCode,
+        ...(await siteCoordsToSave(supabase, input)),
         timezone: input.timezone,
       })
       .eq('id', input.id)

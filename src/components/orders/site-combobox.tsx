@@ -4,12 +4,18 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
 
 import type { OrderFormSite } from '@/features/orders/types';
+import type { Coords } from '@/features/places/coords';
 import { cn } from '@/lib/utils';
 import { usePlaceSuggestions } from '@/hooks/use-place-suggestions';
 
 interface SiteComboboxProps {
   value: string;
   onChange: (value: string) => void;
+  /**
+   * The typed address's map point: null whenever the text changes or a saved site is picked,
+   * and Google's point once one of its suggestions is picked. Saved sites keep their own.
+   */
+  onCoordsChange?: (coords: Coords | null) => void;
   /** The customer's saved sites. They are suggestions only: any text can be typed. */
   sites: OrderFormSite[];
   placeholder?: string;
@@ -26,10 +32,12 @@ interface SiteOption {
   /** What the list shows. */
   label: string;
   source: 'saved' | 'place';
+  /** Google's id for a suggestion, to look up its map point. */
+  placeId?: string | null;
 }
 
 /** One box for the job site: type a town or address, or pick one of the customer's saved sites. */
-export function SiteCombobox({ value, onChange, sites, placeholder, error, className, onBlur }: SiteComboboxProps) {
+export function SiteCombobox({ value, onChange, onCoordsChange, sites, placeholder, error, className, onBlur }: SiteComboboxProps) {
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -38,7 +46,7 @@ export function SiteCombobox({ value, onChange, sites, placeholder, error, class
 
   const typed = value.trim().toLowerCase();
   const isSavedAddress = sites.some((s) => s.address.toLowerCase() === typed);
-  const placeSuggestions = usePlaceSuggestions(value.trim(), open && typed.length >= 3 && !isSavedAddress);
+  const { suggestions: placeSuggestions, fetchCoords } = usePlaceSuggestions(value.trim(), open && typed.length >= 3 && !isSavedAddress);
 
   // Saved sites come first (all of them until something different is typed), then Google suggestions.
   const options = useMemo<SiteOption[]>(() => {
@@ -46,14 +54,30 @@ export function SiteCombobox({ value, onChange, sites, placeholder, error, class
       ? sites
       : sites.filter((s) => s.label.toLowerCase().includes(typed) || s.address.toLowerCase().includes(typed))
     ).map((s): SiteOption => ({ key: `site-${s.id}`, text: s.address, label: s.label, source: 'saved' }));
-    const places = placeSuggestions.map((text): SiteOption => ({ key: `place-${text}`, text, label: text, source: 'place' }));
+    const places = placeSuggestions.map(
+      ({ text, placeId }): SiteOption => ({ key: `place-${placeId ?? text}`, text, label: text, source: 'place', placeId }),
+    );
     return [...saved, ...places];
   }, [sites, typed, isSavedAddress, placeSuggestions]);
 
+  // Counts edits, so a slow lookup never puts coordinates on text that was changed after the pick.
+  const edits = useRef(0);
+
+  const edited = (next: string) => {
+    edits.current += 1;
+    onCoordsChange?.(null);
+    onChange(next);
+  };
+
   const pick = (option: SiteOption) => {
-    onChange(option.text);
+    edited(option.text);
     setOpen(false);
     setActive(-1);
+    if (option.source !== 'place' || !onCoordsChange) return;
+    const editsAtPick = edits.current;
+    void fetchCoords(option.placeId ?? null).then((coords) => {
+      if (edits.current === editsAtPick) onCoordsChange(coords);
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -101,7 +125,7 @@ export function SiteCombobox({ value, onChange, sites, placeholder, error, class
         value={value}
         placeholder={placeholder}
         onChange={(e) => {
-          onChange(e.target.value);
+          edited(e.target.value);
           setOpen(true);
           setActive(-1);
         }}
@@ -124,7 +148,7 @@ export function SiteCombobox({ value, onChange, sites, placeholder, error, class
           aria-label="Clear address"
           title="Clear address"
           onClick={() => {
-            onChange('');
+            edited('');
             setActive(-1);
             inputRef.current?.focus();
           }}

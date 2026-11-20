@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { COORDS_PAIR_MESSAGE, coordsFields, coordsPairRule } from '@/features/places/coords';
 import { toE164 } from '@/lib/phone';
 
 /** The database lets only owners and admins add or change branches. */
@@ -49,13 +50,18 @@ const branchFields = {
   phone,
   /** The main branch. Drive time starts from its address when an operator has no home yard. */
   isHq: z.boolean(),
+  /** The street's map point from Google. Empty for an address typed by hand, so it never goes stale. */
+  ...coordsFields,
 };
 
-export const createBranchSchema = z.object(branchFields);
+const coordsPair = { message: COORDS_PAIR_MESSAGE, path: ['latitude'] };
+
+export const createBranchSchema = z.object(branchFields).refine(coordsPairRule, coordsPair);
 
 export const updateBranchSchema = z
   .object({ id: z.string().uuid(), ...branchFields, isActive: z.boolean() })
-  .refine((b) => b.isActive || !b.isHq, { message: 'The main branch must stay active', path: ['isActive'] });
+  .refine((b) => b.isActive || !b.isHq, { message: 'The main branch must stay active', path: ['isActive'] })
+  .refine(coordsPairRule, coordsPair);
 
 export type BranchFormValues = z.input<typeof createBranchSchema>;
 export type BranchFormOutput = z.output<typeof createBranchSchema>;
