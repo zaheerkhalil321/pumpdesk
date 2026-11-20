@@ -1,5 +1,6 @@
 import type { OrderFormSupplier } from '@/features/suppliers/types';
 import type { OrderStatus } from '@/features/orders/statuses';
+import type { TicketItem } from '@/features/tickets/types';
 
 /** Real records the New order and quick-booking forms offer in their dropdowns. */
 
@@ -97,6 +98,8 @@ export interface NavCounts {
   today: number;
   /** Orders that are not cancelled and not in the past. */
   orders: number;
+  /** Work tickets submitted and awaiting office review. */
+  tickets?: number;
 }
 
 /** One row of the Orders list. */
@@ -121,6 +124,8 @@ export interface OrderItem {
   status: OrderStatus;
   invoiceStatus: 'Not created' | 'Create invoice' | 'Paid';
   volumeYards?: number;
+  hasTicket?: boolean;
+  ticketStatus?: string;
 }
 
 /** Everything the order page shows and edits. */
@@ -176,4 +181,6 @@ export interface FullOrderData {
   adjustedPrep: number;
   adjustedPour: number;
   adjustedCleanup: number;
+  /** The operator's work ticket, once one is started. */
+  ticket?: TicketItem | null;
 }

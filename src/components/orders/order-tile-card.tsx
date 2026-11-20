@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Layers,
   User,
+  FileText,
 } from 'lucide-react';
 import { ORDER_STATUS_STYLE } from '@/features/orders/statuses';
 import { openCall } from '@/lib/reach-out';
@@ -53,21 +54,29 @@ export function OrderTileCard({ order, onClick }: OrderTileCardProps) {
           </div>
 
           {/* Status Badge */}
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0',
-              ORDER_STATUS_STYLE[order.status].badge,
+          <div className="flex items-center gap-1.5 shrink-0">
+            {order.hasTicket && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
+                <FileText className="h-2.5 w-2.5" />
+                <span>Ticket</span>
+              </span>
             )}
-          >
             <span
               className={cn(
-                'h-1.5 w-1.5 rounded-full shrink-0',
-                ORDER_STATUS_STYLE[order.status].dot,
-                order.status === 'Confirmed' && 'animate-pulse',
+                'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0',
+                ORDER_STATUS_STYLE[order.status].badge,
               )}
-            />
-            <span>{order.status}</span>
-          </span>
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full shrink-0',
+                  ORDER_STATUS_STYLE[order.status].dot,
+                  order.status === 'Confirmed' && 'animate-pulse',
+                )}
+              />
+              <span>{order.status}</span>
+            </span>
+          </div>
         </div>
 
         {/* ── 2. Body: Rig Hero Block + Spec Badges ── */}

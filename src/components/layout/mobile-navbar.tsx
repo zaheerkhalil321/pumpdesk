@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronDown,
   MapPin,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +54,13 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: true,
   },
   {
+    title: 'Tickets',
+    href: '/tickets',
+    icon: Receipt,
+    badgeType: 'count',
+    matchPrefix: true,
+  },
+  {
     title: 'Customers',
     href: '/customers',
     icon: Users,
@@ -84,10 +92,11 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-/** Adds the live count to the Schedule and Orders links. */
+/** Adds the live count to the Schedule, Orders, and Tickets links. */
 function withBadge(item: NavItem, counts: NavCounts): NavItem {
   if (item.href === '/schedule') return { ...item, badge: counts.today > 0 ? `${counts.today} today` : undefined };
   if (item.href === '/orders') return { ...item, badge: counts.orders > 0 ? String(counts.orders) : undefined };
+  if (item.href === '/tickets') return { ...item, badge: counts.tickets && counts.tickets > 0 ? String(counts.tickets) : undefined };
   return item;
 }
 

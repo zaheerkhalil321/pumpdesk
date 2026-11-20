@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { DndContext, DragOverlay, pointerWithin, type DragEndEvent, type DragMoveEvent } from '@dnd-kit/core';
-import { Truck, Plus, GripVertical, Clock, Check, TriangleAlert } from 'lucide-react';
+import { Truck, Plus, GripVertical, Clock, Check, TriangleAlert, FileText } from 'lucide-react';
 import { DraggableCard, DroppableLane, useTimelineSensors } from './timeline-dnd';
 import { cn } from '@/lib/utils';
 import { PumpLane, ScheduleBooking } from './schedule-types';
@@ -566,6 +566,15 @@ export function TimelineGrid({
                                     Overlaps {overlap.customerName} ({overlap.orderNumber}) at {timeRangeLabel(overlap)}
                                   </TooltipContent>
                                 </Tooltip>
+                              )}
+                              {booking.hasTicket && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 rounded bg-sky-100 text-sky-800 border border-sky-300/80 px-1 py-0.2 text-[9px] font-bold shrink-0 shadow-2xs"
+                                  title={booking.ticketStatus === 'Reviewed' ? 'Ticket reviewed' : 'Ticket submitted'}
+                                >
+                                  <FileText className="h-2.5 w-2.5" />
+                                  {!isNarrow && <span>{booking.ticketStatus === 'Reviewed' ? 'Reviewed' : 'Ticket'}</span>}
+                                </span>
                               )}
                               {booking.volumeYards > 0 && (
                                 <span

@@ -10,6 +10,8 @@ import { todayIn } from '@/features/fleet/mappers';
 import { listOperators, listPumps } from '@/features/fleet/server/queries';
 import { listSuppliers } from '@/features/suppliers/server/queries';
 import type { OrderFormSupplier } from '@/features/suppliers/types';
+import { getTicketForJob } from '@/features/tickets/server/queries';
+import { TICKET_STATE_LABEL } from '@/features/tickets/utils';
 import { formatE164 } from '@/lib/phone';
 import {
   JOB_COLUMNS,
@@ -139,7 +141,7 @@ export async function getOrderFormOptions(): Promise<OrderFormOptions> {
 const unique = <T,>(values: T[]) => [...new Set(values)];
 
 /** Adds customer, contact, pump and operator names to a list of jobs. */
-async function hydrate(jobs: JobRow[]): Promise<HydratedJob[]> {
+export async function hydrate(jobs: JobRow[]): Promise<HydratedJob[]> {
   if (jobs.length === 0) return [];
   const supabase = await createClient();
   const jobIds = jobs.map((j) => j.id);
@@ -251,7 +253,10 @@ export async function getOrder(jobNumber: string): Promise<FullOrderData | null>
   if (error) throw error;
   if (!data) return null;
   const [hydrated] = await hydrate([data as JobRow]);
-  return toFullOrder(hydrated);
+  const order = toFullOrder(hydrated);
+  order.ticket = await getTicketForJob(order.jobId);
+  if (order.ticket) order.workTicketStatus = TICKET_STATE_LABEL[order.ticket.state];
+  return order;
 }
 
 /**
@@ -383,12 +388,12 @@ export async function listDayCounts(from: string, to: string): Promise<DayCounts
   return counts;
 }
 
-/** The counts shown next to Schedule and Orders in the sidebar. */
+/** The counts shown next to Schedule, Orders, and Tickets in the sidebar. */
 export async function getNavCounts(): Promise<NavCounts> {
   const session = await requireSession();
   const supabase = await createClient();
   const today = todayIn(session.timezone);
-  const [todayJobs, upcoming] = await Promise.all([
+  const [todayJobs, upcoming, pendingTickets] = await Promise.all([
     supabase
       .from('jobs')
       .select('id', { count: 'exact', head: true })
@@ -399,6 +404,14 @@ export async function getNavCounts(): Promise<NavCounts> {
       .select('id', { count: 'exact', head: true })
       .gte('service_date', today)
       .neq('booking_status', 'cancelled'),
+    supabase
+      .from('work_tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'submitted'),
   ]);
-  return { today: todayJobs.count ?? 0, orders: upcoming.count ?? 0 };
+  return {
+    today: todayJobs.count ?? 0,
+    orders: upcoming.count ?? 0,
+    tickets: pendingTickets.count ?? 0,
+  };
 }

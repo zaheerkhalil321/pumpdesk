@@ -51,6 +51,7 @@ import { QuickContactDialog } from '@/components/schedule/quick-contact-dialog';
 import { draftOrderText } from '@/features/sms/templates';
 import { shiftClock } from '@/features/orders/mappers';
 import { pumpMinutesFor } from '@/features/orders/duration';
+import { OrderTicketCard } from '@/components/tickets/order-ticket-card';
 import {
   EDITABLE_ORDER_STATUSES,
   ORDER_STATUS_STYLE,
@@ -1216,6 +1217,9 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
                   </div>
                 </div>
               </div>
+
+              {/* Work Ticket */}
+              <OrderTicketCard ticket={order.ticket} />
 
               {/* Billing */}
               <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">

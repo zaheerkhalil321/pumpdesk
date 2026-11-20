@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   Table as TableIcon,
   SlidersHorizontal,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -499,6 +500,7 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                   <th className="py-3 px-4">Customer / Job site</th>
                   <th className="py-3 px-4">Pump / Operator</th>
                   <th className="py-3 px-4">Job status</th>
+                  <th className="py-3 px-4">Ticket</th>
                   <th className="py-3 px-4">Invoice</th>
                   <th className="py-3 px-4 text-right sm:pr-6"></th>
                 </tr>
@@ -584,6 +586,25 @@ export function OrdersDirectory({ orders }: { orders: OrderItem[] }) {
                         />
                         <span>{order.status}</span>
                       </span>
+                    </td>
+
+                    {/* Work Ticket Status */}
+                    <td className="py-3.5 px-4">
+                      {order.hasTicket ? (
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                            order.ticketStatus === 'Reviewed'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
+                              : 'bg-sky-50 text-sky-700 border-sky-200/80'
+                          )}
+                        >
+                          <FileText className="h-3 w-3" />
+                          <span>{order.ticketStatus ?? 'Submitted'}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs font-normal">Missing</span>
+                      )}
                     </td>
 
                     {/* Invoice Status */}

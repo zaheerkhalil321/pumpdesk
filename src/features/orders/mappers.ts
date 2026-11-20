@@ -87,6 +87,8 @@ function orderStatus(job: JobRow): OrderItem['status'] {
 
 export function toOrderItem(h: HydratedJob): OrderItem {
   const { job } = h;
+  const hasTicket = job.booking_status === 'turned_in' || job.booking_status === 'reviewed';
+  const ticketStatus = job.booking_status === 'reviewed' ? 'Reviewed' : job.booking_status === 'turned_in' ? 'Submitted' : undefined;
   return {
     id: job.job_number,
     jobId: job.id,
@@ -104,6 +106,8 @@ export function toOrderItem(h: HydratedJob): OrderItem {
     status: orderStatus(job),
     invoiceStatus: 'Not created',
     volumeYards: Number(job.estimated_yards),
+    hasTicket,
+    ticketStatus,
   };
 }
 
@@ -218,5 +222,12 @@ export function toBooking(h: HydratedJob): ScheduleBooking {
           ? 'draft'
           : 'unassigned',
     dispatchedAt: job.dispatched_at ? clockOf(job.dispatched_at, tz) : undefined,
+    hasTicket: job.booking_status === 'turned_in' || job.booking_status === 'reviewed',
+    ticketStatus:
+      job.booking_status === 'reviewed'
+        ? 'Reviewed'
+        : job.booking_status === 'turned_in'
+          ? 'Submitted'
+          : undefined,
   };
 }

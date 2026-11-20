@@ -55,6 +55,8 @@ export interface ScheduleBooking {
   contactId?: string;
   contactName?: string;
   contactPhone?: string;
+  hasTicket?: boolean;
+  ticketStatus?: string;
 }
 
 export interface ScheduleFilters {
