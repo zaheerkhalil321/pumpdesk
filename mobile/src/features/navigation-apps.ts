@@ -1,51 +1,32 @@
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
+import type { Place } from '@/api/types';
+import {
+  buildMapsLink,
+  getDestination,
+  type MapsPlatform,
+  type NavigationAppChoice,
+} from './navigation-urls';
 
-export type NavigationAppChoice = 'ask' | 'apple' | 'google' | 'waze';
+export type { NavigationApp, NavigationAppChoice } from './navigation-urls';
 
+const platform: MapsPlatform =
+  Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'other';
+
+/**
+ * Open turn-by-turn directions to a place. Tries the app's own link first and
+ * falls back to the web link if the app is not installed (or in Expo Go).
+ * canOpenURL is deliberately not used: it needs scheme declarations that Expo
+ * Go ignores and Android 11+ hides, while openURL rejects when nothing handles it.
+ */
 export async function openMaps(
-  address: string,
-  preferredApp: NavigationAppChoice = 'ask'
+  place: Place,
+  app: NavigationAppChoice = 'ask'
 ): Promise<void> {
-  const encoded = encodeURIComponent(address);
-
-  if (preferredApp === 'apple' && Platform.OS === 'ios') {
-    const url = `maps://?daddr=${encoded}`;
-    await Linking.openURL(url).catch(() => {});
-    return;
+  const link = buildMapsLink(getDestination(place), app, platform);
+  try {
+    await Linking.openURL(link.native);
+  } catch {
+    await Linking.openURL(link.web).catch(() => {});
   }
-
-  if (preferredApp === 'google') {
-    const nativeUrl = `comgooglemaps://?daddr=${encoded}`;
-    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
-    const canOpen = await Linking.canOpenURL(nativeUrl);
-    if (canOpen) {
-      await Linking.openURL(nativeUrl).catch(() => {});
-    } else {
-      await Linking.openURL(webUrl).catch(() => {});
-    }
-    return;
-  }
-
-  if (preferredApp === 'waze') {
-    const nativeUrl = `waze://?q=${encoded}&navigate=yes`;
-    const webUrl = `https://waze.com/ul?q=${encoded}&navigate=yes`;
-    const canOpen = await Linking.canOpenURL(nativeUrl);
-    if (canOpen) {
-      await Linking.openURL(nativeUrl).catch(() => {});
-    } else {
-      await Linking.openURL(webUrl).catch(() => {});
-    }
-    return;
-  }
-
-  // Default / Ask: open native map viewer
-  const defaultUrl =
-    Platform.OS === 'ios'
-      ? `maps://?daddr=${encoded}`
-      : `geo:0,0?q=${encoded}`;
-
-  await Linking.openURL(defaultUrl).catch(() => {
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encoded}`).catch(() => {});
-  });
 }

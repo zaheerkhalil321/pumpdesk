@@ -36,25 +36,23 @@ export default function JobsScreen() {
   const { showAlert } = useTopAlert();
 
   const [tabIndex, setTabIndex] = useState(0); // 0 = Today, 1 = Upcoming
+  const [pulling, setPulling] = useState(false);
 
   const {
     data: todayJobs = [],
     isLoading: loadingToday,
     refetch: refetchToday,
-    isRefetching: refetchingToday,
   } = useTodayJobs();
 
   const {
     data: upcomingJobs = [],
     isLoading: loadingUpcoming,
     refetch: refetchUpcoming,
-    isRefetching: refetchingUpcoming,
   } = useUpcomingJobs();
 
   const acknowledgeMutation = useAcknowledgeJob();
 
   const firstName = operator?.firstName || 'Rob';
-  const dispatchPhone = operator?.company?.dispatchPhone || '+12075550199';
   const todayDateString = formatDateInZone(new Date(), DEFAULT_TIMEZONE);
 
   // v2: notification bell is hidden for now
@@ -76,12 +74,14 @@ export default function JobsScreen() {
   };
 
   const handleRefresh = async () => {
-    if (tabIndex === 0) {
-      await refetchToday();
-    } else {
-      await refetchUpcoming();
+    setPulling(true);
+    try {
+      await (tabIndex === 0 ? refetchToday() : refetchUpcoming());
+    } finally {
+      setPulling(false);
     }
   };
+
 
   // Categorize today's jobs into completed, next, later cleanly without mutation
   const sortedToday = [...todayJobs].sort(
@@ -121,7 +121,9 @@ export default function JobsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refetchingToday || refetchingUpcoming}
+            // Only the operator's pull shows the spinner. Background reloads (after a tap, on focus) must not:
+            // tying it to isRefetching left it stuck on screen.
+            refreshing={pulling}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
@@ -186,7 +188,7 @@ export default function JobsScreen() {
                 onPress={() => setTabIndex(1)}
                 style={{ marginBottom: 12, width: '100%' }}
               />
-              <ContactDispatchButtons dispatchPhone={dispatchPhone} />
+              <ContactDispatchButtons />
             </EmptyState>
           ) : (
             <View style={styles.jobList}>
@@ -212,7 +214,7 @@ export default function JobsScreen() {
               title="No upcoming jobs yet"
               subtitle="Dispatch will assign and notify you as new pours are scheduled."
             >
-              <ContactDispatchButtons dispatchPhone={dispatchPhone} />
+              <ContactDispatchButtons />
             </EmptyState>
           ) : (
             <View style={styles.upcomingContainer}>

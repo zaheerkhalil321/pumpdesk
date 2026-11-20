@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet, Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
-import { AppText, Button } from '@/components/ui';
+import { AppText } from './AppText';
+import { Button } from './Button';
 import { useTheme } from '@/theme';
 import { fontFamilies } from '@/theme/typography';
 

@@ -1,7 +1,10 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
 
+/** Launch: signed-in operators go straight to their jobs; everyone else signs in. */
 export default function Index() {
-  // Always start at the Auth flow for repeated testing (per user request)
-  return <Redirect href="/(auth)/sign-in" />;
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return null;
+  return <Redirect href={isAuthenticated ? '/(app)/(jobs)' : '/(auth)/sign-in'} />;
 }

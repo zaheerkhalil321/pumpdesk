@@ -1,6 +1,7 @@
 module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['./jest.setup.js'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/live/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

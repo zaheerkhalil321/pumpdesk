@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ArrowRight } from 'lucide-react-native';
 import { AppText, Card } from '@/components/ui';
-import type { ClockEntry } from '@/hooks/useTimeClock';
+import type { ClockEntry } from '@/api/types';
 import { formatHoursMinutes, formatLocalDayLabel, formatLocalTime } from '@/lib/dates';
 import { useTheme } from '@/theme';
 import { fontFamilies } from '@/theme/typography';
@@ -34,7 +34,7 @@ export const DayCard: React.FC<DayCardProps> = ({ day, entries, workedMs, now })
         const running = !entry.clockedOutAt;
         return (
           <View
-            key={entry.clockedInAt}
+            key={entry.id}
             style={[
               styles.shift,
               index > 0 ? { borderTopColor: colors.border, borderTopWidth: 1 } : null,

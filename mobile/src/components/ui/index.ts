@@ -21,3 +21,4 @@ export * from './ContactDispatchSheet';
 export * from './OfflineBar';
 export * from './PumpDeskLogo';
 export * from './TopAlert';
+export * from './OptionSheet';

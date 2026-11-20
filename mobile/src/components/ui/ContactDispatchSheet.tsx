@@ -15,7 +15,7 @@ export interface ContactDispatchSheetProps {
 export const ContactDispatchSheet: React.FC<ContactDispatchSheetProps> = ({
   visible,
   onClose,
-  dispatchPhone = '+12075550199',
+  dispatchPhone,
 }) => {
   const { colors, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();

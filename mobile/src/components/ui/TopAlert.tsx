@@ -6,13 +6,13 @@ import ToastMessage, {
   ToastConfigParams,
 } from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CheckCircle2, Info } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle2, Info } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/theme';
 import { fontFamilies } from '@/theme/typography';
 import { AppText } from './AppText';
 
-type AlertTone = 'success' | 'info';
+type AlertTone = 'success' | 'info' | 'warning';
 
 export interface AlertAction {
   label: string;
@@ -49,9 +49,10 @@ const AlertCard: React.FC<{
   action?: AlertAction;
 }> = ({ tone, title, message, action }) => {
   const { colors, radius } = useTheme();
-  const accent = tone === 'success' ? colors.done : colors.info;
-  const accentSoft = tone === 'success' ? colors.doneSoft : colors.infoSoft;
-  const Icon = tone === 'success' ? CheckCircle2 : Info;
+  const accent = tone === 'success' ? colors.done : tone === 'warning' ? colors.warning : colors.info;
+  const accentSoft =
+    tone === 'success' ? colors.doneSoft : tone === 'warning' ? colors.warningSoft : colors.infoSoft;
+  const Icon = tone === 'success' ? CheckCircle2 : tone === 'warning' ? AlertTriangle : Info;
 
   return (
     <View
@@ -105,6 +106,9 @@ const toastConfig: ToastConfig = {
   info: ({ text1, text2, props }: ToastConfigParams<AlertProps>) => (
     <AlertCard tone="info" title={text1} message={text2} action={props?.action} />
   ),
+  warning: ({ text1, text2, props }: ToastConfigParams<AlertProps>) => (
+    <AlertCard tone="warning" title={text1} message={text2} action={props?.action} />
+  ),
 };
 
 /**
@@ -124,7 +128,7 @@ export const TopAlertProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       text1: title,
       text2: options?.message,
       position: 'top',
-      visibilityTime: options?.action ? DURATION_WITH_ACTION_MS : DURATION_MS,
+      visibilityTime: options?.action || tone === 'warning' ? DURATION_WITH_ACTION_MS : DURATION_MS,
       props: { action: options?.action } satisfies AlertProps,
     });
   }, []);

@@ -4,20 +4,21 @@ import { useRouter } from 'expo-router';
 import { Screen, AppText, Button, PhoneField, ContactDispatchSheet } from '@/components/ui';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { useAuth } from '@/hooks/useAuth';
-import { extractDigits, isValidUsPhone } from '@/lib/phone';
-import { ApiError } from '@/api';
+import { CountryCode, isValidPhone, toE164 } from '@/lib/phone';
+import { ApiError, isMockMode } from '@/api';
 
 export default function SignInScreen() {
   const router = useRouter();
   const { sendCode } = useAuth();
 
-  const [phone, setPhone] = useState('(207) 555-0168');
+  const [country, setCountry] = useState<CountryCode>('US');
+  // Demo data: the seed operator's number is filled in. Real backend: start empty.
+  const [phone, setPhone] = useState(isMockMode ? '(207) 555-0168' : '');
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [showHelpSheet, setShowHelpSheet] = useState(false);
 
-  const cleanDigits = extractDigits(phone);
-  const isValid = isValidUsPhone(cleanDigits);
+  const isValid = isValidPhone(phone, country);
 
   const handleSendCode = async () => {
     if (!isValid || loading) return;
@@ -25,7 +26,7 @@ export default function SignInScreen() {
     setLoading(true);
 
     try {
-      await sendCode(phone);
+      await sendCode(toE164(phone, country));
       router.push('/(auth)/verify');
     } catch (err: any) {
       if (err instanceof ApiError) {
@@ -69,7 +70,12 @@ export default function SignInScreen() {
                 setPhone(formatted);
                 if (error) setError(undefined);
               }}
-              placeholder="(555) 123-4567"
+              country={country}
+              onCountryChange={(next) => {
+                setCountry(next);
+                setPhone('');
+                setError(undefined);
+              }}
               helperText="Use the number your company has on file."
               error={error}
             />

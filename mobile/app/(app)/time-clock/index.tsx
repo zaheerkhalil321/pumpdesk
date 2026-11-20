@@ -1,37 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { View, StyleSheet, RefreshControl } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Screen, AppText, Card, ListRow, useTopAlert } from '@/components/ui';
 import { ClockCard } from '@/components/timeclock/ClockCard';
-import { useTimeClock, workedBetween } from '@/hooks/useTimeClock';
+import { useTimeClock } from '@/hooks/useTimeClock';
+import { useTheme } from '@/theme';
 import {
   formatDateInZone,
   formatHoursMinutes,
   formatLocalTime,
-  startOfWeekMonday,
   DEFAULT_TIMEZONE,
 } from '@/lib/dates';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export default function TimeClockScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { showAlert } = useTopAlert();
-  const { entries, openEntry, clockIn, clockOut } = useTimeClock();
-  const [now, setNow] = useState(() => Date.now());
+  const { openEntry, now, workedToday, workedWeek, clockIn, clockOut, refetch, loadFailed } =
+    useTimeClock();
+  const [pulling, setPulling] = useState(false);
 
-  // Keep the totals moving while the operator is on the clock.
-  useEffect(() => {
-    if (!openEntry) return;
-    const id = setInterval(() => setNow(Date.now()), 15000);
-    return () => clearInterval(id);
-  }, [openEntry]);
+  // Hours can change in the office, so reload whenever the tab comes into view.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
-  const today = new Date(now);
-  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const weekStart = startOfWeekMonday(today);
-  const workedToday = workedBetween(entries, dayStart, new Date(dayStart.getTime() + DAY_MS), now);
-  const workedWeek = workedBetween(entries, weekStart, new Date(weekStart.getTime() + 7 * DAY_MS), now);
+  const handleRefresh = async () => {
+    setPulling(true);
+    try {
+      await refetch();
+    } finally {
+      setPulling(false);
+    }
+  };
 
   const handleClockIn = () => {
     clockIn();
@@ -44,7 +47,14 @@ export default function TimeClockScreen() {
   };
 
   return (
-    <Screen scroll padded bottomInset={false}>
+    <Screen
+      scroll
+      padded
+      bottomInset={false}
+      refreshControl={
+        <RefreshControl refreshing={pulling} onRefresh={handleRefresh} tintColor={colors.primary} />
+      }
+    >
       <View style={styles.content}>
         <View style={styles.header}>
           <AppText variant="display" tone="heading" accessibilityRole="header">
@@ -53,6 +63,11 @@ export default function TimeClockScreen() {
           <AppText variant="body" tone="muted" style={styles.date}>
             {formatDateInZone(new Date(now), DEFAULT_TIMEZONE)}
           </AppText>
+          {loadFailed ? (
+            <AppText variant="small" tone="danger" style={styles.date}>
+              Couldn&apos;t load your hours. Pull down to try again.
+            </AppText>
+          ) : null}
         </View>
 
         <ClockCard

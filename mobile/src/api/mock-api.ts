@@ -6,6 +6,7 @@ import {
   JobStep,
   TicketExtra,
   WorkTicketDraft,
+  ClockEntry,
   ApiError,
 } from './types';
 import { OperatorApi } from './operator-api';
@@ -22,29 +23,34 @@ const JOBS_STORAGE_KEY = '@pumpdesk/mock_jobs';
 const TICKETS_STORAGE_KEY = '@pumpdesk/mock_tickets';
 const SESSION_STORAGE_KEY = '@pumpdesk/mock_session';
 const SEED_DAY_STORAGE_KEY = '@pumpdesk/mock_seed_day';
+const TIME_STORAGE_KEY = '@pumpdesk/mock_time_entries';
 const SEED_ZONE = 'America/New_York';
 
 // The seed is built around "today", so saved demo data goes stale the next day.
 const todayKey = () => formatInTimeZone(new Date(), SEED_ZONE, 'yyyy-MM-dd');
 
+const DAY_MS = 24 * 60 * 60 * 1000;
 const delay = (ms: number = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
 class MockApi implements OperatorApi {
   private jobs: OperatorJob[] = [];
   private tickets: Record<string, WorkTicketDraft> = {};
   private session: Operator | null = null;
+  private timeEntries: ClockEntry[] = [];
   private initialized = false;
 
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
 
     try {
-      const [savedJobs, savedTickets, savedSession, savedSeedDay] = await Promise.all([
+      const [savedJobs, savedTickets, savedSession, savedSeedDay, savedTime] = await Promise.all([
         AsyncStorage.getItem(JOBS_STORAGE_KEY),
         AsyncStorage.getItem(TICKETS_STORAGE_KEY),
         AsyncStorage.getItem(SESSION_STORAGE_KEY),
         AsyncStorage.getItem(SEED_DAY_STORAGE_KEY),
+        AsyncStorage.getItem(TIME_STORAGE_KEY),
       ]);
+      if (savedTime) this.timeEntries = JSON.parse(savedTime);
 
       if (savedJobs && savedTickets && savedSeedDay === todayKey()) {
         this.jobs = JSON.parse(savedJobs);
@@ -73,6 +79,7 @@ class MockApi implements OperatorApi {
     await Promise.all([
       AsyncStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(this.jobs)),
       AsyncStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(this.tickets)),
+      AsyncStorage.setItem(TIME_STORAGE_KEY, JSON.stringify(this.timeEntries)),
       this.session
         ? AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(this.session))
         : AsyncStorage.removeItem(SESSION_STORAGE_KEY),
@@ -118,6 +125,11 @@ class MockApi implements OperatorApi {
       throw new ApiError('forbidden', 'Not signed in');
     }
     return this.session;
+  }
+
+  onSignedOut(): () => void {
+    // The demo login never expires on its own.
+    return () => undefined;
   }
 
   async listToday(): Promise<OperatorJob[]> {
@@ -189,6 +201,66 @@ class MockApi implements OperatorApi {
     await this.persist();
   }
 
+  async listTimeEntries(from: string, to: string): Promise<ClockEntry[]> {
+    await delay(150);
+    await this.ensureInitialized();
+    const lo = new Date(from).getTime();
+    const hi = new Date(to).getTime();
+    if (!(hi > lo) || hi - lo > 62 * DAY_MS) throw new ApiError('invalid_range', 'That date range is too long.');
+    return this.timeEntries
+      .filter(
+        (e) =>
+          new Date(e.clockedInAt).getTime() < hi &&
+          (e.clockedOutAt ? new Date(e.clockedOutAt).getTime() : Infinity) > lo
+      )
+      .sort((a, b) => a.clockedInAt.localeCompare(b.clockedInAt))
+      .map((e) => ({ ...e }));
+  }
+
+  async clockIn(at: string): Promise<ClockEntry> {
+    await delay(200);
+    await this.ensureInitialized();
+    const t = new Date(at).getTime();
+    if (Number.isNaN(t) || t > Date.now() + 5 * 60 * 1000) {
+      throw new ApiError('invalid_time', 'That time is not valid.');
+    }
+    const open = this.timeEntries.find((e) => !e.clockedOutAt);
+    if (open) return { ...open };
+    const last = this.timeEntries.reduce<number>(
+      (max, e) => Math.max(max, e.clockedOutAt ? new Date(e.clockedOutAt).getTime() : 0),
+      0
+    );
+    if (t < last) throw new ApiError('overlaps_previous', 'That time overlaps your last shift.');
+    const entry: ClockEntry = {
+      id: `mock-time-${t}`,
+      clockedInAt: new Date(t).toISOString(),
+      clockedOutAt: null,
+      breakMinutes: 0,
+      jobId: null,
+    };
+    this.timeEntries.push(entry);
+    await this.persist();
+    return { ...entry };
+  }
+
+  async clockOut(at: string): Promise<ClockEntry | null> {
+    await delay(200);
+    await this.ensureInitialized();
+    const t = new Date(at).getTime();
+    if (Number.isNaN(t) || t > Date.now() + 5 * 60 * 1000) {
+      throw new ApiError('invalid_time', 'That time is not valid.');
+    }
+    const open = this.timeEntries.find((e) => !e.clockedOutAt);
+    if (open) {
+      if (t < new Date(open.clockedInAt).getTime()) throw new ApiError('invalid_time', 'That time is not valid.');
+      open.clockedOutAt = new Date(t).toISOString();
+      await this.persist();
+      return { ...open };
+    }
+    const latest = [...this.timeEntries].sort((a, b) => b.clockedInAt.localeCompare(a.clockedInAt))[0];
+    return latest ? { ...latest } : null;
+  }
+
   async getTicketExtras(): Promise<TicketExtra[]> {
     return [...SEED_EXTRAS];
   }
@@ -227,6 +299,7 @@ class MockApi implements OperatorApi {
     this.jobs = seed.jobs;
     this.tickets = seed.tickets;
     this.session = SEED_OPERATOR;
+    this.timeEntries = [];
     await AsyncStorage.setItem(SEED_DAY_STORAGE_KEY, todayKey());
     await this.persist();
     // Drop any waiting changes too, so they cannot be applied on top of the fresh data.

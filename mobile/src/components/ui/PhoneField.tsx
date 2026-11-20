@@ -4,11 +4,13 @@ import {
   TextInput,
   StyleSheet,
   ViewStyle,
+  Pressable,
 } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
 import { useTheme } from '@/theme';
 import { fontFamilies } from '@/theme/typography';
-import { formatUsPhone, extractDigits } from '@/lib/phone';
+import { COUNTRIES, COUNTRY_LIST, CountryCode, formatNational, nationalDigits } from '@/lib/phone';
+import { OptionSheet } from './OptionSheet';
 import { AppText } from './AppText';
 
 export interface PhoneFieldProps {
@@ -20,6 +22,9 @@ export interface PhoneFieldProps {
   placeholder?: string;
   containerStyle?: ViewStyle;
   editable?: boolean;
+  /** Country of the number; the pill on the left changes it. */
+  country?: CountryCode;
+  onCountryChange?: (country: CountryCode) => void;
 }
 
 export const PhoneField: React.FC<PhoneFieldProps> = ({
@@ -28,17 +33,19 @@ export const PhoneField: React.FC<PhoneFieldProps> = ({
   onChangeText,
   helperText = 'Use the number your company has on file.',
   error,
-  placeholder = '(555) 123-4567',
+  placeholder,
   containerStyle,
   editable = true,
+  country = 'US',
+  onCountryChange,
 }) => {
   const { colors, heights, radius, spacing, typography, iconSizes } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const current = COUNTRIES[country];
 
   const handleChange = (text: string) => {
-    const raw = extractDigits(text).slice(0, 10);
-    const formatted = formatUsPhone(raw);
-    onChangeText(formatted, raw);
+    onChangeText(formatNational(text, country), nationalDigits(text, country));
   };
 
   const getBorderColor = () => {
@@ -66,7 +73,11 @@ export const PhoneField: React.FC<PhoneFieldProps> = ({
           },
         ]}
       >
-        <View
+        <Pressable
+          onPress={onCountryChange ? () => setPickerOpen(true) : undefined}
+          disabled={!onCountryChange || !editable}
+          accessibilityRole="button"
+          accessibilityLabel={`Country: ${current.name} +${current.dial}. Change country`}
           style={[
             styles.countryPill,
             {
@@ -76,14 +87,16 @@ export const PhoneField: React.FC<PhoneFieldProps> = ({
           ]}
         >
           <AppText variant="body" tone="default" style={styles.countryCode}>
-            US +1
+            {current.code} +{current.dial}
           </AppText>
-          <ChevronDown
-            size={iconSizes.sm}
-            color={colors.mutedForeground}
-            strokeWidth={iconSizes.strokeWidth}
-          />
-        </View>
+          {onCountryChange ? (
+            <ChevronDown
+              size={iconSizes.sm}
+              color={colors.mutedForeground}
+              strokeWidth={iconSizes.strokeWidth}
+            />
+          ) : null}
+        </Pressable>
 
         <TextInput
           style={[
@@ -96,7 +109,7 @@ export const PhoneField: React.FC<PhoneFieldProps> = ({
           ]}
           value={value}
           onChangeText={handleChange}
-          placeholder={placeholder}
+          placeholder={placeholder ?? current.placeholder}
           placeholderTextColor={colors.mutedForeground}
           keyboardType="phone-pad"
           textContentType="telephoneNumber"
@@ -115,6 +128,19 @@ export const PhoneField: React.FC<PhoneFieldProps> = ({
         <AppText variant="small" tone="muted" style={styles.bottomText}>
           {helperText}
         </AppText>
+      ) : null}
+      {onCountryChange ? (
+        <OptionSheet
+          visible={pickerOpen}
+          title="Country"
+          options={COUNTRY_LIST.map((c) => ({ value: c.code, label: `${c.name} (+${c.dial})` }))}
+          selected={country}
+          onSelect={(code) => {
+            setPickerOpen(false);
+            onCountryChange(code);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
       ) : null}
     </View>
   );

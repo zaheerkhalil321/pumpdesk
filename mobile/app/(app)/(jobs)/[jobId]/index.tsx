@@ -13,6 +13,7 @@ import {
   MetaPair,
   ListRow,
   useTopAlert,
+  OptionSheet,
 } from '@/components/ui';
 import { TimePickerSheet } from '@/components/job/TimePickerSheet';
 import { EditTimesSheet } from '@/components/job/EditTimesSheet';
@@ -35,7 +36,7 @@ import {
   STEP_LABELS,
   validateStepTimeEdit,
 } from '@/features/steps';
-import { openMaps } from '@/features/navigation-apps';
+import { useOpenMaps } from '@/hooks/useOpenMaps';
 import { formatTimeInZone } from '@/lib/dates';
 import { JobStep } from '@/api/types';
 import type { BadgeTone } from '@/components/ui/Badge';
@@ -57,6 +58,7 @@ export default function JobScreen() {
 
 
   // Time editing modal state
+  const { navigate, sheet: mapsSheet } = useOpenMaps();
   const [editingStep, setEditingStep] = useState<JobStep | null>(null);
   const [editError, setEditError] = useState<string | undefined>();
   const [editTimesOpen, setEditTimesOpen] = useState(false);
@@ -270,7 +272,7 @@ export default function JobScreen() {
                 <NavigateButton
                   label="Navigate to shop"
                   subLabel={job.shop.label}
-                  onPress={() => openMaps(job.shop.label)}
+                  onPress={() => navigate(job.shop)}
                 />
               </View>
             ) : progressState === 'arrived_shop' ? (
@@ -284,7 +286,7 @@ export default function JobScreen() {
                 />
                 <NavigateButton
                   label="Navigate to job site"
-                  onPress={() => openMaps(siteAddress)}
+                  onPress={() => navigate(job.site)}
                 />
               </View>
             ) : progressState === 'departed_shop' ? (
@@ -298,7 +300,7 @@ export default function JobScreen() {
                 />
                 <NavigateButton
                   label="Navigate to job site"
-                  onPress={() => openMaps(siteAddress)}
+                  onPress={() => navigate(job.site)}
                 />
               </View>
             ) : progressState === 'arrived_site' ? (
@@ -338,7 +340,7 @@ export default function JobScreen() {
                   onGoToNextJob={() =>
                     nextJobToday && router.replace(`/(app)/(jobs)/${nextJobToday.id}` as any)
                   }
-                  onNavigateToShop={() => openMaps(job.shop.label)}
+                  onNavigateToShop={() => navigate(job.shop)}
                 />
 
                 <TouchableOpacity
@@ -373,6 +375,8 @@ export default function JobScreen() {
           </View>
         </View>
       </Screen>
+
+      <OptionSheet {...mapsSheet} />
 
       {/* Edit times list (on site) */}
       <EditTimesSheet

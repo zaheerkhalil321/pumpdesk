@@ -10,3 +10,6 @@ export * from './mock-seed';
 const mode = process.env.EXPO_PUBLIC_API_MODE || 'mock';
 
 export const api: OperatorApi = mode === 'supabase' ? supabaseApi : mockApi;
+
+/** True when the app runs on on-phone demo data. */
+export const isMockMode = mode !== 'supabase';

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { JobStep, WorkTicketDraft } from './types';
+import { ApiError, JobStep, WorkTicketDraft } from './types';
+import { PERMANENT_ERROR_CODES } from './supabase-errors';
 import { OperatorApi } from './operator-api';
 
 export type OutboxActionType =
@@ -8,7 +9,9 @@ export type OutboxActionType =
   | 'undo_step'
   | 'edit_step_time'
   | 'save_ticket'
-  | 'submit_ticket';
+  | 'submit_ticket'
+  | 'clock_in'
+  | 'clock_out';
 
 export interface OutboxItem {
   id: string; // client UUID
@@ -28,6 +31,10 @@ function notifyListeners() {
   listeners.forEach((fn) => fn([...memoryQueue]));
 }
 
+/** Called when the server refuses a queued action for good (it is dropped from the queue). */
+type RejectedListener = (item: OutboxItem, error: ApiError) => void;
+const rejectedListeners = new Set<RejectedListener>();
+
 export const outbox = {
   async init(): Promise<void> {
     try {
@@ -43,6 +50,12 @@ export const outbox = {
 
   getQueue(): OutboxItem[] {
     return [...memoryQueue];
+  },
+
+  /** Hear about actions the server refused for good, so the operator can be told. */
+  onRejected(listener: RejectedListener): () => void {
+    rejectedListeners.add(listener);
+    return () => rejectedListeners.delete(listener);
   },
 
   subscribe(listener: (queue: OutboxItem[]) => void): () => void {
@@ -106,12 +119,27 @@ export const outbox = {
             case 'submit_ticket':
               await api.submitTicket(item.jobId);
               break;
+            case 'clock_in':
+              await api.clockIn(item.payload.at);
+              break;
+            case 'clock_out':
+              await api.clockOut(item.payload.at);
+              break;
           }
           // Completed successfully, remove from FIFO
           memoryQueue.shift();
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(memoryQueue));
           notifyListeners();
-        } catch {
+        } catch (error) {
+          if (error instanceof ApiError && PERMANENT_ERROR_CODES.has(error.code)) {
+            // Retrying can never work (cancelled job, locked ticket, ...). Drop it so it cannot block the
+            // queue, and say so: the screen showed the tap as done, the operator must know it was not.
+            const rejected = memoryQueue.shift();
+            if (rejected) rejectedListeners.forEach((fn) => fn(rejected, error));
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(memoryQueue));
+            notifyListeners();
+            continue;
+          }
           // If offline or network error, stop processing queue and retry later
           break;
         }

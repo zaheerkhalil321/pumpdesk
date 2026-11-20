@@ -6,17 +6,29 @@ import { useTheme } from '@/theme';
 import { fontFamilies } from '@/theme/typography';
 import { openTextDispatch, openCallDispatch } from '@/features/contact-dispatch';
 import { AppText } from './AppText';
+import { useDispatchPhone } from '@/hooks/useDispatchPhone';
 
 export interface ContactDispatchButtonsProps {
-  dispatchPhone: string;
+  /** Leave out to use the company's dispatch number (see useDispatchPhone). */
+  dispatchPhone?: string;
   style?: ViewStyle;
 }
 
 export const ContactDispatchButtons: React.FC<ContactDispatchButtonsProps> = ({
-  dispatchPhone,
+  dispatchPhone: given,
   style,
 }) => {
   const { colors, radius, iconSizes } = useTheme();
+  const companyPhone = useDispatchPhone();
+  const dispatchPhone = given || companyPhone;
+
+  if (!dispatchPhone) {
+    return (
+      <AppText variant="small" tone="muted" style={[styles.missing, style]}>
+        Dispatch&apos;s number isn&apos;t set up yet. Ask your company to add it.
+      </AppText>
+    );
+  }
 
   const handleText = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -102,5 +114,8 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fontFamilies.semibold,
     fontSize: 15,
+  },
+  missing: {
+    textAlign: 'center',
   },
 });

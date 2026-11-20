@@ -6,34 +6,30 @@ import { Screen, AppText, EmptyState } from '@/components/ui';
 import { DayCard } from '@/components/timeclock/DayCard';
 import { WeekChart } from '@/components/timeclock/WeekChart';
 import { DatePickerSheet } from '@/components/timeclock/DatePickerSheet';
-import { useTimeClock, workedBetween } from '@/hooks/useTimeClock';
+import { useMinuteNow, useTimeEntries } from '@/hooks/useTimeClock';
+import { dayRange, overlapsRange, weekRange, workedBetween } from '@/features/time-clock';
 import { formatWeekRange, startOfWeekMonday } from '@/lib/dates';
 import { useTheme } from '@/theme';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 // The phone's date picker has no web version, so the week label is only tappable on phones.
 const CAN_PICK_DATE = Platform.OS !== 'web';
 
 export default function TimesheetsScreen() {
   const router = useRouter();
   const { colors, radius, iconSizes } = useTheme();
-  const { entries } = useTimeClock();
-  const [now] = useState(() => Date.now());
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date()));
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const weekEnd = new Date(weekStart.getTime() + 7 * DAY_MS);
+  const { to: weekEnd } = weekRange(weekStart);
+  const { data: entries = [] } = useTimeEntries(weekStart, weekEnd);
+  const now = useMinuteNow(entries.some((e) => !e.clockedOutAt));
   const isCurrentWeek = now >= weekStart.getTime() && now < weekEnd.getTime();
   const weekTotal = workedBetween(entries, weekStart, weekEnd, now);
 
   const week = Array.from({ length: 7 }, (_, i) => {
     const start = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i);
-    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
-    const dayEntries = entries.filter(
-      (e) =>
-        new Date(e.clockedInAt).getTime() < end.getTime() &&
-        (e.clockedOutAt ? new Date(e.clockedOutAt).getTime() : now) > start.getTime()
-    );
+    const end = dayRange(start).to;
+    const dayEntries = entries.filter((e) => overlapsRange(e, start, end, now));
     return { start, entries: dayEntries, worked: workedBetween(dayEntries, start, end, now) };
   });
   // Newest day first, only days with time on them.

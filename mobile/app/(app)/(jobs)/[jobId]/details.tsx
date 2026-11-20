@@ -9,9 +9,10 @@ import {
   Badge,
   NavigateButton,
   ContactDispatchButtons,
+  OptionSheet,
 } from '@/components/ui';
 import { useJob } from '@/hooks/useJobs';
-import { openMaps } from '@/features/navigation-apps';
+import { useOpenMaps } from '@/hooks/useOpenMaps';
 import { openCallDispatch, openTextDispatch } from '@/features/contact-dispatch';
 import { formatTimeInZone } from '@/lib/dates';
 import { useTheme } from '@/theme';
@@ -22,6 +23,7 @@ export default function CustomerDetailsScreen() {
   const { colors, iconSizes } = useTheme();
 
   const { data: job, isLoading } = useJob(jobId);
+  const { navigate, sheet: mapsSheet } = useOpenMaps();
 
   if (isLoading || !job) {
     return (
@@ -76,7 +78,7 @@ export default function CustomerDetailsScreen() {
           </AppText>
           <NavigateButton
             label="Navigate to site"
-            onPress={() => openMaps(siteAddress)}
+            onPress={() => navigate(job.site)}
             style={{ marginTop: 12 }}
           />
         </View>
@@ -184,9 +186,10 @@ export default function CustomerDetailsScreen() {
 
         {/* Contact Dispatch Buttons at bottom */}
         <View style={styles.bottomDispatchSection}>
-          <ContactDispatchButtons dispatchPhone={job.shop.label ? '+12075550199' : '+12075550168'} />
+          <ContactDispatchButtons />
         </View>
       </Screen>
+      <OptionSheet {...mapsSheet} />
     </View>
   );
 }

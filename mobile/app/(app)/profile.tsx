@@ -1,34 +1,29 @@
 import { api } from '@/api';
 import { AppearanceRow } from '@/components/profile/AppearanceRow';
-import { OptionSheet } from '@/components/profile/OptionSheet';
 import { PhotoViewer } from '@/components/profile/PhotoViewer';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileStats } from '@/components/profile/ProfileStats';
 import { SettingsRow } from '@/components/profile/SettingsRow';
 import { SettingsSection } from '@/components/profile/SettingsSection';
-import { AppText, Screen, useTopAlert } from '@/components/ui';
+import { AppText, OptionSheet, Screen, useTopAlert } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigationApp } from '@/hooks/useNavigationApp';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { usePhotoEditor } from '@/hooks/usePhotoEditor';
 import { useProfileStats } from '@/hooks/useProfileStats';
-import { formatUsPhone } from '@/lib/phone';
+import { availableNavigationApps } from '@/features/navigation-urls';
+import { formatPhoneForDisplay } from '@/lib/phone';
 import { useTheme } from '@/theme';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { LogOut, MapPin, Navigation, RotateCcw } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 // Read from app.json ("version"), so it never goes out of date.
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
-type NavApp = 'ask' | 'apple' | 'google' | 'waze';
-const NAV_APPS: { value: NavApp; label: string }[] = [
-  { value: 'ask', label: 'Ask each time' },
-  { value: 'apple', label: 'Apple Maps' },
-  { value: 'google', label: 'Google Maps' },
-  { value: 'waze', label: 'Waze' },
-];
+const NAV_APPS = availableNavigationApps(Platform.OS === 'ios' ? 'ios' : 'android');
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -38,7 +33,7 @@ export default function ProfileScreen() {
   const photo = usePhotoEditor();
   const stats = useProfileStats();
 
-  const [navApp, setNavApp] = useState<NavApp>('ask');
+  const { app: navApp, setApp: setNavApp } = useNavigationApp();
   const [navSheetOpen, setNavSheetOpen] = useState(false);
   const location = useLocationPermission();
 
@@ -82,7 +77,7 @@ export default function ProfileScreen() {
         fullName={fullName}
         initials={initials}
         companyName={companyName}
-        phone={operator?.phone ? formatUsPhone(operator.phone) : undefined}
+        phone={operator?.phone ? formatPhoneForDisplay(operator.phone) : undefined}
         photoUri={photo.photoUri}
         onPressPhoto={photo.pressPhoto}
         onEditPhoto={photo.editPhoto}

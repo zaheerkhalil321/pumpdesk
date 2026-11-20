@@ -54,4 +54,30 @@ describe('Mock API Service', () => {
     const undone = await mockApi.getJob('job-104');
     expect(undone.steps.arrived_shop).toBeNull();
   });
+
+  it('clocks in, is idempotent, then clocks out', async () => {
+    const t0 = new Date(Date.now() - 3600_000).toISOString();
+    const a = await mockApi.clockIn(t0);
+    const b = await mockApi.clockIn(new Date().toISOString());
+    expect(b.id).toBe(a.id);
+    const out = await mockApi.clockOut(new Date().toISOString());
+    expect(out?.clockedOutAt).not.toBeNull();
+    const list = await mockApi.listTimeEntries(new Date(Date.now() - 86400_000).toISOString(), new Date(Date.now() + 86400_000).toISOString());
+    expect(list).toHaveLength(1);
+  });
+
+  it('refuses a clock in from the future and an overlap', async () => {
+    await expect(mockApi.clockIn(new Date(Date.now() + 3600_000).toISOString())).rejects.toMatchObject({ code: 'invalid_time' });
+    await mockApi.clockIn(new Date(Date.now() - 7200_000).toISOString());
+    await mockApi.clockOut(new Date(Date.now() - 3600_000).toISOString());
+    await expect(mockApi.clockIn(new Date(Date.now() - 5400_000).toISOString())).rejects.toMatchObject({ code: 'overlaps_previous' });
+  });
+
+  it('answers null when clocking out before any shift', async () => {
+    expect(await mockApi.clockOut(new Date().toISOString())).toBeNull();
+  });
+
+  it('refuses a range over 62 days', async () => {
+    await expect(mockApi.listTimeEntries('2026-01-01T00:00:00Z', '2026-06-01T00:00:00Z')).rejects.toMatchObject({ code: 'invalid_range' });
+  });
 });

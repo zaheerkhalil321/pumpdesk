@@ -67,21 +67,42 @@ export interface WorkTicketDraft {
   updatedAt: string;
 }
 
+/** One shift on the time clock. clockedOutAt is null while the operator is on the clock. */
+export interface ClockEntry {
+  id: string;
+  clockedInAt: string; // ISO instant
+  clockedOutAt: string | null;
+  breakMinutes: number;
+  jobId: string | null;
+}
+
 export type ApiErrorCode =
   | 'not_found'
   | 'phone_not_found'
+  | 'ambiguous_phone'
   | 'bad_code'
   | 'rate_limited'
   | 'offline'
   | 'forbidden'
   | 'conflict'
+  | 'job_cancelled'
+  | 'step_out_of_order'
+  | 'too_early'
+  | 'ticket_locked'
+  | 'invalid_ticket'
+  | 'invalid_time'
+  | 'overlaps_previous'
+  | 'invalid_range'
   | 'unknown';
 
 export class ApiError extends Error {
   code: ApiErrorCode;
-  constructor(code: ApiErrorCode, message: string) {
+  /** For rate_limited: seconds until the server allows another try, when it says so. */
+  retryAfterSeconds: number | null;
+  constructor(code: ApiErrorCode, message: string, retryAfterSeconds: number | null = null) {
     super(message);
     this.code = code;
     this.name = 'ApiError';
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }

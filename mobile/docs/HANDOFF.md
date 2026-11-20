@@ -102,4 +102,35 @@ npm run web
 
 ### Environment Variables
 - `EXPO_PUBLIC_API_MODE=mock` (default): Uses `mockApi` with local persistence.
-- `EXPO_PUBLIC_API_MODE=supabase`: Ready to plug into live Supabase backend once migrations and database functions from section 8 are completed.
+- `EXPO_PUBLIC_API_MODE=supabase`: Uses `supabaseApi` (phase 2, done) against the backend from PR #4.
+- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`: copy `.env.example` to `.env.local` (git-ignored).
+  For a phone, the URL must use this computer's Wi-Fi address (`http://<ip>:54321`), not `127.0.0.1`.
+
+## 5. Real backend (phase 2)
+
+`src/api/supabase-api.ts` implements `OperatorApi` with `@supabase/supabase-js` (client in `src/lib/supabase.ts`,
+session in AsyncStorage). Pure helpers are split out and unit-tested: `supabase-mapping.ts` (JSON to app types),
+`supabase-errors.ts` (backend error to `ApiError`), `day-window.ts` (today / upcoming in America/New_York).
+
+| OperatorApi | Backend |
+|---|---|
+| `sendCode` | `auth.signInWithOtp({ phone })` (the sign-up hook rejects unknown numbers: `phone_not_found`) |
+| `verifyCode` | `auth.verifyOtp({ type: 'sms' })`, then RPC `link_operator_login` (signs out again if linking fails) |
+| `signOut` | `auth.signOut()` |
+| `getMe` | RPC `operator_me` (fails fast with `forbidden` when there is no session) |
+| `listToday` / `listUpcoming` | RPC `operator_jobs(p_from, p_to)`; today = [00:00, next 00:00) New York time; upcoming = tomorrow through N days |
+| `getJob` / `markSeen` | `operator_job` / `mark_job_seen` |
+| `acknowledge` / `recordStep` / `undoStep` / `editStepTime` | `acknowledge_assignment` / `record_job_step` / `undo_job_step` / `edit_job_step_time` |
+| `getTicketExtras` / `getTicket` | `ticket_extras` / `get_work_ticket` (+ download of the signature PNG from the `signatures` bucket into `signaturePng`) |
+| `saveTicket` | upload PNG to `signatures/<companyId>/<jobId>.png` (upsert), then `save_work_ticket` with `signaturePath` |
+| `submitTicket` | `submit_work_ticket` |
+
+Error codes added to `ApiErrorCode`: `ambiguous_phone`, `job_cancelled`, `step_out_of_order`, `too_early`,
+`ticket_locked`, `invalid_ticket`, `invalid_time`. `not_operator` / `not_assigned` map to `forbidden`.
+The outbox now drops an item whose error can never succeed (cancelled job, locked ticket, bad ticket, ...)
+instead of retrying it forever and blocking everything behind it.
+
+Live check: `LIVE_SUPABASE=1 LIVE_SUPABASE_URL=... LIVE_SUPABASE_ANON_KEY=... npm run test:live` (see
+`tests/live/supabase-live.test.ts`). It signs in Rob, walks a job through acknowledge, steps, undo, ticket with
+signature and submit, and checks the DB with `psql`. It changes data; run `supabase db reset` afterwards for fresh
+demo jobs. Open: hosted Supabase and Twilio (real SMS); local test code is 123456.

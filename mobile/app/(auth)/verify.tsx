@@ -11,25 +11,27 @@ import {
 } from '@/components/ui';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { useAuth } from '@/hooks/useAuth';
+import { ApiError } from '@/api';
 import { maskPhoneNumber } from '@/lib/phone';
+import { formatCountdown, secondsUntilResend } from '@/features/otp';
 import { useTheme } from '@/theme';
 
 export default function VerifyScreen() {
   const router = useRouter();
   const { colors, iconSizes } = useTheme();
-  const { pendingPhone, verifyCode, sendCode } = useAuth();
+  const { pendingPhone, codeSentAt, verifyCode, sendCode } = useAuth();
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const [countdown, setCountdown] = useState(30);
+  const [now, setNow] = useState(() => Date.now());
   const [showHelpSheet, setShowHelpSheet] = useState(false);
 
+  // Counted from when the code really went out, so leaving and coming back keeps the right time.
+  const countdown = secondsUntilResend(codeSentAt, now);
   useEffect(() => {
     if (countdown <= 0) return;
-    const timer = setInterval(() => {
-      setCountdown((prev) => prev - 1);
-    }, 1000);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
 
@@ -43,8 +45,16 @@ export default function VerifyScreen() {
     try {
       await verifyCode(finalCode);
       router.push('/(auth)/ready');
-    } catch {
-      setError("That code didn't work. Try again.");
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'phone_not_found') {
+        setError("We couldn't find this number. Ask dispatch to add it.");
+      } else if (err instanceof ApiError && err.code === 'offline') {
+        setError('No connection. Check your signal and try again.');
+      } else if (err instanceof ApiError && err.code === 'rate_limited') {
+        setError('Too many tries. Wait a minute and try again.');
+      } else {
+        setError("That code didn't work. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -52,12 +62,19 @@ export default function VerifyScreen() {
 
   const handleResend = async () => {
     if (countdown > 0) return;
-    setCountdown(30);
     setError(undefined);
     try {
       await sendCode(pendingPhone);
-    } catch {
-      // ignore in mock
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.code === 'rate_limited'
+          ? 'Please wait a moment before asking for a new code.'
+          : err instanceof ApiError && err.code === 'offline'
+            ? 'No connection. Check your signal and try again.'
+            : "We couldn't send a new code. Try again."
+      );
+    } finally {
+      setNow(Date.now());
     }
   };
 
@@ -134,7 +151,7 @@ export default function VerifyScreen() {
             <View style={styles.resendRow}>
               {countdown > 0 ? (
                 <AppText variant="caption" tone="muted">
-                  Resend code in 00:{countdown < 10 ? `0${countdown}` : countdown}
+                  Resend code in {formatCountdown(countdown)}
                 </AppText>
               ) : (
                 <TouchableOpacity

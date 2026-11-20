@@ -5,6 +5,7 @@ import React, { useCallback } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  RefreshControlProps,
   ScrollView,
   StyleSheet,
   View,
@@ -22,6 +23,8 @@ export interface ScreenProps {
   keyboardAvoiding?: boolean;
   /** Set false on screens inside the tab bar, which already handles the bottom safe area. */
   bottomInset?: boolean;
+  /** Pull-to-refresh, for scrolling screens. */
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 export const Screen: React.FC<ScreenProps> = ({
@@ -33,6 +36,7 @@ export const Screen: React.FC<ScreenProps> = ({
   headerBackground = 'default',
   keyboardAvoiding = true,
   bottomInset = true,
+  refreshControl,
 }) => {
   const { colors, spacing, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -66,6 +70,7 @@ export const Screen: React.FC<ScreenProps> = ({
       contentContainerStyle={[innerStyle, contentContainerStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>
