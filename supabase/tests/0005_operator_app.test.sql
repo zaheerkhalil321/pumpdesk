@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(154);
+select plan(159);
 
 -- Operator app backend (migrations 0019, 0020).
 -- Seeded: Midcoast operators Rob a1..01 (+12075550168), Dave a1..02, Tony a1..03, Casey a1..05; Rob has the six
@@ -81,9 +81,9 @@ select set_config('app.co', 'a0000000-0000-4000-8000-000000000001', true);
 select is(private.hook_before_user_created('{"user": {"phone": "12075550168"}}'::jsonb), '{}'::jsonb, 'hook lets an operator phone sign up');
 select is(private.hook_before_user_created('{"user": {"phone": "+12075550168"}}'::jsonb), '{}'::jsonb, 'hook accepts the + form too');
 select ok(private.hook_before_user_created('{"user": {"phone": "12075559999"}}'::jsonb) ? 'error', 'hook refuses a phone that is not an operator');
-select is(private.hook_before_user_created('{"user": {"email": "x@example.com"}}'::jsonb), '{}'::jsonb,
-  'hook leaves users without a phone (office staff added by an admin) alone');
-select is(private.hook_before_user_created('{"user": {"email": "x@example.com", "phone": ""}}'::jsonb), '{}'::jsonb,
+select is(private.hook_before_user_created('{"user": {"email": "x@example.com"}}'::jsonb) #>> '{error,message}', 'signup_not_allowed',
+  'nobody signs themselves up by email (admins add office staff with Create user, which skips the hook)');
+select is(private.hook_before_user_created('{"user": {"email": "x@example.com", "phone": ""}}'::jsonb) #>> '{error,message}', 'signup_not_allowed',
   'an empty phone counts as no phone');
 select is(
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -307,6 +307,24 @@ select is(public.operator_job(current_setting('app.j3')::uuid) ->> 'changedSince
 select public.mark_job_seen(current_setting('app.j3')::uuid);
 select is(public.operator_job(current_setting('app.j3')::uuid) ->> 'changedSinceSeen', 'false', 'opening it clears the flag');
 
+-- 9b. Ticket turned in while still on site, then "Depart job site" (ORD-1526, as Rob)
+select public.record_job_step(current_setting('app.j3')::uuid, 'arrived_shop', '2026-11-19T12:00:00Z');
+select public.record_job_step(current_setting('app.j3')::uuid, 'departed_shop', '2026-11-19T12:20:00Z');
+select public.record_job_step(current_setting('app.j3')::uuid, 'arrived_site', '2026-11-19T12:50:00Z');
+select public.save_work_ticket(format('{"jobId": "%s", "arrivedOnSiteAt": "2026-11-19T12:50:00Z", "startedPourAt": "2026-11-19T13:00:00Z", "finishedPourAt": "2026-11-19T14:00:00Z", "yardsPumped": 20, "hose3inFt": 50, "hose4inFt": 0, "extras": [], "comments": "", "signerName": null, "signaturePng": null, "signedAt": null, "updatedAt": "2026-11-19T14:00:00Z"}',
+  current_setting('app.j3'))::jsonb);
+select public.submit_work_ticket(current_setting('app.j3')::uuid);
+select is(pg_temp.q(format($q$select field_status::text from public.jobs where id = '%s'$q$, current_setting('app.j3'))), 'on_site',
+  'a ticket turned in on site leaves the job on site');
+select is(public.record_job_step(current_setting('app.j3')::uuid, 'departed_site', '2026-11-19T14:10:00Z') -> 'steps' ->> 'departed_site', '2026-11-19T14:10:00.000Z',
+  'Depart job site still works after the ticket is in');
+select is(pg_temp.q(format($q$select field_status::text from public.jobs where id = '%s'$q$, current_setting('app.j3'))), 'done',
+  'and the job goes straight to done');
+select lives_ok(format($j$select public.record_job_step('%s', 'departed_site', '2026-11-19T14:10:00Z')$j$, current_setting('app.j3')),
+  'a retry of that tap is a no-op');
+select throws_ok(format($j$select public.undo_job_step('%s', 'departed_site')$j$, current_setting('app.j3')), 'P0001', 'ticket_locked',
+  'but it cannot be undone once the ticket is in');
+
 -- 10. Dispatcher cancels ORD-1530: the operator still sees it, as cancelled, and can change nothing
 set local request.jwt.claims = '{"sub": "c0000000-0000-4000-8000-000000000003", "role": "authenticated"}';
 select public.cancel_job(current_setting('app.j5')::uuid, 'Customer called',
@@ -346,7 +364,7 @@ select throws_ok(format($j$select public.operator_job('%s')$j$, current_setting(
 -- 12. Office users are unaffected, and operator functions are not for them
 set local request.jwt.claims = '{"sub": "c0000000-0000-4000-8000-000000000003", "role": "authenticated"}';
 select ok((select count(*) from public.jobs) >= 7, 'the dispatcher still sees all orders');
-select is((select count(*) from public.work_tickets), 2::bigint, 'the dispatcher reads both tickets (the seeded one and the phone-test one)');
+select is((select count(*) from public.work_tickets), 3::bigint, 'the dispatcher reads all three tickets (seeded, phone test, turned in on site)');
 select is((select count(*) from public.work_ticket_extras), 3::bigint, 'with its extras (2 from the phone test, 1 seeded)');
 select ok((select count(*) from public.job_step_events) >= 8, 'and the step taps');
 select lives_ok($$insert into public.ticket_extras (code, label) values ('rental_hose', 'Rental hose')$$, 'a dispatcher can add an extra');
@@ -370,7 +388,7 @@ select throws_ok(format($$insert into public.job_step_events (company_id, job_id
   values ('%s', '%s', 'a1000000-0000-4000-8000-000000000001', 'arrived_shop', now())$$, current_setting('app.co'), current_setting('app.omar')),
   '23503', null, 'a step cannot point at another company''s job');
 select throws_ok(format($$insert into public.job_step_events (company_id, job_id, employee_id, step, at)
-  values ('%s', '%s', 'a2000000-0000-4000-8000-000000000001', 'arrived_shop', now())$$, current_setting('app.co'), current_setting('app.j3')),
+  values ('%s', '%s', 'a2000000-0000-4000-8000-000000000001', 'arrived_shop', now())$$, current_setting('app.co'), current_setting('app.j6')),
   '23503', null, 'nor at another company''s employee');
 select throws_ok(format($$insert into public.job_step_events (company_id, job_id, employee_id, step, at)
   values ('%s', '%s', 'a1000000-0000-4000-8000-000000000001', 'arrived_site', now())$$, current_setting('app.co'), current_setting('app.j2')),
