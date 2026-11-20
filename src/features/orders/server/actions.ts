@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { formatInTimeZone } from 'date-fns-tz';
 
 import { authedAction } from '@/server/action';
@@ -21,11 +22,23 @@ import { getShopAddress } from '@/features/company/server/queries';
 import { estimateDriveMinutes } from '@/features/orders/server/drive-time';
 import { previousBlock } from '@/features/orders/travel';
 import { getOperatorYard } from '@/features/yards/server/queries';
+import { processNotificationDeliveries } from '@/features/notifications/server/process-deliveries';
 import type { Database, Json } from '@/types/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const ORDER_EDITORS = ['owner', 'admin', 'dispatcher', 'office'] as const;
 const DAY_MS = 86_400_000;
+
+/** Sends any customer texts the database just queued, after the response, so the dispatcher never waits. */
+function sendQueuedNotifications() {
+  after(async () => {
+    try {
+      await processNotificationDeliveries();
+    } catch {
+      // The minute-by-minute run picks the rows up again.
+    }
+  });
+}
 
 type OrderResult = { id: string; job_number: string; version: number };
 
@@ -195,6 +208,7 @@ export const createOrder = authedAction({
     const result = data as OrderResult;
     result.version = await saveSiteWhenConfirmed(supabase, result, timezone);
     revalidateOrders(result.job_number);
+    if (input.bookingStatus === 'confirmed') sendQueuedNotifications();
     return result;
   },
 });
@@ -255,6 +269,7 @@ export const updateOrder = authedAction({
     const result = data as OrderResult;
     result.version = await saveSiteWhenConfirmed(supabase, result, session.timezone);
     revalidateOrders(result.job_number);
+    if (fields.bookingStatus === 'confirmed' || fields.dispatch) sendQueuedNotifications();
     return result;
   },
 });

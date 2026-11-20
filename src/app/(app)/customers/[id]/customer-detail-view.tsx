@@ -3,6 +3,7 @@
 import { openCall, openText } from '@/lib/reach-out';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import type { CustomerNotificationRow } from '@/features/notifications/events';
 import { CustomerNotificationPreferences } from '@/components/customers/customer-notification-preferences';
 import { useRouter } from 'next/navigation';
 import {
@@ -55,12 +56,14 @@ import { CopyButton } from '@/components/ui/copy-button';
 
 interface CustomerDetailViewProps {
   customer: CustomerDetail;
+  notificationRows: CustomerNotificationRow[];
+  canEditNotifications: boolean;
 }
 
 type ActiveTab = 'overview' | 'contacts_sites';
 type NewContactRole = 'Site contact' | 'Primary contact' | 'Invoicing';
 
-export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
+export function CustomerDetailView({ customer, notificationRows, canEditNotifications }: CustomerDetailViewProps) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const refresh = () => router.refresh();
@@ -1006,7 +1009,11 @@ export function CustomerDetailView({ customer }: CustomerDetailViewProps) {
                 </p>
               </div>
 
-              <CustomerNotificationPreferences />
+              <CustomerNotificationPreferences
+                customerId={customer.id}
+                rows={notificationRows}
+                canEdit={canEditNotifications}
+              />
             </div>
           </div>
         </div>

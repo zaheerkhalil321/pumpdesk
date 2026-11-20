@@ -4,16 +4,18 @@ import { listSuppliers } from '@/features/suppliers/server/queries';
 import { listYards } from '@/features/yards/server/queries';
 import { listBranches } from '@/features/branches/server/queries';
 import { BRANCH_EDITORS } from '@/features/branches/schemas';
+import { listNotificationRules } from '@/features/notifications/server/queries';
 import { requireSession } from '@/server/session';
 
 export default async function Page() {
-  const [session, suppliers, logoUrl, yards, branches, profile] = await Promise.all([
+  const [session, suppliers, logoUrl, yards, branches, profile, notificationRules] = await Promise.all([
     requireSession(),
     listSuppliers(),
     getCompanyLogoUrl(),
     listYards(),
     listBranches(),
     getCompanyProfile(),
+    listNotificationRules(),
   ]);
   const canEditBranches = (BRANCH_EDITORS as readonly string[]).includes(session.role);
   return (
@@ -24,6 +26,8 @@ export default async function Page() {
       branches={branches}
       canEditBranches={canEditBranches}
       profile={profile}
+      notificationRules={notificationRules}
+      canEditNotifications={session.role === 'owner' || session.role === 'admin'}
     />
   );
 }

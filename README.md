@@ -161,3 +161,9 @@ Production
 Private repository.
 
 Copyright © PumpDesk.
+## Customer notifications (environment)
+
+Automatic customer texts need two server-only variables (names only; set the values in `.env.local` and in the host's settings, never in the repo):
+
+- `SUPABASE_SECRET_KEY`: the Supabase service-role key. Used only by the sender in `src/features/notifications/server/process-deliveries.ts`.
+- `NOTIFICATIONS_RUN_SECRET`: the password for `POST /api/notifications/run`. The same value goes into Supabase Vault as `notifications_run_secret`, with the route's full URL as `notifications_run_url`; a pg_cron job calls the route every minute.

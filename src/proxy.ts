@@ -8,6 +8,7 @@ function isAuthPath(pathname: string): boolean {
 }
 
 // Refreshes the session cookie and sends logged-out visitors to /login.
+// /api/notifications/run is left out: the database calls it with a bearer secret, not a login.
 // This is not security: pages and actions check again (architecture 4.2).
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -42,5 +43,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+  matcher: ['/((?!api/notifications/run|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
 };

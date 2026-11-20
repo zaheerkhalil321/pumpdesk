@@ -13,13 +13,19 @@ import { Switch } from '@/components/ui/switch';
 import { AppSelect } from '@/components/ui/app-select';
 import {
   useSettingsStore,
-  updateCustomerNotification,
   updateOfficeAlert,
 } from '@/lib/settings-store';
 import { toast } from 'sonner';
+import { CustomerNotificationsCard } from '@/components/settings/customer-notifications-card';
+import type { NotificationRuleRow } from '@/features/notifications/events';
 
-export function NotificationsSettingsTab() {
-  const { customerNotifications, officeAlerts } = useSettingsStore();
+interface NotificationsSettingsTabProps {
+  notificationRules: NotificationRuleRow[];
+  canEditNotifications: boolean;
+}
+
+export function NotificationsSettingsTab({ notificationRules, canEditNotifications }: NotificationsSettingsTabProps) {
+  const { officeAlerts } = useSettingsStore();
   const [activeSubTab, setActiveSubTab] = useState<'customers' | 'operators' | 'office' | 'templates'>('customers');
   const [activeLatePopover, setActiveLatePopover] = useState(false);
   const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
@@ -41,12 +47,6 @@ export function NotificationsSettingsTab() {
       });
     }
   }, [activeSubTab]);
-
-  const handleToggleCustomer = (id: string, current: boolean) => {
-    updateCustomerNotification(id, { enabled: !current });
-    const target = customerNotifications.find((r) => r.id === id);
-    toast.success(`${target?.message}: ${!current ? 'Enabled' : 'Disabled'}`);
-  };
 
   const handleToggleOffice = (id: string, current: boolean) => {
     updateOfficeAlert(id, { enabled: !current });
@@ -103,190 +103,7 @@ export function NotificationsSettingsTab() {
             Default messages for assigned job contacts.
           </p>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-            {/* Mobile / Tablet Card View */}
-            <div className="md:hidden divide-y divide-slate-100">
-              {customerNotifications.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="p-4 space-y-3 hover:bg-slate-50/70 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">
-                        {rule.message}
-                      </span>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveTooltipId(
-                              activeTooltipId === rule.id ? null : rule.id
-                            )
-                          }
-                          className="text-slate-400 hover:text-brand p-0.5 cursor-pointer"
-                          title={rule.info}
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                        </button>
-                        {activeTooltipId === rule.id && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute left-6 top-0 z-30 w-64 p-3 rounded-xl bg-slate-900 text-white text-xs shadow-xl space-y-1.5"
-                          >
-                            <p className="font-bold">{rule.message}</p>
-                            <p className="text-slate-300">{rule.info}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Switch */}
-                    <div className="inline-flex items-center gap-2 shrink-0">
-                      <Switch
-                        checked={rule.enabled}
-                        onCheckedChange={() =>
-                          handleToggleCustomer(rule.id, rule.enabled)
-                        }
-                      />
-                      <span
-                        className={cn(
-                          'text-xs font-semibold w-7 text-left',
-                          rule.enabled ? 'text-brand' : 'text-slate-400'
-                        )}
-                      >
-                        {rule.enabled ? 'On' : 'Off'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-slate-500">
-                    <span className="text-slate-400 font-medium">When: </span>
-                    <span>{rule.when}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <span className="text-xs font-medium text-slate-500 shrink-0">Channel:</span>
-                    <AppSelect
-                      value={rule.channel}
-                      onChange={(val) =>
-                        updateCustomerNotification(rule.id, {
-                          channel: val as 'Email & text' | 'Text' | 'Email',
-                        })
-                      }
-                      options={[
-                        { value: 'Email & text', label: 'Email & text' },
-                        { value: 'Text', label: 'Text' },
-                        { value: 'Email', label: 'Email' },
-                      ]}
-                      className="w-full sm:w-44 h-8.5 rounded-lg text-xs"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm min-w-[620px]">
-                <thead>
-                  <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-500 font-semibold">
-                    <th className="py-3 px-4 sm:px-6 w-1/3">Message</th>
-                    <th className="py-3 px-4 sm:px-6">When</th>
-                    <th className="py-3 px-4 sm:px-6">Channel</th>
-                    <th className="py-3 px-4 sm:px-6 text-right">Enabled</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {customerNotifications.map((rule) => (
-                    <tr
-                      key={rule.id}
-                      onClick={() => handleToggleCustomer(rule.id, rule.enabled)}
-                      className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-3.5 px-4 sm:px-6">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900 group-hover:text-brand transition-colors">
-                            {rule.message}
-                          </span>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveTooltipId(
-                                  activeTooltipId === rule.id ? null : rule.id
-                                );
-                              }}
-                              className="text-slate-400 hover:text-brand p-0.5 cursor-pointer"
-                              title={rule.info}
-                            >
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                            {activeTooltipId === rule.id && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute left-6 top-0 z-30 w-64 p-3 rounded-xl bg-slate-900 text-white text-xs shadow-xl space-y-1.5"
-                              >
-                                <p className="font-bold">{rule.message}</p>
-                                <p className="text-slate-300">{rule.info}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 sm:px-6 text-slate-600">
-                        {rule.when}
-                      </td>
-
-                      <td
-                        className="py-3.5 px-4 sm:px-6"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <AppSelect
-                          value={rule.channel}
-                          onChange={(val) =>
-                            updateCustomerNotification(rule.id, {
-                              channel: val as 'Email & text' | 'Text' | 'Email',
-                            })
-                          }
-                          options={[
-                            { value: 'Email & text', label: 'Email & text' },
-                            { value: 'Text', label: 'Text' },
-                            { value: 'Email', label: 'Email' },
-                          ]}
-                          className="w-44 h-8.5 rounded-lg text-xs"
-                        />
-                      </td>
-
-                      <td
-                        className="py-3.5 px-4 sm:px-6 text-right"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="inline-flex items-center gap-2 justify-end">
-                          <Switch
-                            checked={rule.enabled}
-                            onCheckedChange={() =>
-                              handleToggleCustomer(rule.id, rule.enabled)
-                            }
-                          />
-                          <span
-                            className={cn(
-                              'text-xs font-semibold w-7 text-left',
-                              rule.enabled ? 'text-brand' : 'text-slate-400'
-                            )}
-                          >
-                            {rule.enabled ? 'On' : 'Off'}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <CustomerNotificationsCard rules={notificationRules} canEdit={canEditNotifications} />
 
           {/* Bottom Banner */}
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">

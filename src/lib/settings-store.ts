@@ -36,15 +36,6 @@ export interface AdditionalCharge {
   status: 'Active' | 'Inactive';
 }
 
-export interface CustomerNotificationRule {
-  id: string;
-  message: string;
-  info: string;
-  when: string;
-  channel: 'Email & text' | 'Text' | 'Email';
-  enabled: boolean;
-}
-
 export interface OfficeAlertRule {
   id: string;
   alert: string;
@@ -88,7 +79,6 @@ export interface SettingsState {
   company: CompanyDetails;
   services: PricingService[];
   charges: AdditionalCharge[];
-  customerNotifications: CustomerNotificationRule[];
   officeAlerts: OfficeAlertRule[];
   pourTypes: PourTypeSetting[];
   tags: TagSetting[];
@@ -184,56 +174,6 @@ export const INITIAL_SETTINGS: SettingsState = {
       rate: 45,
       unit: 'Per job',
       status: 'Active',
-    },
-  ],
-  customerNotifications: [
-    {
-      id: 'cust-1',
-      message: 'Order confirmation',
-      info: 'Sent immediately when an order is booked or confirmed by dispatch.',
-      when: 'When requested',
-      channel: 'Email & text',
-      enabled: true,
-    },
-    {
-      id: 'cust-2',
-      message: 'Operator details',
-      info: 'Provides operator name and phone number to the job contact.',
-      when: 'When dispatched',
-      channel: 'Text',
-      enabled: true,
-    },
-    {
-      id: 'cust-3',
-      message: 'Pump en route',
-      info: 'Alerts the job superintendent when the pump leaves the yard.',
-      when: 'When operator marks en route',
-      channel: 'Text',
-      enabled: true,
-    },
-    {
-      id: 'cust-4',
-      message: 'Pre-work authorization',
-      info: 'Requests digital sign-off on terms prior to boom setup.',
-      when: 'When requested',
-      channel: 'Email & text',
-      enabled: false,
-    },
-    {
-      id: 'cust-5',
-      message: 'Work ticket review',
-      info: 'Sends digital pour receipt and hours summary after completion.',
-      when: 'After ticket submission',
-      channel: 'Email',
-      enabled: true,
-    },
-    {
-      id: 'cust-6',
-      message: 'Missing job details',
-      info: 'Automated nudge for mix design or gate access code.',
-      when: 'When requested',
-      channel: 'Email',
-      enabled: false,
     },
   ],
   officeAlerts: [
@@ -426,19 +366,6 @@ export function togglePourTypeFavorite(id: string) {
     ...currentSettings,
     pourTypes: currentSettings.pourTypes.map((pt) =>
       pt.id === id ? { ...pt, favorite: !pt.favorite } : pt
-    ),
-  };
-  notify();
-}
-
-export function updateCustomerNotification(
-  id: string,
-  updates: Partial<CustomerNotificationRule>
-) {
-  currentSettings = {
-    ...currentSettings,
-    customerNotifications: currentSettings.customerNotifications.map((rule) =>
-      rule.id === id ? { ...rule, ...updates } : rule
     ),
   };
   notify();

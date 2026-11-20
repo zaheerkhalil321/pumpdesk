@@ -9,6 +9,7 @@ import {
 import { SettingsHub } from '@/components/settings/settings-hub';
 import { CompanySettingsTab, type CompanySubTab } from '@/components/settings/company-settings-tab';
 import { PricingSettingsTab } from '@/components/settings/pricing-settings-tab';
+import type { NotificationRuleRow } from '@/features/notifications/events';
 import { NotificationsSettingsTab } from '@/components/settings/notifications-settings-tab';
 import { ListsSettingsTab } from '@/components/settings/lists-settings-tab';
 import { IntegrationsSettingsTab } from '@/components/settings/integrations-settings-tab';
@@ -25,9 +26,21 @@ interface SettingsPageProps {
   /** Owners and admins only; others see the branches without the edit buttons. */
   canEditBranches: boolean;
   profile: CompanyProfile;
+  notificationRules: NotificationRuleRow[];
+  /** Owners and admins only. */
+  canEditNotifications: boolean;
 }
 
-function SettingsContent({ suppliers, logoUrl, yards, branches, canEditBranches, profile }: SettingsPageProps) {
+function SettingsContent({
+  suppliers,
+  logoUrl,
+  yards,
+  branches,
+  canEditBranches,
+  profile,
+  notificationRules,
+  canEditNotifications,
+}: SettingsPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -79,7 +92,12 @@ function SettingsContent({ suppliers, logoUrl, yards, branches, canEditBranches,
 
         {currentTab === 'pricing' && <PricingSettingsTab />}
 
-        {currentTab === 'notifications' && <NotificationsSettingsTab />}
+        {currentTab === 'notifications' && (
+          <NotificationsSettingsTab
+            notificationRules={notificationRules}
+            canEditNotifications={canEditNotifications}
+          />
+        )}
 
         {currentTab === 'lists' && <ListsSettingsTab suppliers={suppliers} />}
 
@@ -89,7 +107,16 @@ function SettingsContent({ suppliers, logoUrl, yards, branches, canEditBranches,
   );
 }
 
-export function SettingsPage({ suppliers, logoUrl, yards, branches, canEditBranches, profile }: SettingsPageProps) {
+export function SettingsPage({
+  suppliers,
+  logoUrl,
+  yards,
+  branches,
+  canEditBranches,
+  profile,
+  notificationRules,
+  canEditNotifications,
+}: SettingsPageProps) {
   return (
     <Suspense
       fallback={
@@ -100,6 +127,8 @@ export function SettingsPage({ suppliers, logoUrl, yards, branches, canEditBranc
     >
       <SettingsContent
         suppliers={suppliers}
+        notificationRules={notificationRules}
+        canEditNotifications={canEditNotifications}
         logoUrl={logoUrl}
         yards={yards}
         branches={branches}

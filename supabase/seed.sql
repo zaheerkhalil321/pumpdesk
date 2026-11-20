@@ -265,3 +265,11 @@ begin
   end loop;
 end
 $seed$;
+
+-- The sample orders above fire the customer-notification triggers. Close those rows so a local reset never
+-- leaves texts waiting to go out (the sample phone numbers are not real). The order triggers are deferred to
+-- the end of the transaction, so they are fired first.
+set constraints all immediate;
+update public.notification_deliveries
+   set status = 'skipped', skip_reason = 'seed', processed_at = now()
+ where status = 'pending';

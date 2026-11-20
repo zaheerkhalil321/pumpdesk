@@ -53,6 +53,8 @@ import { shiftClock } from '@/features/orders/mappers';
 import { siteCoordsPayload, type Coords } from '@/features/places/coords';
 import { pumpMinutesFor } from '@/features/orders/duration';
 import { OrderTicketCard } from '@/components/tickets/order-ticket-card';
+import { OrderCustomerTexts } from '@/components/orders/order-customer-texts';
+import type { OrderDelivery } from '@/features/notifications/events';
 import {
   EDITABLE_ORDER_STATUSES,
   ORDER_STATUS_STYLE,
@@ -72,6 +74,8 @@ const editableStatusOf = (status: OrderStatus): EditableOrderStatus =>
 interface OrderDetailViewProps {
   order: FullOrderData;
   options: OrderFormOptions;
+  /** The automatic customer texts for this order. */
+  deliveries: OrderDelivery[];
   /** Opened from the schedule board, so Back goes to the schedule instead of the orders list. */
   cameFromSchedule: boolean;
 }
@@ -87,7 +91,7 @@ const toRows = (items: { name: string; quantity: number }[]): ItemRow[] =>
 const withValue = (list: string[], value: string) =>
   value && !list.includes(value) ? [value, ...list] : list;
 
-export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetailViewProps) {
+export function OrderDetailView({ order, options, deliveries, cameFromSchedule }: OrderDetailViewProps) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -1227,6 +1231,9 @@ export function OrderDetailView({ order, options, cameFromSchedule }: OrderDetai
 
               {/* Work Ticket */}
               <OrderTicketCard ticket={order.ticket} />
+
+              {/* Automatic customer texts */}
+              <OrderCustomerTexts deliveries={deliveries} />
 
               {/* Billing */}
               <div className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-4">

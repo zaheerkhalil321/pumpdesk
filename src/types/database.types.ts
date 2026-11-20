@@ -271,6 +271,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"customer_notification_prefs": {
+                  Row: {
+                    "company_id": string,"customer_id": string,"enabled": boolean,"event": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string,"customer_id": string,"enabled": boolean,"event": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"customer_id"?: string,"enabled"?: boolean,"event"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "customer_notification_prefs_company_id_customer_id_fkey"
+      columns: ["company_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "customer_notification_prefs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"customers": {
                   Row: {
                     "billing_address_line_1": string | null,"billing_address_line_2": string | null,"billing_city": string | null,"billing_country_code": string,"billing_postal_code": string | null,"billing_state": string | null,"business_name": string,"company_id": string,"created_at": string,"credit_hold": boolean,"credit_limit": number | null,"customer_number": string | null,"customer_type": string | null,"dispatch_note": string | null,"email": string | null,"id": string,"internal_notes": string | null,"is_active": boolean,"legal_name": string | null,"payment_terms_days": number | null,"phone": string | null,"requires_po": boolean,"status": Database["public"]['Enums']["customer_status"],"tax_exempt": boolean,"tax_exempt_number": string | null,"tier": string | null,"updated_at": string,"version": number,"website": string | null
@@ -661,16 +687,80 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"sms_messages": {
+                },"notification_deliveries": {
                   Row: {
-                    "body": string,"company_id": string,"contact_id": string | null,"created_at": string,"customer_id": string | null,"employee_id": string | null,"error_code": string | null,"error_message": string | null,"id": string,"job_id": string | null,"provider_sid": string | null,"recipient_kind": string,"sent_by": string | null,"status": string,"to_phone": string
+                    "attempts": number,"claimed_at": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"customer_id": string | null,"event": string,"id": string,"job_id": string,"next_attempt_at": string,"processed_at": string | null,"skip_reason": string | null,"sms_message_id": string | null,"status": string,"to_phone": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"job_id"?: string | null,"provider_sid"?: string | null,"recipient_kind": string,"sent_by"?: string | null,"status": string,"to_phone": string
+                    "attempts"?: number,"claimed_at"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"event": string,"id"?: string,"job_id": string,"next_attempt_at"?: string,"processed_at"?: string | null,"skip_reason"?: string | null,"sms_message_id"?: string | null,"status"?: string,"to_phone"?: string | null
                   }
                   Update: {
-                    "body"?: string,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"job_id"?: string | null,"provider_sid"?: string | null,"recipient_kind"?: string,"sent_by"?: string | null,"status"?: string,"to_phone"?: string
+                    "attempts"?: number,"claimed_at"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"event"?: string,"id"?: string,"job_id"?: string,"next_attempt_at"?: string,"processed_at"?: string | null,"skip_reason"?: string | null,"sms_message_id"?: string | null,"status"?: string,"to_phone"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_deliveries_company_id_contact_id_fkey"
+      columns: ["company_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "notification_deliveries_company_id_customer_id_fkey"
+      columns: ["company_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "notification_deliveries_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_deliveries_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "notification_deliveries_sms_message_id_fkey"
+      columns: ["sms_message_id"]
+isOneToOne: false
+      referencedRelation: "sms_messages"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_rules": {
+                  Row: {
+                    "company_id": string,"enabled": boolean,"event": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string,"enabled": boolean,"event": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"enabled"?: boolean,"event"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_rules_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sms_messages": {
+                  Row: {
+                    "body": string,"company_id": string,"contact_id": string | null,"created_at": string,"customer_id": string | null,"employee_id": string | null,"error_code": string | null,"error_message": string | null,"id": string,"job_id": string | null,"notification_event": string | null,"provider_sid": string | null,"recipient_kind": string,"sent_by": string | null,"status": string,"to_phone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"job_id"?: string | null,"notification_event"?: string | null,"provider_sid"?: string | null,"recipient_kind": string,"sent_by"?: string | null,"status": string,"to_phone": string
+                  }
+                  Update: {
+                    "body"?: string,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"customer_id"?: string | null,"employee_id"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"job_id"?: string | null,"notification_event"?: string | null,"provider_sid"?: string | null,"recipient_kind"?: string,"sent_by"?: string | null,"status"?: string,"to_phone"?: string
                   }
                   Relationships: [
                     {
@@ -842,6 +932,9 @@ isOneToOne: false
 "cancel_job":
 { Args: { "p_job": string,"p_reason": string,"p_version": number }; Returns: Json
                            },
+"claim_notification_deliveries":
+{ Args: { "p_limit"?: number }; Returns: Json
+                           },
 "clock_in":
 { Args: { "p_at": string }; Returns: Json
                            },
@@ -853,6 +946,9 @@ isOneToOne: false
                            },
 "edit_job_step_time":
 { Args: { "p_at": string,"p_job_id": string,"p_step": Database["public"]['Enums']["job_step"] }; Returns: Json
+                           },
+"finish_notification_delivery":
+{ Args: { "p_id": string,"p_reason"?: string,"p_sms_message_id"?: string,"p_status": string }; Returns: undefined
                            },
 "get_work_ticket":
 { Args: { "p_job_id": string }; Returns: Json
