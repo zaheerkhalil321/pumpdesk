@@ -311,6 +311,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"employee_time_entries": {
+                  Row: {
+                    "approved_at": string | null,"approved_by": string | null,"break_minutes": number,"clock_in": string,"clock_out": string | null,"company_id": string,"created_at": string,"employee_id": string,"id": string,"job_id": string | null,"notes": string | null,"overtime_hours": number | null,"regular_hours": number | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"break_minutes"?: number,"clock_in": string,"clock_out"?: string | null,"company_id"?: string,"created_at"?: string,"employee_id": string,"id"?: string,"job_id"?: string | null,"notes"?: string | null,"overtime_hours"?: number | null,"regular_hours"?: number | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"break_minutes"?: number,"clock_in"?: string,"clock_out"?: string | null,"company_id"?: string,"created_at"?: string,"employee_id"?: string,"id"?: string,"job_id"?: string | null,"notes"?: string | null,"overtime_hours"?: number | null,"regular_hours"?: number | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "employee_time_entries_approved_by_fkey"
+      columns: ["approved_by"]
+isOneToOne: false
+      referencedRelation: "app_users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "employee_time_entries_company_id_employee_id_fkey"
+      columns: ["company_id","employee_id"]
+isOneToOne: false
+      referencedRelation: "employees"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "employee_time_entries_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "employee_time_entries_company_id_job_id_fkey"
+      columns: ["company_id","job_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"employees": {
                   Row: {
                     "branch_id": string | null,"cdl_class": string | null,"cdl_expires_on": string | null,"company_id": string,"created_at": string,"email": string | null,"employee_number": string | null,"first_name": string,"hire_date": string | null,"home_yard_id": string | null,"id": string,"is_dispatcher": boolean,"is_mechanic": boolean,"is_operator": boolean,"job_title": string | null,"last_name": string,"medical_cert_expires_on": string | null,"notes": string | null,"phone": string | null,"preferred_name": string | null,"status": Database["public"]['Enums']["employee_status"],"termination_date": string | null,"updated_at": string,"user_id": string | null
@@ -804,6 +842,12 @@ isOneToOne: false
 "cancel_job":
 { Args: { "p_job": string,"p_reason": string,"p_version": number }; Returns: Json
                            },
+"clock_in":
+{ Args: { "p_at": string }; Returns: Json
+                           },
+"clock_out":
+{ Args: { "p_at": string }; Returns: Json
+                           },
 "delete_operator":
 { Args: { "p_id": string }; Returns: undefined
                            },
@@ -830,6 +874,9 @@ isOneToOne: false
                            },
 "operator_me":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"operator_time_entries":
+{ Args: { "p_from": string,"p_to": string }; Returns: Json
                            },
 "record_job_step":
 { Args: { "p_at": string,"p_job_id": string,"p_step": Database["public"]['Enums']["job_step"] }; Returns: Json
