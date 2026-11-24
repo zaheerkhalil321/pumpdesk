@@ -425,12 +425,14 @@ Table contacts {
   phone text [note: 'E.164, e.g. +12075550110']
   phone_type text
   notes text
-  is_active boolean [not null, note: 'default true; soft delete']
+  is_active boolean [not null, note: 'default true; Inactive in the UI']
+  deleted_at timestamptz [note: 'set by Delete contact (soft delete, also sets is_active false); hidden from lists (0028)']
   created_at timestamptz [not null, note: 'now()']
   updated_at timestamptz [not null, note: 'now(), trigger']
 
   indexes {
     (company_id, id) [unique, note: 'target of composite tenant FKs']
+    (company_id) [note: 'where deleted_at is null']
   }
 
   Note: 'People: supers, PMs, billing staff.'
@@ -878,6 +880,8 @@ Table employees {
   indexes {
     (company_id, id) [unique, note: 'target of composite tenant FKs']
     (company_id, employee_number) [unique]
+    (company_id, phone) [unique, note: 'where status <> terminated and phone is not null (0027)']
+    (company_id, email) [unique, note: 'lower(email), where status <> terminated and email is not null (0027)']
     (company_id, last_name, first_name)
     (company_id, user_id)
   }

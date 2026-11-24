@@ -47,7 +47,7 @@ export async function listCustomers(): Promise<CustomerItem[]> {
   const [customers, links, contacts, sites] = await Promise.all([
     supabase.from('customers').select(CUSTOMER_COLUMNS).eq('is_active', true).order('business_name'),
     supabase.from('customer_contact_links').select(LINK_COLUMNS),
-    supabase.from('contacts').select(CONTACT_COLUMNS),
+    supabase.from('contacts').select(CONTACT_COLUMNS).is('deleted_at', null),
     supabase.from('job_sites').select('customer_id').eq('is_active', true),
   ]);
   if (customers.error) throw customers.error;
@@ -118,7 +118,7 @@ export async function listContacts(): Promise<ContactItem[]> {
   const supabase = await createClient();
 
   const [contacts, links, customers] = await Promise.all([
-    supabase.from('contacts').select(CONTACT_COLUMNS).order('first_name'),
+    supabase.from('contacts').select(CONTACT_COLUMNS).is('deleted_at', null).order('first_name'),
     supabase.from('customer_contact_links').select(LINK_COLUMNS),
     supabase.from('customers').select('id, business_name').eq('is_active', true),
   ]);
@@ -141,6 +141,7 @@ export async function getContact(id: string): Promise<ContactItem | null> {
     .from('contacts')
     .select(CONTACT_COLUMNS)
     .eq('id', id)
+    .is('deleted_at', null)
     .maybeSingle();
   if (error) throw error;
   if (!contact) return null;

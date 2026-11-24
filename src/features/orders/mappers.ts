@@ -222,6 +222,7 @@ export function toBooking(h: HydratedJob): ScheduleBooking {
           ? 'draft'
           : 'unassigned',
     dispatchedAt: job.dispatched_at ? clockOf(job.dispatched_at, tz) : undefined,
+    fieldStatus: job.field_status,
     hasTicket: job.booking_status === 'turned_in' || job.booking_status === 'reviewed',
     ticketStatus:
       job.booking_status === 'reviewed'

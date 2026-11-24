@@ -57,7 +57,11 @@ export interface ScheduleBooking {
   contactPhone?: string;
   hasTicket?: boolean;
   ticketStatus?: string;
+  /** Where the crew is, from the operator app's steps. */
+  fieldStatus?: FieldStatus;
 }
+
+export type FieldStatus = 'scheduled' | 'en_route' | 'on_site' | 'pumping' | 'washout' | 'returning' | 'done';
 
 export interface ScheduleFilters {
   searchQuery: string;

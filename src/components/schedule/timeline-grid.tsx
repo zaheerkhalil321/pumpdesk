@@ -10,6 +10,9 @@ import { clockFromHour } from '@/features/orders/mappers';
 import { findOverlap } from '@/features/orders/conflicts';
 import { formatDuration } from '@/features/orders/duration';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LiveBadge } from './live-badge';
+import { liveStateOf, progressStepOf, stageLabelOf, stageToneOf } from './live-status';
+import { useBoardClock, useLiveRefresh } from './use-board-clock';
 
 /** "7:00 - 10:00 AM": a span between two hours, shortened when both are in the same half of the day. */
 function hourRangeLabel(startHour: number, endHour: number): string {
@@ -140,6 +143,47 @@ const STRIP_BASIS = [
   'basis-[45%]',
 ];
 
+// How much of a live job's block has gone by, in steps of 5%.
+const PROGRESS_WIDTHS = [
+  'w-[0%]', 'w-[5%]', 'w-[10%]', 'w-[15%]', 'w-[20%]', 'w-[25%]', 'w-[30%]', 'w-[35%]', 'w-[40%]', 'w-[45%]', 'w-[50%]',
+  'w-[55%]', 'w-[60%]', 'w-[65%]', 'w-[70%]', 'w-[75%]', 'w-[80%]', 'w-[85%]', 'w-[90%]', 'w-[95%]', 'w-[100%]',
+];
+
+// Where the "now" line sits inside its hour column, to the nearest quarter hour.
+const QUARTER_LEFT = ['left-0', 'left-1/4', 'left-1/2', 'left-3/4'];
+
+/**
+ * The red "now" line down the board, like a wall clock's hand. In the header it carries a "Now" tag;
+ * in each pump row it is a thin line behind the cards.
+ */
+function NowLine({ hour, variant }: { hour: number; variant: 'header' | 'lane' }) {
+  const col = Math.min(23, Math.max(0, Math.floor(hour)));
+  const quarter = Math.min(3, Math.floor((hour - col) * 4));
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        'pointer-events-none absolute inset-0 grid grid-cols-[repeat(24,minmax(0,1fr))]',
+        variant === 'header' ? 'z-10' : 'z-[5]',
+      )}
+    >
+      <div className={cn('relative row-start-1 h-full', COL_STARTS[col])}>
+        <span className={cn('absolute inset-y-0 w-0.5 -translate-x-1/2 bg-rose-500/60', QUARTER_LEFT[quarter])} />
+        {variant === 'header' && (
+          <span
+            className={cn(
+              'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-slate-50',
+              QUARTER_LEFT[quarter],
+            )}
+          >
+            Now
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Diagonal hatching for the prep and clean-up strips on either side of a pour. */
 const HATCH = 'bg-slate-50 bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--color-slate-200)_5px_6px)]';
 
@@ -257,6 +301,9 @@ function TravelConnectors({ ordered, trackOf }: { ordered: ScheduleBooking[]; tr
 }
 
 interface TimelineGridProps {
+  /** The day shown (yyyy-MM-dd) and the company's time zone, for the live states and the "now" line. */
+  date: string;
+  timezone: string;
   pumps: PumpLane[];
   bookings: ScheduleBooking[];
   onSlotClick: (pumpId: string, hour: number) => void;
@@ -269,6 +316,8 @@ interface TimelineGridProps {
 }
 
 export function TimelineGrid({
+  date,
+  timezone,
   pumps,
   bookings,
   onSlotClick,
@@ -276,6 +325,11 @@ export function TimelineGrid({
   onRescheduleBooking,
 }: TimelineGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Live board: a clock that ticks every 30 seconds, and fresh data while today is on screen.
+  const now = useBoardClock(timezone);
+  const isToday = now?.date === date;
+  useLiveRefresh(isToday);
 
   // Open on the working day (5 AM) instead of midnight; the rest is one scroll away.
   useEffect(() => {
@@ -375,7 +429,8 @@ export function TimelineGrid({
             </div>
 
             {/* 24 Time Header Slots */}
-            <div className="flex-1 grid grid-cols-[repeat(24,minmax(0,1fr))] min-w-[2600px]">
+            <div className="flex-1 grid grid-cols-[repeat(24,minmax(0,1fr))] min-w-[2600px] relative">
+              {isToday && now && <NowLine hour={now.hour} variant="header" />}
               {TIMELINE_HOURS.map((slot) => (
                 <div
                   key={slot.hour}
@@ -452,6 +507,8 @@ export function TimelineGrid({
                       })}
                     </div>
 
+                    {isToday && now && <NowLine hour={now.hour} variant="lane" />}
+
                     {/* Layer B: Bookings Overlay Grid (Spans across all booked hours) */}
                     <div className={cn('grid grid-cols-[repeat(24,minmax(0,1fr))] h-full absolute inset-0 p-1.5 gap-y-1.5 pointer-events-none z-10', OVERLAY_ROWS[tracks - 1])}>
                       {ordered.map((booking) => {
@@ -495,6 +552,13 @@ export function TimelineGrid({
                         });
 
                         // Descriptive tooltip with full un-truncated details
+                        // Live state: out on the job, late to site, or done. Drives the beam, glow and badge.
+                        const live = liveStateOf(booking, now);
+                        const stage = stageLabelOf(booking, live);
+                        const tone = stageToneOf(booking, live);
+                        // Only a job that is really under way fills up; a late one has not started.
+                        const progress = live === 'live' ? progressStepOf(booking, now) : null;
+
                         const cardTooltip = `${booking.customerName}${booking.volumeYards > 0 ? ` • ${booking.volumeYards} yd³` : ''}\nSite: ${booking.jobSiteName}\nOperator: ${booking.operator || "Needs operator"} (${booking.dispatchStatus || "draft"})\nTime: ${timeRangeLabel(booking)} (${booking.durationHours}h)${overlap ? `\nOverlaps ${overlap.customerName} (${overlap.orderNumber}) at ${timeRangeLabel(overlap)}` : ""}\nDrag to reschedule (on a tablet, hold then drag) • Click to view details`;
 
                         return (
@@ -507,14 +571,28 @@ export function TimelineGrid({
                               if (!justDragged.current) onBookingClick(booking);
                             }}
                             className={cn(
-                              'pointer-events-auto group',
+                              'pointer-events-auto group relative rounded-lg',
                               'h-full flex items-stretch cursor-grab active:cursor-grabbing select-none max-w-full min-w-0',
+                              live === 'late' && 'late-ring',
+                              live === 'done' && 'opacity-60 saturate-50 transition-opacity hover:opacity-100 hover:saturate-100',
                               ROW_STARTS[trackOf.get(booking.id) ?? 0],
                               startColClass,
                               spanColClass,
                             )}
                             title={cardTooltip}
                           >
+                            {/* Time used so far: a soft, still tint from the left. No edge line, no moving light. */}
+                            {progress !== null && progress > 0 && (
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'pointer-events-none absolute inset-y-0 left-0 z-[1] rounded-l-lg',
+                                  'bg-brand/[0.08]',
+                                  progress === 100 && 'rounded-r-lg',
+                                  PROGRESS_WIDTHS[progress / 5],
+                                )}
+                              />
+                            )}
                             {prepPercent > 0 && (
                               <StripLabel
                                 kind="Prep"
@@ -528,6 +606,7 @@ export function TimelineGrid({
                                 'flex min-w-0 flex-1 flex-col justify-between overflow-hidden rounded-lg border border-l-[3.5px] shadow-2xs group-hover:shadow-md',
                                 isNarrow ? 'p-1.5' : 'p-2.5',
                                 isBeingDragged && 'border-2 border-brand',
+                                live === 'live' && !isBeingDragged && 'live-beam',
                               // Left border status stripe for instantaneous visual scanning
                               !booking.operator && 'border-l-rose-500',
                               booking.operator && booking.dispatchStatus === 'dispatched' && 'border-l-emerald-500',
@@ -590,9 +669,9 @@ export function TimelineGrid({
 
                             {/* Row 2: Operator • Job Site • Duration */}
                             {isNarrow ? (
-                              /* Clean, un-crowded row for 1-slot cards */
-                              <div className="flex items-center justify-between gap-1 text-[9.5px] mt-0.5 min-w-0">
-                                <div className="flex items-center gap-1 min-w-0 flex-1">
+                              /* Short job: operator and status on one line, the time on its own line below. */
+                              <>
+                                <div className="flex items-center gap-1 text-[9.5px] mt-0.5 min-w-0">
                                   <span
                                     className={cn(
                                       'h-1.5 w-1.5 rounded-full shrink-0',
@@ -606,11 +685,13 @@ export function TimelineGrid({
                                       ? booking.operator.split(' ')[0] + (booking.operator.split(' ')[1] ? ` ${booking.operator.split(' ')[1][0]}.` : '')
                                       : 'No op'}
                                   </span>
+                                  {/* Short labels here: "Late" instead of "Late · Not On Site". */}
+                                  {live !== 'idle' && <LiveBadge tone={tone} label={live === 'late' ? 'Late' : stage} />}
                                 </div>
-                                <span className="text-[9px] font-bold text-slate-600 bg-white/80 px-1 py-0.2 rounded shrink-0">
+                                <span className="mt-0.5 self-start whitespace-nowrap text-[9px] font-bold text-slate-600 bg-white/80 px-1 py-0.2 rounded">
                                   {timeRangeLabel(booking).replace(' - ', '–')}
                                 </span>
-                              </div>
+                              </>
                             ) : (
                               /* Standard wide card row */
                               <div className="flex items-center justify-between gap-1.5 text-[10.5px] opacity-90 mt-1 min-w-0">
@@ -633,16 +714,19 @@ export function TimelineGrid({
                                       <span className="text-[8px] opacity-75 font-normal">Draft</span>
                                     </span>
                                   )}
+                                  {live !== 'idle' && <LiveBadge tone={tone} label={stage} />}
                                 </div>
-
+                              </div>
+                            )}
+                            {/* Row 3: pour time, then the site. Kept off row 2 so the status badge never gets squeezed. */}
+                            {!isNarrow && (
+                              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
                                 <span className="shrink-0 flex items-center gap-0.5 text-[9.5px] font-semibold text-slate-600 bg-white/70 px-1 rounded">
                                   <Clock className="h-2.5 w-2.5 inline" />
                                   {timeRangeLabel(booking)}
                                 </span>
+                                <span className="truncate text-[10.5px] font-medium text-slate-600">{booking.jobSiteName}</span>
                               </div>
-                            )}
-                            {!isNarrow && (
-                              <span className="mt-0.5 truncate text-[10.5px] font-medium text-slate-600">{booking.jobSiteName}</span>
                             )}
                             </div>
                             {cleanupPercent > 0 && (

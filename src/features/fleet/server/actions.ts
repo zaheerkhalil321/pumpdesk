@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { authedAction } from '@/server/action';
-import { NotFoundError } from '@/server/errors';
+import type { Database } from '@/types/database.types';
+import { FieldConflictError, NotFoundError } from '@/server/errors';
 import {
   deletePumpSchema,
   assignPumpOperatorSchema,
@@ -128,10 +130,45 @@ export const assignPumpOperator = authedAction({
 
 // ── Operators ───────────────────────────────────────────────────
 
+/**
+ * One phone number and one email per person: the operator app signs in by phone.
+ * Throws with a message naming who already has it. Deleted people don't count.
+ * A unique index (0027) backs this up if two saves race.
+ */
+async function assertPhoneAndEmailFree(
+  supabase: SupabaseClient<Database>,
+  contact: { phone: string | null; email: string | null; exceptId?: string },
+) {
+  const checks = [
+    contact.phone ? { field: 'phone', column: 'phone', value: contact.phone, label: 'phone number' } : null,
+    contact.email ? { field: 'email', column: 'email', value: contact.email, label: 'email' } : null,
+  ].filter((c) => c !== null);
+
+  const fieldErrors: Record<string, string[]> = {};
+  for (const check of checks) {
+    let query = supabase
+      .from('employees')
+      .select('first_name, last_name')
+      .neq('status', 'terminated')
+      .ilike(check.column, check.value.replace(/[\\%_]/g, '\\$&'))
+      .limit(1);
+    if (contact.exceptId) query = query.neq('id', contact.exceptId);
+    const { data, error } = await query;
+    if (error) throw error;
+    const owner = data?.[0];
+    if (owner) {
+      const name = `${owner.first_name} ${owner.last_name}`.trim();
+      fieldErrors[check.field] = [`This ${check.label} is already used by ${name}.`];
+    }
+  }
+  if (Object.keys(fieldErrors).length > 0) throw new FieldConflictError(fieldErrors);
+}
+
 export const createOperator = authedAction({
   schema: createOperatorSchema,
   roles: CREW_EDITORS,
   run: async ({ input, supabase }) => {
+    await assertPhoneAndEmailFree(supabase, { phone: input.phone, email: input.email });
     const { data, error } = await supabase
       .from('employees')
       .insert({
@@ -168,6 +205,7 @@ export const updateOperator = authedAction({
   schema: updateOperatorSchema,
   roles: CREW_EDITORS,
   run: async ({ input, supabase }) => {
+    await assertPhoneAndEmailFree(supabase, { phone: input.phone, email: input.email, exceptId: input.id });
     const { data, error } = await supabase
       .from('employees')
       .update({

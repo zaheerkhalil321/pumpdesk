@@ -45,6 +45,7 @@ export default async function SchedulePage({
       pumps={lanes}
       orderOptions={orderOptions}
       date={date}
+      timezone={session.timezone}
       bookings={schedule.bookings}
       unassignedJobs={schedule.unassigned}
       dayCounts={dayCounts}

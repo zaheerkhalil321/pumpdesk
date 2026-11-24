@@ -326,11 +326,11 @@ export async function listDayBlocks(date: string): Promise<DayBlock[]> {
 }
 
 /**
- * The jobs an operator is on that deleting them would change: not cancelled and not finished.
- * Soonest first. Matches what the delete itself takes them off.
+ * The jobs an operator is on that deleting them would change: today or later, not cancelled and
+ * not finished. Past jobs keep the operator. Soonest first. Matches what the delete takes them off.
  */
 export async function listOperatorJobs(employeeId: string): Promise<OperatorJob[]> {
-  await requireSession();
+  const session = await requireSession();
   const supabase = await createClient();
 
   const { data: assignments, error: assignmentError } = await supabase
@@ -345,6 +345,7 @@ export async function listOperatorJobs(employeeId: string): Promise<OperatorJob[
     .from('jobs')
     .select(JOB_COLUMNS)
     .in('id', assignments.map((a) => a.job_id))
+    .gte('service_date', todayIn(session.timezone))
     .neq('booking_status', 'cancelled')
     .neq('field_status', 'done')
     .order('scheduled_start');

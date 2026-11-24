@@ -87,7 +87,9 @@ export function mapCustomerListItem(
   activeSites: number,
   timezone: string,
 ): CustomerItem {
-  const link = links.find((l) => l.is_primary) ?? links[0];
+  // Links to deleted contacts are skipped, so the next contact shows instead.
+  const shown = links.filter((l) => contactsById.has(l.contact_id));
+  const link = shown.find((l) => l.is_primary) ?? shown[0];
   const contact = link ? contactsById.get(link.contact_id) : undefined;
 
   return {

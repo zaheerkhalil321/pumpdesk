@@ -296,6 +296,63 @@ body[data-brand-theme="slate"] {
 }
 
 /*
+ * Schedule board, live jobs.
+ * live-beam: a short streak of light runs round the card's edge while the crew is out on the job.
+ * With reduced motion it holds still: a plain outline, no movement.
+ */
+@property --beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+@utility live-beam {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    padding: 1.5px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(
+      from var(--beam-angle),
+      transparent 0deg 240deg,
+      color-mix(in oklab, var(--color-brand) 15%, transparent) 280deg,
+      var(--color-brand) 335deg,
+      color-mix(in oklab, var(--color-brand) 40%, white) 350deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: beam-spin 3.6s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+      background: color-mix(in oklab, var(--color-brand) 55%, transparent);
+    }
+  }
+}
+
+/* A late job holds still: a thin rose outline marks the problem without looking "in progress". */
+@utility late-ring {
+  box-shadow: 0 0 0 1.5px var(--color-rose-400);
+}
+
+/*
  * Popup readability: dialogs and side sheets use small, light text that is hard to read on
  * desktop. This bumps the small sizes by one step and darkens the lightest greys, in one place,
  * so every popup (and any new one) gets it. :where() keeps hover and state colours winning.

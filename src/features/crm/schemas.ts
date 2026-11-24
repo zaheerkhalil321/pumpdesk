@@ -107,6 +107,8 @@ export const findContactsByPhoneSchema = z.object({ phone: phone });
 
 export const unlinkContactSchema = z.object({ linkId: uuid });
 
+export const deleteContactSchema = z.object({ id: uuid });
+
 export const updateContactLinkSchema = z.object({
   linkId: uuid,
   roles: contactRoles.optional(),

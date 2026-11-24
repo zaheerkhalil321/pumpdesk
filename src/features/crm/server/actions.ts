@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { authedAction } from '@/server/action';
 import { NotFoundError, StaleVersionError } from '@/server/errors';
 import {
+  deleteContactSchema,
   deleteJobSiteSchema,
   createContactSchema,
   createCustomerSchema,
@@ -339,6 +340,28 @@ export const updateJobSite = authedAction({
       .select('customer_id');
     if (error) throw error;
     revalidateCrm(data?.[0]?.customer_id ?? undefined);
+    return { id: input.id };
+  },
+});
+
+/**
+ * Soft delete: the contact leaves every list and picker, but the record is kept so
+ * old orders still show the name. Also marks them inactive, so they get no texts.
+ */
+export const deleteContact = authedAction({
+  schema: deleteContactSchema,
+  roles: CRM_EDITORS,
+  run: async ({ input, supabase }) => {
+    const { data, error } = await supabase
+      .from('contacts')
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
+      .eq('id', input.id)
+      .is('deleted_at', null)
+      .select('id');
+    if (error) throw error;
+    if (!data || data.length === 0) throw new NotFoundError();
+    revalidateCrm(undefined, input.id);
+    revalidatePath('/customers', 'layout');
     return { id: input.id };
   },
 });

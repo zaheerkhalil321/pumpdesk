@@ -45,6 +45,8 @@ interface ScheduleBoardProps {
   orderOptions: OrderFormOptions;
   /** The day being shown (yyyy-MM-dd). */
   date: string;
+  /** The company's time zone, for the live job states and the "now" line. */
+  timezone: string;
   /** Pours on that day, each on a pump. */
   bookings: ScheduleBooking[];
   /** Upcoming orders that still need a pump. */
@@ -58,6 +60,7 @@ export function ScheduleBoard({
   pumps,
   orderOptions,
   date,
+  timezone,
   bookings: savedBookings,
   unassignedJobs,
   dayCounts,
@@ -475,6 +478,8 @@ export function ScheduleBoard({
         />
       ) : (
         <TimelineGrid
+          date={date}
+          timezone={timezone}
           pumps={filteredPumps}
           bookings={filteredBookings}
           onSlotClick={(pumpId, hour) => handleOpenNewBooking(pumpId, hour)}

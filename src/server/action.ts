@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { z } from 'zod';
 
 import type { Database } from '@/types/database.types';
-import { actionError, mapError, type ActionErrorCode } from '@/server/errors';
+import { actionError, FieldConflictError, mapError, type ActionErrorCode } from '@/server/errors';
 import { getSession, type Session } from '@/server/session';
 import { createClient } from '@/server/supabase';
 
@@ -54,6 +54,10 @@ export function authedAction<S extends z.ZodObject, T>(config: {
       const data = await config.run({ input: parsed.data as z.infer<S>, session, supabase });
       return { ok: true, data };
     } catch (error) {
+      if (error instanceof FieldConflictError) {
+        const first = Object.values(error.fieldErrors)[0]?.[0];
+        return { ok: false, code: 'DUPLICATE', message: first ?? 'That already exists.', fieldErrors: error.fieldErrors };
+      }
       return { ok: false, ...mapError(error) };
     }
   };

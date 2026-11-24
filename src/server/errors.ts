@@ -19,6 +19,13 @@ export class StaleVersionError extends Error {}
 /** Thrown by an action when an update matched no row (missing, or hidden by RLS). */
 export class NotFoundError extends Error {}
 
+/** Thrown by an action when a value is already taken, e.g. a phone number used by someone else. */
+export class FieldConflictError extends Error {
+  constructor(public readonly fieldErrors: Record<string, string[]>) {
+    super('field conflict');
+  }
+}
+
 /** Thrown by an action when the user has done it too many times in a short while. */
 export class RateLimitedError extends Error {}
 

@@ -15,6 +15,7 @@ import {
   Plus,
   Copy,
   Info,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +30,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
@@ -38,6 +40,7 @@ import { reportAction } from '@/lib/action-feedback';
 import type { ContactItem, CustomerOption } from '@/features/crm/types';
 import { EditContactModal } from '@/components/contacts/edit-contact-modal';
 import { LinkAccountModal } from '@/components/contacts/link-account-modal';
+import { DeleteContactDialog } from '@/components/contacts/delete-contact-dialog';
 import { CopyButton } from '@/components/ui/copy-button';
 
 interface ContactDetailViewProps {
@@ -57,6 +60,7 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
   // Modals state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const isInactive = contact.status === 'Inactive';
 
@@ -221,8 +225,23 @@ export function ContactDetailView({ contact, customerOptions }: ContactDetailVie
                 <span className={cn('h-2 w-2 rounded-full', isInactive ? 'bg-emerald-500' : 'bg-slate-400')} />
                 <span>Mark as {isInactive ? 'Active' : 'Inactive'}</span>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setIsDeleteOpen(true)}
+                disabled={isSaving}
+                className="text-xs cursor-pointer flex items-center gap-2 p-2 rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete contact</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <DeleteContactDialog
+            open={isDeleteOpen}
+            onOpenChange={setIsDeleteOpen}
+            contactId={contact.id}
+            contactName={contact.name}
+          />
         </div>
       </div>
 

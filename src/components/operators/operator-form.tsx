@@ -141,6 +141,14 @@ export function OperatorForm({
       const result = operator
         ? await updateOperator({ id: operator.id, ...base, isActive })
         : await createOperator(base);
+      // Phone or email already used by someone else: show it under the field.
+      if (!result.ok && result.fieldErrors) {
+        const next: FieldErrors = {};
+        for (const [field, messages] of Object.entries(result.fieldErrors)) next[field] = messages[0];
+        setErrors(next);
+        toast.error(result.message);
+        return;
+      }
       if (!reportAction(result, { entity: 'operator', refresh })) return;
 
       toast.success(operator ? 'Profile updated' : 'Operator added successfully', {

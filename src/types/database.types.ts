@@ -221,14 +221,14 @@ isOneToOne: false
                   ]
                 },"contacts": {
                   Row: {
-                    "company_id": string,"created_at": string,"email": string | null,"first_name": string,"id": string,"is_active": boolean,"job_title": string | null,"last_name": string | null,"notes": string | null,"phone": string | null,"phone_type": string | null,"updated_at": string
+                    "company_id": string,"created_at": string,"deleted_at": string | null,"email": string | null,"first_name": string,"id": string,"is_active": boolean,"job_title": string | null,"last_name": string | null,"notes": string | null,"phone": string | null,"phone_type": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "company_id"?: string,"created_at"?: string,"email"?: string | null,"first_name": string,"id"?: string,"is_active"?: boolean,"job_title"?: string | null,"last_name"?: string | null,"notes"?: string | null,"phone"?: string | null,"phone_type"?: string | null,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"email"?: string | null,"first_name": string,"id"?: string,"is_active"?: boolean,"job_title"?: string | null,"last_name"?: string | null,"notes"?: string | null,"phone"?: string | null,"phone_type"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"email"?: string | null,"first_name"?: string,"id"?: string,"is_active"?: boolean,"job_title"?: string | null,"last_name"?: string | null,"notes"?: string | null,"phone"?: string | null,"phone_type"?: string | null,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"email"?: string | null,"first_name"?: string,"id"?: string,"is_active"?: boolean,"job_title"?: string | null,"last_name"?: string | null,"notes"?: string | null,"phone"?: string | null,"phone_type"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
