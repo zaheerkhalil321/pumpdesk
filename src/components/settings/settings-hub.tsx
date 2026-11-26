@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { SettingsMainTab } from './settings-theme-bar';
 import { AppearanceCard } from './appearance-card';
+import { TwoStepCard } from './two-step-card';
 
 interface SettingsHubProps {
   onSelectTab: (tab: SettingsMainTab) => void;
@@ -133,6 +134,7 @@ export function SettingsHub({ onSelectTab }: SettingsHubProps) {
       </div>
 
       <AppearanceCard />
+      <TwoStepCard />
     </div>
   );
 }

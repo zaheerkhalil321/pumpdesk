@@ -4,6 +4,7 @@ import { cache } from 'react';
 import { redirect } from 'next/navigation';
 
 import type { Database } from '@/types/database.types';
+import { hasFullSession, isSignedIn, MFA_PATH } from '@/lib/auth/guard';
 import { createClient } from '@/server/supabase';
 
 export type Session = {
@@ -14,17 +15,25 @@ export type Session = {
   role: Database['public']['Enums']['membership_role'];
 };
 
+/** The verified access token claims, once per request. */
+const getClaims = cache(async () => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  return data?.claims ?? null;
+});
+
 /**
  * The signed-in user plus their company and role. The user id comes from the verified
  * token (getClaims); company and role are read live from company_memberships.
- * Returns null when logged out or when there is no active membership.
+ * Returns null when logged out, when the code step is not done yet (aal1), or when
+ * there is no active membership. Server Actions (authedAction) and API routes rely on this.
  */
 export const getSession = cache(async (): Promise<Session | null> => {
-  const supabase = await createClient();
+  const claims = await getClaims();
+  if (!claims || !hasFullSession(claims)) return null;
+  const userId = claims.sub;
 
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (!userId) return null;
+  const supabase = await createClient();
 
   const { data } = await supabase
     .from('company_memberships')
@@ -48,6 +57,7 @@ export const getSession = cache(async (): Promise<Session | null> => {
 
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
-  if (!session) redirect('/login');
-  return session;
+  if (session) return session;
+  const claims = await getClaims();
+  redirect(isSignedIn(claims) && !hasFullSession(claims) ? MFA_PATH : '/login');
 }

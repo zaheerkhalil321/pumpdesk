@@ -1,13 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const AUTH_PATHS = ['/login', '/forgot-password', '/reset-password', '/auth'];
-
-function isAuthPath(pathname: string): boolean {
-  return AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
+import { guardRoute, MFA_PATH } from '@/lib/auth/guard';
 
 // Refreshes the session cookie and sends logged-out visitors to /login.
+// A password-only (aal1) session is sent to the code screen until it passes the code step.
 // /api/notifications/run is left out: the database calls it with a bearer secret, not a login.
 // This is not security: pages and actions check again (architecture 4.2).
 export async function proxy(request: NextRequest) {
@@ -32,9 +29,10 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
 
-  if (!data?.claims && !isAuthPath(request.nextUrl.pathname)) {
+  const decision = guardRoute(request.nextUrl.pathname, data?.claims);
+  if (decision !== 'allow') {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = decision === 'login' ? '/login' : MFA_PATH;
     url.search = '';
     return NextResponse.redirect(url);
   }

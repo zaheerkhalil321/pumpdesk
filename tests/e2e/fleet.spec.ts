@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { login } from "./support/login";
+
 // Needs the local Supabase stack with the seed loaded. Passwords come from the environment.
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
 
 /** Opens a pump from the table. The click can land mid-refresh, so retry until the dialog is up. */
 async function openPump(page: Page, label: string) {
@@ -9,15 +10,6 @@ async function openPump(page: Page, label: string) {
     await page.getByText(label).first().click();
     await expect(page.getByRole("button", { name: "Edit Rig" })).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 15000 });
-}
-
-async function login(page: Page, email: string) {
-  if (!PASSWORD) throw new Error("Set E2E_PASSWORD (the seeded local test password).");
-  await page.goto("/login");
-  await page.getByPlaceholder("you@company.com").fill(email);
-  await page.locator('input[type="password"]').fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await page.waitForURL("**/schedule");
 }
 
 test.describe("Fleet: pumps", () => {

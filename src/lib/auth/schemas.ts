@@ -57,6 +57,16 @@ export const resetPasswordSchema = z
     path: ['confirmPassword'],
   });
 
+/** Six digits from the authenticator app. Spaces are dropped so "123 456" works. */
+export const mfaCodeSchema = z.object({
+  code: z
+    .string()
+    .transform((value) => value.replace(/\s/g, ''))
+    .pipe(z.string().regex(/^\d{6}$/, 'Enter the 6-digit code from your app')),
+});
+
 export type LoginValues = z.infer<typeof loginSchema>;
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+export type MfaCodeInput = z.input<typeof mfaCodeSchema>;
+export type MfaCodeValues = z.output<typeof mfaCodeSchema>;

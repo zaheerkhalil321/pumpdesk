@@ -1,17 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// Needs the local Supabase stack with the seed loaded. Passwords come from the environment.
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
-const MIDCOAST_CUSTOMER_ID = "e1000000-0000-4000-8000-000000000101";
+import { login } from "./support/login";
 
-async function login(page: Page, email: string) {
-  if (!PASSWORD) throw new Error("Set E2E_PASSWORD (the seeded local test password).");
-  await page.goto("/login");
-  await page.getByPlaceholder("you@company.com").fill(email);
-  await page.locator('input[type="password"]').fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await page.waitForURL("**/schedule");
-}
+// Needs the local Supabase stack with the seed loaded. Passwords come from the environment.
+const MIDCOAST_CUSTOMER_ID = "e1000000-0000-4000-8000-000000000101";
 
 async function openCustomer(page: Page, name: string) {
   await page.goto("/customers");

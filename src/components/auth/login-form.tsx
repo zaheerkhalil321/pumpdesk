@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FormField } from '@/components/ui/form-field';
-import { LoadingOverlay } from '@/components/ui/loader';
 import { AuthTicket } from '@/components/auth/auth-ticket';
 import { AuthHeader } from '@/components/auth/auth-header';
 import { AuthFormAlert } from '@/components/auth/auth-form-alert';
@@ -45,93 +44,85 @@ export function LoginForm() {
       setFormError(workspace.error);
       return;
     }
+    // Every user has a second step (set up an app, or enter its code) before the board.
     // A full page load, so pages cached for a previous user are never shown to this one.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the full load is the point
-    window.location.assign('/schedule');
+    window.location.assign('/mfa');
   };
 
   return (
-    <>
-      {isRedirecting && (
-        <LoadingOverlay
-          message="Opening Your Dispatch Board"
-          description="Loading today's pours, pumps and crews."
-        />
-      )}
+    <AuthTicket stub="Invite only. Ask your admin for access.">
+      <div className="flex flex-col gap-7">
+        <AuthHeader title="Sign In" />
 
-      <AuthTicket stub="Invite only. Ask your admin for access.">
-        <div className="flex flex-col gap-7">
-          <AuthHeader title="Sign In" />
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
+          <AuthFormAlert message={formError} />
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
-            <AuthFormAlert message={formError} />
+          <FormField id="email" label="Email" error={errors.email?.message}>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@company.com"
+              autoFocus
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'email-message' : undefined}
+              className={AUTH_INPUT_CLASS}
+              {...register('email')}
+            />
+          </FormField>
 
-            <FormField id="email" label="Email" error={errors.email?.message}>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                autoFocus
-                aria-invalid={Boolean(errors.email)}
-                aria-describedby={errors.email ? 'email-message' : undefined}
-                className={AUTH_INPUT_CLASS}
-                {...register('email')}
-              />
-            </FormField>
-
-            <FormField
+          <FormField
+            id="password"
+            label="Password"
+            error={errors.password?.message}
+            labelAction={
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+              >
+                Forgot Password?
+              </Link>
+            }
+          >
+            <PasswordInput
               id="password"
-              label="Password"
-              error={errors.password?.message}
-              labelAction={
-                <Link
-                  href="/forgot-password"
-                  className="text-xs font-medium text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+              autoComplete="current-password"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'password-message' : undefined}
+              className={AUTH_INPUT_CLASS}
+              {...register('password')}
+            />
+          </FormField>
+
+          <Controller
+            control={control}
+            name="rememberMe"
+            render={({ field }) => (
+              <div className="flex items-center gap-2.5">
+                <Checkbox
+                  id="rememberMe"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="focus-visible:ring-0"
+                />
+                <label
+                  htmlFor="rememberMe"
+                  className="cursor-pointer select-none text-sm text-muted-foreground"
                 >
-                  Forgot Password?
-                </Link>
-              }
-            >
-              <PasswordInput
-                id="password"
-                autoComplete="current-password"
-                aria-invalid={Boolean(errors.password)}
-                aria-describedby={errors.password ? 'password-message' : undefined}
-                className={AUTH_INPUT_CLASS}
-                {...register('password')}
-              />
-            </FormField>
+                  Keep Me Signed In On This Device
+                </label>
+              </div>
+            )}
+          />
 
-            <Controller
-              control={control}
-              name="rememberMe"
-              render={({ field }) => (
-                <div className="flex items-center gap-2.5">
-                  <Checkbox
-                    id="rememberMe"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="focus-visible:ring-0"
-                  />
-                  <label
-                    htmlFor="rememberMe"
-                    className="cursor-pointer select-none text-sm text-muted-foreground"
-                  >
-                    Keep Me Signed In On This Device
-                  </label>
-                </div>
-              )}
-            />
-
-            <AuthSubmitButton
-              isLoading={isSubmitting || isRedirecting}
-              label="Sign In"
-              loadingLabel="Signing In..."
-            />
-          </form>
-        </div>
-      </AuthTicket>
-    </>
+          <AuthSubmitButton
+            isLoading={isSubmitting || isRedirecting}
+            label="Sign In"
+            loadingLabel="Signing In..."
+          />
+        </form>
+      </div>
+    </AuthTicket>
   );
 }
